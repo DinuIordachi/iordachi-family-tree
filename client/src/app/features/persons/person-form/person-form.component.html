@@ -1,0 +1,212 @@
+<div class="flex flex-col gap-4">
+  <div class="flex items-center gap-4">
+    <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" (onClick)="goBack()" />
+    <h2 class="text-2xl font-bold m-0">{{ isEdit() ? 'Edit Person' : 'Create Person' }}</h2>
+  </div>
+
+  @if (isEdit() && loading()) {
+    <!-- Form skeleton -->
+    <div class="card">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="flex flex-col gap-2">
+            <p-skeleton width="100%" height="2.25rem" />
+          </div>
+        }
+        <div class="md:col-span-2 flex justify-end gap-2 pt-2">
+          <p-skeleton width="5rem" height="2.5rem" borderRadius="var(--p-content-border-radius)" />
+          <p-skeleton width="5rem" height="2.5rem" borderRadius="var(--p-content-border-radius)" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Contacts table skeleton -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <p-skeleton width="6rem" height="1.25rem" />
+        <p-skeleton width="9rem" height="2.5rem" borderRadius="var(--p-content-border-radius)" />
+      </div>
+      <div class="flex flex-col gap-3">
+        @for (i of [1, 2, 3]; track i) {
+          <p-skeleton width="100%" height="2.5rem" />
+        }
+      </div>
+    </div>
+
+    <!-- Garage Roles skeleton -->
+    <div class="card">
+      <p-skeleton width="8rem" height="1.25rem" styleClass="mb-4" />
+      <div class="flex flex-col gap-3">
+        @for (i of [1, 2]; track i) {
+          <p-skeleton width="100%" height="2.5rem" />
+        }
+      </div>
+    </div>
+
+    <!-- Association Roles skeleton -->
+    <div class="card">
+      <p-skeleton width="10rem" height="1.25rem" styleClass="mb-4" />
+      <div class="flex flex-col gap-3">
+        @for (i of [1, 2]; track i) {
+          <p-skeleton width="100%" height="2.5rem" />
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="card">
+      <form [formGroup]="form" (ngSubmit)="onSave()" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <p-floatlabel variant="on">
+          <input pInputText id="lastName" formControlName="lastName" class="w-full" />
+          <label for="lastName">Last Name</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <input pInputText id="firstName" formControlName="firstName" class="w-full" />
+          <label for="firstName">First Name</label>
+        </p-floatlabel>
+
+        <p-floatlabel variant="on">
+          <input pInputText id="patronymic" formControlName="patronymic" class="w-full" />
+          <label for="patronymic">Patronymic</label>
+        </p-floatlabel>
+
+        @if (isEdit()) {
+          <p-floatlabel variant="on">
+            <input pInputText id="nameId" [value]="person()?.nameId || ''" class="w-full" [disabled]="true" />
+            <label for="nameId">Name ID</label>
+          </p-floatlabel>
+        }
+
+        <div class="md:col-span-2 flex justify-end gap-2 pt-2">
+          <p-button label="Cancel" severity="secondary" (onClick)="goBack()" />
+          <p-button label="Save" type="submit" icon="pi pi-check"
+                    [loading]="saving()" [disabled]="form.invalid" />
+        </div>
+      </form>
+    </div>
+
+    @if (isEdit()) {
+      <div class="card">
+        <div class="flex justify-between mb-3">
+          <h4>Contacts</h4>
+          <p-button label="Add Contact" icon="pi pi-plus" (onClick)="addContactRow()" />
+        </div>
+
+        <p-table [value]="contacts()" [rowHover]="true" dataKey="id">
+          <ng-template #header>
+            <tr>
+              <th>Type</th>
+              <th>Value</th>
+              <th>Favorite</th>
+              <th>WhatsApp</th>
+              <th>Viber</th>
+              <th>Telegram</th>
+              <th>Calls</th>
+              <th>SMS</th>
+              <th class="w-32">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-contact>
+            <tr>
+              <td>
+                <p-select
+                  [options]="contactTypeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="contact.type"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </td>
+              <td>
+                <input pInputText [(ngModel)]="contact.value" [ngModelOptions]="{ standalone: true }" class="w-full" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.favorite" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.whatsapp" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.viber" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.telegram" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.calls" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td class="text-center">
+                <p-checkbox [(ngModel)]="contact.sms" [ngModelOptions]="{ standalone: true }" [binary]="true" />
+              </td>
+              <td>
+                <div class="flex gap-1">
+                  <p-button icon="pi pi-check" [rounded]="true" [text]="true" severity="success"
+                            (onClick)="saveContact(contact)" />
+                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                            (onClick)="confirmRemoveContact(contact)" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="9" class="text-center p-4">No contacts.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <div class="card">
+        <h4>Garage Roles</h4>
+        <p-table [value]="garageRoles()" [rowHover]="true" dataKey="id">
+          <ng-template #header>
+            <tr>
+              <th>Garage</th>
+              <th>Role</th>
+              <th>Ownership %</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-gr>
+            <tr>
+              <td>{{ gr.garage?.name || '-' }}</td>
+              <td>{{ gr.role?.name || '-' }}</td>
+              <td>{{ gr.ownershipPercentage != null ? gr.ownershipPercentage + '%' : '-' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="3" class="text-center p-4">No garage roles.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <div class="card">
+        <h4>Association Roles</h4>
+        <p-table [value]="associationRoles()" [rowHover]="true" dataKey="id">
+          <ng-template #header>
+            <tr>
+              <th>Association</th>
+              <th>Role</th>
+              <th>Active</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-ar>
+            <tr>
+              <td>{{ ar.association?.name || '-' }}</td>
+              <td>{{ ar.role?.name || '-' }}</td>
+              <td>{{ ar.isActive ? 'Yes' : 'No' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="3" class="text-center p-4">No association roles.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    }
+  }
+
+  <app-confirm-dialog />
+</div>

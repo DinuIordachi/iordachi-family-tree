@@ -1,0 +1,65 @@
+
+    <app-floating-configurator />
+    <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
+      <div class="flex flex-col items-center justify-center">
+        <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
+          <div class="w-full bg-surface-0 dark:bg-surface-900 py-12 px-8 sm:px-20" style="border-radius: 53px">
+            <!-- Logo / Title -->
+            <div class="text-center mb-8">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 mb-4">
+                <i class="pi pi-warehouse text-3xl text-primary-600 dark:text-primary-300"></i>
+              </div>
+              <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0">Garage Manager</h1>
+              <p class="text-sm text-surface-500 dark:text-surface-400 mt-1">Sign in to your account</p>
+            </div>
+
+            <!-- Error message -->
+            @if (errorMessage()) {
+              <p-message severity="error" [text]="errorMessage()" styleClass="w-full mb-4" />
+            }
+
+            <!-- Form -->
+            <form [formGroup]="form" (ngSubmit)="onLogin()" class="flex flex-col gap-5">
+              <p-floatlabel variant="on">
+                <input pInputText id="email" formControlName="email"
+                       type="email" class="w-full" />
+                <label for="email">Email</label>
+              </p-floatlabel>
+              @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+                <small class="text-red-500 -mt-3">Email is required.</small>
+              }
+              @if (form.get('email')?.touched && form.get('email')?.hasError('email')) {
+                <small class="text-red-500 -mt-3">Enter a valid email address.</small>
+              }
+
+              <p-floatlabel variant="on">
+                <p-password id="password" formControlName="password"
+                            [toggleMask]="true" [feedback]="false"
+                            styleClass="w-full" inputStyleClass="w-full" />
+                <label for="password">Password</label>
+              </p-floatlabel>
+              @if (form.get('password')?.touched && form.get('password')?.hasError('required')) {
+                <small class="text-red-500 -mt-3">Password is required.</small>
+              }
+
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <p-checkbox formControlName="rememberMe" [binary]="true" inputId="rememberMe" />
+                  <label for="rememberMe" class="text-sm text-surface-600 dark:text-surface-400 cursor-pointer">Remember me</label>
+                </div>
+                <a class="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium cursor-pointer">Forgot password?</a>
+              </div>
+
+              <p-button type="submit" label="Sign In" icon="pi pi-sign-in"
+                        [loading]="loading()" [disabled]="form.invalid && form.touched"
+                        styleClass="w-full" />
+            </form>
+
+            <p class="text-center mt-6 text-sm text-surface-500 dark:text-surface-400">
+              Don't have an account?
+              <a routerLink="/register" class="text-primary-600 dark:text-primary-400 hover:underline font-medium">Create one</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>

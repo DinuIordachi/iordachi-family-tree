@@ -1,0 +1,66 @@
+<div class="flex flex-col gap-4">
+  <div class="card">
+    <p-table
+      [value]="associations()"
+      [paginator]="true"
+      [rows]="perPage()"
+      [totalRecords]="totalRecords()"
+      [lazy]="true"
+      (onLazyLoad)="onPageChange($event)"
+      [loading]="loading()"
+      [rowHover]="true"
+      dataKey="id"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} associations">
+
+      <ng-template #caption>
+        <div class="flex justify-between items-center">
+          <h1>Associations</h1>
+
+          <div class="flex gap-3">
+            <p-iconfield>
+              <p-inputicon class="pi pi-search" />
+              <input pInputText type="text" placeholder="Search..." (input)="onSearch($event)" />
+            </p-iconfield>
+            <p-button label="Add Association" icon="pi pi-plus" (onClick)="navigateToCreate()" />
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="name">Name
+            <p-sortIcon field="name" />
+          </th>
+          <th>Address</th>
+          <th>Phone</th>
+          <th class="w-32">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-assoc>
+        <tr>
+          <td>{{ assoc.name }}</td>
+          <td>{{ assoc.address || '-' }}</td>
+          <td>{{ assoc.phone || '-' }}</td>
+          <td>
+            <div class="flex gap-1">
+              <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info"
+                        (onClick)="navigateToEdit(assoc.id)" />
+              <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                        (onClick)="confirmDelete(assoc)" />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="4" class="text-center p-4">No associations found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+  </div>
+  <app-confirm-dialog />
+</div>

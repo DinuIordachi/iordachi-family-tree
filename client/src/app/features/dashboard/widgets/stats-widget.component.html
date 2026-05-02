@@ -1,0 +1,27 @@
+
+    <div class="col-span-12 lg:col-span-6 xl:col-span-4">
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <span class="block text-muted-color font-medium">{{ label() }}</span>
+          <div class="flex items-center justify-center rounded-border"
+               [class]="iconBgClass()"
+               style="width: 2.5rem; height: 2.5rem">
+            <i [class]="icon()" class="text-xl" [style.color]="iconColor()"></i>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          @if (count() === null) {
+            <div class="flex items-center gap-2">
+              <i class="pi pi-spin pi-spinner text-2xl text-muted-color"></i>
+            </div>
+          } @else {
+            <span class="text-2xl font-semibold text-color">{{ count() }}</span>
+          }
+          <div class="flex items-center gap-2">
+            <a [routerLink]="link()" class="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1">
+              View All <i class="pi pi-arrow-right text-xs"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>

@@ -1,0 +1,44 @@
+<div class="layout-topbar">
+  <div class="layout-topbar-logo-container">
+    <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
+      <i class="pi pi-bars"></i>
+    </button>
+    <a class="layout-topbar-logo" routerLink="/">
+      <span>Garage Manager</span>
+    </a>
+  </div>
+  <div class="layout-topbar-actions">
+    <div class="layout-topbar-actions-end">
+      <ul class="layout-topbar-items">
+        <li class="layout-topbar-item">
+          <button type="button" class="layout-topbar-action" (click)="layoutService.toggleDarkMode()">
+            <i [class]="layoutService.isDarkTheme() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+          </button>
+        </li>
+        <li class="layout-topbar-item">
+          <button
+            type="button"
+            class="layout-topbar-action"
+            (click)="layoutService.showConfigSidebar()"
+          >
+            <i class="pi pi-palette"></i>
+          </button>
+        </li>
+        @if (auth.currentUser(); as user) {
+          <li class="layout-topbar-item">
+                                <span class="layout-topbar-action">
+<!--                                    {{ user.firstName }}-->
+                                  <img [src]="user.avatarUrl" alt="Avatar" class="size-8">
+                                </span>
+          </li>
+        }
+        <li class="layout-topbar-item">
+          <button type="button" class="layout-topbar-action" (click)="auth.logout()">
+            <i class="pi pi-sign-out"></i>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+<app-configurator />

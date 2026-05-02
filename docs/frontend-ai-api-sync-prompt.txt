@@ -1,0 +1,1491 @@
+You are integrating against the Laravel backend API. Use this as the canonical API contract for /api/v1.
+Base URL examples: http://aai-api.test/api , https://api.aai.md/api , https://aai-api.bridgebyte.md/api
+
+Global rules:
+1) Authentication: Protected endpoints require `Authorization: Bearer <token>` (Sanctum). Endpoints under middleware `verified` additionally require verified email; otherwise forbidden.
+2) Request key format: backend accepts camelCase in API payload/query and normalizes to snake_case internally via BaseFormRequest. Keep sending camelCase from frontend.
+3) Pagination: paginated list endpoints return Laravel paginator shape with `data` plus `links` and `meta`.
+4) Validation errors: 422 JSON shape `{ message: string, errors: { ...fieldErrors } }`.
+5) Unauthorized vs Forbidden: 401 when token missing/invalid; 403 when authenticated but not allowed by Gate/Policy/verified middleware.
+6) Not found: 404 for missing models and for visibility-protected records (e.g., unpublished post/event/file for public caller).
+7) Server errors: mutating endpoints are wrapped in DB transactions and may return 500 with user-friendly `message` when an unexpected exception occurs (unless debug mode rethrows).
+8) Known backend inconsistency: route `GET /api/v1/users/invitation/{user}` is registered, but `UserController@showInvitation` method is not present in current code; treat this endpoint as unstable until backend fixes it.
+
+Endpoint catalog:
+
+GET /api/v1
+- operationId: health.simpleHealthCheck
+- authorization: Public (no bearer required)
+- responses:
+  - 200: application/json: object
+  - 503: application/json: object
+
+GET /api/v1/activities
+- operationId: activity.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - logName: string | null
+  - event: string | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, logName, description, event, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=ActivityResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+GET /api/v1/activities/{activity}
+- operationId: activity.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - activity: integer (required)
+- responses:
+  - 200: application/json: data=ActivityResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+DELETE /api/v1/activities/{activity}
+- operationId: activity.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - activity: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/events
+- operationId: event.index
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - type: string | null
+  - status: string | null
+  - archived: boolean | null
+  - startsFrom: string | null (date-time)
+  - startsTo: string | null (date-time)
+  - isOnline: boolean | null
+  - author: string | null
+  - includeAuthor: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, title, slug, type, status, startsAt, endsAt, publishedAt, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedEventResource | data[]=EventResource)
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedEventResource (limited variant) vs EventResource (full variant). Extra fields in full variant: authorId, can, deletedAt.
+
+POST /api/v1/events
+- operationId: event.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: multipart/form-data
+    - schema: StoreEventRequest
+    - fields:
+      - agenda: array | null
+      - capacity: integer | null min=1
+      - description (required): string
+      - endsAt: string | null (date-time)
+      - featuredImageFile: string | null (binary) maxLength=5120
+      - isOnline (required): boolean
+      - location: string | null
+      - meetingUrl: string | null (uri) maxLength=255
+      - publishedAt: string | null (date-time)
+      - registrationUrl: string | null (uri) maxLength=255
+      - speakers: array | null
+      - sponsors: array | null
+      - startsAt (required): string (date-time)
+      - status: string | null enum[draft, published, cancelled]
+      - summary: string | null
+      - ticketTiers: array | null
+      - timezone (required): string
+      - title (required): string maxLength=255
+      - type (required): string enum[workshop, competition, conference, seminar, team-building]
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/events/{event}
+- operationId: event.show
+- authorization: Public (no bearer required)
+- path params:
+  - event: string (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedEventResource | data=EventResource)
+  - 404: application/json: object
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedEventResource (limited variant) vs EventResource (full variant). Extra fields in full variant: authorId, can, deletedAt.
+
+PUT /api/v1/events/{event}
+- operationId: event.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: event=[0-9]+
+- path params:
+  - event: integer (required)
+- request body:
+  - content-type: multipart/form-data
+    - schema: UpdateEventRequest
+    - fields:
+      - agenda: array | null
+      - capacity: integer | null min=1
+      - description (required): string
+      - endsAt: string | null (date-time)
+      - featuredImageFile: string | null (binary) maxLength=5120
+      - isOnline (required): boolean
+      - location: string | null
+      - meetingUrl: string | null (uri) maxLength=255
+      - publishedAt: string | null (date-time)
+      - registrationUrl: string | null (uri) maxLength=255
+      - speakers: array | null
+      - sponsors: array | null
+      - startsAt (required): string (date-time)
+      - status: string | null enum[draft, published, cancelled]
+      - summary: string | null
+      - ticketTiers: array | null
+      - timezone (required): string
+      - title (required): string maxLength=255
+      - type (required): string enum[workshop, competition, conference, seminar, team-building]
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/events/{event}
+- operationId: event.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: event=[0-9]+
+- path params:
+  - event: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/events/{event}/force-delete
+- operationId: event.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: event=[0-9]+
+- path params:
+  - event: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/file-folders
+- operationId: fileFolder.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - parentId: integer | null
+  - includeChildren: boolean | null
+  - archived: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, name, slug, sortOrder, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=FileFolderResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/file-folders
+- operationId: fileFolder.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StoreFileFolderRequest
+    - fields:
+      - description: string | null
+      - name (required): string maxLength=255
+      - parentId: integer | null
+      - sortOrder: integer | null min=0
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/file-folders/{file_folder}
+- operationId: fileFolder.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file_folder=[0-9]+
+- path params:
+  - file_folder: integer (required)
+- responses:
+  - 200: application/json: data=FileFolderResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PUT /api/v1/file-folders/{file_folder}
+- operationId: fileFolder.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file_folder=[0-9]+
+- path params:
+  - file_folder: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateFileFolderRequest
+    - fields:
+      - description: string | null
+      - name (required): string maxLength=255
+      - parentId: integer | null
+      - sortOrder: integer | null min=0
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/file-folders/{file_folder}
+- operationId: fileFolder.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file_folder=[0-9]+
+- path params:
+  - file_folder: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/files
+- operationId: file.index
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - folderId: string | null
+  - author: string | null
+  - accessLevel: string | null
+  - isPublished: boolean | null
+  - publishedFrom: string | null (date-time)
+  - publishedTo: string | null (date-time)
+  - mimeType: string | null
+  - extension: string | null
+  - archived: boolean | null
+  - includeAuthor: boolean | null
+  - includeFolder: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, title, slug, accessLevel, isPublished, publishedAt, size, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedFileResource | data[]=FileResource)
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedFileResource (limited variant) vs FileResource (full variant). Extra fields in full variant: accessLevel, author, authorId, can, deletedAt, downloadUrl, folderId, isPublished, originalName.
+
+POST /api/v1/files
+- operationId: file.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: multipart/form-data
+    - schema: StoreFileRequest
+    - fields:
+      - description: string | null
+      - file (required): string (binary) maxLength=10240
+      - folderId: integer | null
+      - title (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/files/{file}
+- operationId: file.show
+- authorization: Public (no bearer required)
+- path params:
+  - file: string (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedFileResource | data=FileResource)
+  - 404: application/json: object
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedFileResource (limited variant) vs FileResource (full variant). Extra fields in full variant: accessLevel, author, authorId, can, deletedAt, downloadUrl, folderId, isPublished, originalName.
+
+PUT /api/v1/files/{file}
+- operationId: file.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file=[0-9]+
+- path params:
+  - file: integer (required)
+- request body:
+  - content-type: multipart/form-data
+    - schema: UpdateFileRequest
+    - fields:
+      - description: string | null
+      - file: string | null (binary) maxLength=10240
+      - folderId: integer | null
+      - title (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/files/{file}
+- operationId: file.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file=[0-9]+
+- path params:
+  - file: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+PATCH /api/v1/files/{file}/access-level
+- operationId: file.updateAccessLevel
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file=[0-9]+
+- path params:
+  - file: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateFileAccessLevelRequest
+    - fields:
+      - accessLevel (required): string enum[admin, publisher, member, public]
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/files/{file}/download
+- operationId: file.download
+- authorization: Public (no bearer required)
+- path params:
+  - file: string (required)
+- responses:
+  - 200: application/octet-stream: string (binary)
+  - 404: application/json: object
+  - 422: component response: ValidationException
+
+DELETE /api/v1/files/{file}/force-delete
+- operationId: file.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file=[0-9]+
+- path params:
+  - file: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+PATCH /api/v1/files/{file}/publication
+- operationId: file.updatePublication
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: file=[0-9]+
+- path params:
+  - file: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateFilePublicationRequest
+    - fields:
+      - isPublished (required): boolean
+      - publishedAt: string | null (date-time)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/files/{file}/thumbnail
+- operationId: file.thumbnail
+- authorization: Public (no bearer required)
+- path params:
+  - file: string (required)
+- responses:
+  - 200: application/octet-stream: string (binary)
+  - 404: application/json: object
+  - 422: component response: ValidationException
+
+POST /api/v1/forgot-password
+- operationId: getMediaItem
+- authorization: Public (no bearer required)
+- request body:
+  - content-type: application/json
+    - schema: ForgotPasswordRequest
+    - fields:
+      - email (required): string (email)
+- responses:
+  - 200: application/json: object
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/login
+- operationId: auth.login
+- authorization: Public (no bearer required)
+- request body:
+  - content-type: application/json
+    - schema: LoginRequest
+    - fields:
+      - email (required): string (email)
+      - password (required): string
+      - remember: boolean | null
+- responses:
+  - 200: application/json: object
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/logout
+- operationId: auth.logout
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/me
+- operationId: auth.me
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- responses:
+  - 200: application/json: data=MeResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/me
+- operationId: me.update
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- request body:
+  - content-type: multipart/form-data
+    - schema: MeUpdateRequest
+    - fields:
+      - avatarFile: string | null (binary) maxLength=5120
+      - birthdate (required): string (date-time)
+      - countryCode (required): string maxLength=255
+      - current_password: string | null
+      - email (required): string (email)
+      - firstName (required): string
+      - gender: string | null enum[male, female]
+      - lastName: string | null
+      - password: string | null
+      - password_confirmation: string | null
+      - phone (required): string maxLength=255
+      - workOrganization (required): string maxLength=255
+      - workPosition (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/me
+- operationId: me.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/permissions
+- operationId: permissions.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - name: string | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, name, displayName, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=PermissionResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/permissions
+- operationId: permissions.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StorePermissionRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/permissions/{permission}
+- operationId: permissions.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - permission: integer (required)
+- responses:
+  - 200: application/json: data=PermissionResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PUT /api/v1/permissions/{permission}
+- operationId: permissions.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - permission: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdatePermissionRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PATCH /api/v1/permissions/{permission}
+- operationId: permissions.updatePatch
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - permission: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdatePermissionRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+DELETE /api/v1/permissions/{permission}
+- operationId: permissions.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - permission: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/personal-access-tokens
+- operationId: personalAccessToken.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - userAgent: string | null
+  - lastIp: string | null
+  - lastCountryCode: string | null
+  - issuedIp: string | null
+  - issuedCountryCode: string | null
+  - expired: boolean | null
+  - user: string | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, name, userAgent, issued.ip, issued.countryCode, issued.country, last.ip, last.countryCode, last.country, last.usedAt, expiresAt, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=PersonalAccessTokenResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+GET /api/v1/personal-access-tokens/{personal_access_token}
+- operationId: personalAccessToken.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - personal_access_token: integer (required)
+- responses:
+  - 200: application/json: data=PersonalAccessTokenResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PATCH /api/v1/personal-access-tokens/{personal_access_token}
+- operationId: personalAccessToken.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - personal_access_token: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdatePersonalAccessTokenRequest
+    - fields:
+      - expiresAt: string | null
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/personal-access-tokens/{personal_access_token}
+- operationId: personalAccessToken.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - personal_access_token: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/personal-access-tokens/{personal_access_token}/force-delete
+- operationId: personalAccessToken.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - personal_access_token: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/posts
+- operationId: post.index
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - status: string | null
+  - author: string | null
+  - archived: boolean | null
+  - includeAuthor: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, title, slug, status, publishedAt, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedPostResource | data[]=PostResource)
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedPostResource (limited variant) vs PostResource (full variant). Extra fields in full variant: authorId, can, deletedAt, status.
+
+POST /api/v1/posts
+- operationId: post.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: multipart/form-data
+    - schema: StorePostRequest
+    - fields:
+      - canonicalUrl: string | null (uri) maxLength=255
+      - content (required): string
+      - excerpt: string | null
+      - featuredImageFile: string | null (binary) maxLength=5120
+      - metaDescription: string | null
+      - metaKeywords: string | null
+      - metaTitle: string | null maxLength=255
+      - publishedAt: string | null (date-time)
+      - status: string | null enum[draft, published]
+      - title (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/posts/{post}
+- operationId: post.show
+- authorization: Public (no bearer required)
+- path params:
+  - post: string (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedPostResource | data=PostResource)
+  - 404: application/json: object
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedPostResource (limited variant) vs PostResource (full variant). Extra fields in full variant: authorId, can, deletedAt, status.
+
+PUT /api/v1/posts/{post}
+- operationId: post.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: post=[0-9]+
+- path params:
+  - post: integer (required)
+- request body:
+  - content-type: multipart/form-data
+    - schema: UpdatePostRequest
+    - fields:
+      - canonicalUrl: string | null (uri) maxLength=255
+      - content (required): string
+      - excerpt: string | null
+      - featuredImageFile: string | null (binary) maxLength=5120
+      - metaDescription: string | null
+      - metaKeywords: string | null
+      - metaTitle: string | null maxLength=255
+      - publishedAt: string | null (date-time)
+      - status: string | null enum[draft, published]
+      - title (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/posts/{post}
+- operationId: post.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: post=[0-9]+
+- path params:
+  - post: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/posts/{post}/force-delete
+- operationId: post.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: post=[0-9]+
+- path params:
+  - post: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/register
+- operationId: auth.register
+- authorization: Public (no bearer required)
+- request body:
+  - content-type: application/json
+    - schema: RegisterRequest
+    - fields:
+      - activeAt (required): string (date-time)
+      - birthdate (required): string (date-time)
+      - consentPersonalDataProcessing: string
+      - countryCode (required): string maxLength=255
+      - email (required): string (email) maxLength=255
+      - firstName (required): string maxLength=255
+      - gender: string | null enum[male, female]
+      - lastName (required): string maxLength=255
+      - phone (required): string maxLength=255
+      - signature (required): string
+      - taxId (required): string maxLength=255
+      - workOrganization (required): string maxLength=255
+      - workPosition (required): string maxLength=255
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/reset-password
+- operationId: auth.resetPassword
+- authorization: Public (no bearer required)
+- request body:
+  - content-type: application/json
+    - schema: ResetPasswordRequest
+    - fields:
+      - code (required): string
+      - password: string
+      - password_confirmation: string
+- responses:
+  - 200: application/json: object
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/roles
+- operationId: roles.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - name: string | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, name, displayName, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedRoleResource | data[]=RoleResource)
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/roles
+- operationId: roles.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StoreRoleRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/roles/{role}
+- operationId: roles.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - role: integer (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedRoleResource | data=RoleResource)
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedRoleResource (limited variant) vs RoleResource (full variant). Extra fields in full variant: can, createdAt, permissions, updatedAt, users.
+
+PUT /api/v1/roles/{role}
+- operationId: roles.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - role: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateRoleRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PATCH /api/v1/roles/{role}
+- operationId: roles.updatePatch
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - role: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateRoleRequest
+    - fields:
+      - displayName (required): string
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+DELETE /api/v1/roles/{role}
+- operationId: roles.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - role: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/settings
+- operationId: setting.index
+- authorization: Public (no bearer required)
+- query params:
+  - group: string | null
+- responses:
+  - 200: application/json: data=object (keyed settings groups)
+  - 422: component response: ValidationException
+
+PUT /api/v1/settings
+- operationId: setting.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: UpdateSettingRequest
+    - fields:
+      - bank: object
+      - contactUs: object
+      - legal: object
+      - registration: object
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/support/faqs
+- operationId: supportFaq.index
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - type: string | null
+  - includeTypes: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, name, displayName, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedSupportFaqResource | data[]=SupportFaqResource)
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedSupportFaqResource (limited variant) vs SupportFaqResource (full variant). Extra fields in full variant: can, createdAt, updatedAt.
+
+POST /api/v1/support/faqs
+- operationId: supportFaq.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StoreSupportFaqRequest
+    - fields:
+      - answer (required): string
+      - question (required): string
+      - supportTypeId (required): integer
+- responses:
+  - 200: application/json: data=SupportFaqResource
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/support/faqs/{support_faq}
+- operationId: supportFaq.show
+- authorization: Public (no bearer required)
+- path params:
+  - support_faq: integer (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedSupportFaqResource | data=SupportFaqResource)
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedSupportFaqResource (limited variant) vs SupportFaqResource (full variant). Extra fields in full variant: can, createdAt, updatedAt.
+
+PUT /api/v1/support/faqs/{support_faq}
+- operationId: supportFaq.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_faq: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateSupportFaqRequest
+    - fields:
+      - answer (required): string
+      - question (required): string
+      - supportTypeId (required): integer
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/support/faqs/{support_faq}
+- operationId: supportFaq.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_faq: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/support/requests
+- operationId: supportRequest.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - archived: boolean | null
+  - type: string | null
+  - owner: string | null
+  - closedBy: string | null
+  - includeTypes: boolean | null
+  - includeOwner: boolean | null
+  - includeClosedBy: boolean | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, firstName, lastName, email, phone, message, feedback, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/support/requests
+- operationId: supportRequest.store
+- authorization: Public (no bearer required)
+- request body:
+  - content-type: application/json
+    - schema: StoreSupportRequestRequest
+    - fields:
+      - email: string | null
+      - firstName: string | null
+      - lastName: string | null
+      - message (required): string
+      - phone: string | null
+      - properties: array | null
+      - supportTypeId (required): integer
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+- access behavior notes: Public+authorized dual behavior: guest returns `{ "message": "Support Request was created successfully" }` (200). Authenticated user without support-request view permission returns `LimitedSupportRequestResource` (200). Authenticated manager with `support-request view` permission returns `SupportRequestResource` + message (201).
+
+GET /api/v1/support/requests/{support_request}
+- operationId: supportRequest.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_request: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+
+PUT /api/v1/support/requests/{support_request}
+- operationId: supportRequest.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_request: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateSupportRequestRequest
+    - fields:
+      - email (required): string
+      - firstName (required): string
+      - lastName (required): string
+      - message (required): string
+      - ownerId: integer | null
+      - phone (required): string
+      - properties (required): array<string>
+      - supportTypeId (required): integer
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/support/requests/{support_request}
+- operationId: supportRequest.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_request: integer (required)
+- query params:
+  - feedback: string | null
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/support/requests/{support_request}/force-delete
+- operationId: supportRequest.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_request: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/support/types
+- operationId: supportType.index
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - hasFaqs: boolean | null
+  - hasRequests: boolean | null
+  - orderBy: string | null enum[id, name, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: anyOf(data[]=LimitedSupportTypeResource | data[]=SupportTypeResource)
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedSupportTypeResource (limited variant) vs SupportTypeResource (full variant). Extra fields in full variant: can.
+
+POST /api/v1/support/types
+- operationId: supportType.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StoreSupportTypeRequest
+    - fields:
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/support/types/{support_type}
+- operationId: supportType.show
+- authorization: Public (no bearer required)
+- path params:
+  - support_type: integer (required)
+- responses:
+  - 200: application/json: anyOf(data=LimitedSupportTypeResource | data=SupportTypeResource)
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+- permission-based data differences: LimitedSupportTypeResource (limited variant) vs SupportTypeResource (full variant). Extra fields in full variant: can.
+
+PUT /api/v1/support/types/{support_type}
+- operationId: supportType.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_type: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: UpdateSupportTypeRequest
+    - fields:
+      - name (required): string
+- responses:
+  - 200: application/json: object
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/support/types/{support_type}
+- operationId: supportType.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - support_type: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/users
+- operationId: user.index
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- query params:
+  - term: string | null
+  - gender: string | null enum[male, female]
+  - email: string | null
+  - firstName: string | null
+  - lastName: string | null
+  - phone: string | null
+  - verified: boolean | null
+  - blocked: boolean | null
+  - role: string | null
+  - edition: string | null
+  - archived: boolean | null
+  - paid: boolean | null
+  - country: string | null
+  - page: integer | null min=1
+  - pageSize: integer | null min=1 max=1000
+  - orderBy: string | null enum[id, firstName, lastName, email, gender, blocked, createdAt, updatedAt]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=UserResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+
+POST /api/v1/users
+- operationId: user.store
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: StoreUserRequest
+    - fields:
+      - active_at: string | null maxLength=255
+      - approved_at: string | null maxLength=255
+      - birthdate: string | null (date-time)
+      - countryCode: string | null maxLength=255
+      - email (required): string (email) maxLength=255
+      - firstName (required): string maxLength=255
+      - gender: string | null enum[male, female]
+      - lastName: string | null maxLength=255
+      - password (required): string
+      - password_confirmation (required): string
+      - phone: string | null maxLength=255
+      - roles: array | null
+      - tax_id (required): string maxLength=255
+      - work_organization (required): string maxLength=255
+      - work_position (required): string maxLength=255
+- responses:
+  - 200: application/json: data=UserResource
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/users/{user}
+- operationId: user.show
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - user: integer (required)
+- responses:
+  - 200: application/json: data=UserResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+- access behavior notes: Authorized-only endpoint with data variant: callers with `view-users` permission receive `UserResource`; otherwise controller falls back to `MeResource` for own profile context.
+
+PUT /api/v1/users/{user}
+- operationId: user.update
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - user: integer (required)
+- request body:
+  - content-type: multipart/form-data
+    - schema: UpdateUserRequest
+    - fields:
+      - activeAt: string | null
+      - approvedAt: string | null
+      - avatarFile: string | null (binary) maxLength=5120
+      - birthdate: string | null (date-time)
+      - blockedAt: string | null
+      - countryCode: string | null maxLength=255
+      - email (required): string (email) maxLength=255
+      - firstName (required): string maxLength=255
+      - gender: string | null enum[male, female]
+      - lastName: string | null maxLength=255
+      - password: string | null
+      - password_confirmation: string | null
+      - phone: string | null maxLength=255
+      - roles: array | null
+      - taxId (required): string maxLength=255
+      - workOrganization (required): string maxLength=255
+      - workPosition (required): string maxLength=255
+- responses:
+  - 200: application/json: data=UserResource
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/users/{user}
+- operationId: user.destroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - user: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+DELETE /api/v1/users/{user}/force-delete
+- operationId: user.forceDestroy
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path params:
+  - user: integer (required)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/users/{user}/membership/approve
+- operationId: userMembership.approve
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: user=[0-9]+
+- path params:
+  - user: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: ApproveUserMembershipRequest
+    - fields:
+      - activeAt: string | null (date-time)
+      - approvedAt: string | null (date-time)
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/users/{user}/membership/reject
+- operationId: userMembership.reject
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- path constraints: user=[0-9]+
+- path params:
+  - user: integer (required)
+- request body:
+  - content-type: application/json
+    - schema: RejectUserMembershipRequest
+    - fields:
+      - reason (required): string maxLength=2000
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 404: component response: ModelNotFoundException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/users/invitation/{user}
+- operationId: users.showInvitation
+- authorization: Public (no bearer required)
+- path params:
+  - user: string (email) (required)
+- responses:
+  - 200: application/json: object
+  - 404: component response: ModelNotFoundException
+
+POST /api/v1/users/invite
+- operationId: user.invite
+- authorization: Bearer token required (Sanctum) + token touched on each request + verified email required
+- request body:
+  - content-type: application/json
+    - schema: InviteUserRequest
+    - fields:
+      - invites (required): array<object>
+- responses:
+  - 200: application/json: data[]=UserResource
+  - 201: status can be returned by controller logic
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/verify
+- operationId: verifyEmail.verify
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- request body:
+  - content-type: application/json
+    - schema: VerifyEmailRequest
+    - fields:
+      - code (required): string
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+POST /api/v1/verify/resend
+- operationId: verifyEmail.resend
+- authorization: Bearer token required (Sanctum) + token touched on each request
+- responses:
+  - 200: application/json: object
+  - 401: component response: AuthenticationException
+  - 403: component response: AuthorizationException
+  - 422: component response: ValidationException
+  - 500: application/json: { message: string } (transaction fallback on unexpected errors)
+
+GET /api/v1/world/countries
+- operationId: world.country
+- authorization: Public (no bearer required)
+- query params:
+  - term: string | null
+  - iso2: string | null
+  - iso3: string | null
+  - name: string | null
+  - phone_code: integer | null
+  - region: string | null
+  - subregion: string | null
+  - orderBy: string | null enum[id, iso2, iso3, name, phoneCode, region, subregion]
+  - orderDirection: string | null enum[asc, desc]
+- responses:
+  - 200: application/json: data[]=CountryResource
+  - 422: component response: ValidationException
+
+Frontend implementation guidance:
+1) Build a centralized API client that always captures `{status, message, errors}` and maps 401/403/422 consistently in UI.
+2) For endpoints with limited/full variants, design type unions (e.g., `LimitedPost | Post`) and feature-flag UI by field existence (e.g., `can`).
+3) For file download/thumbnail, expect binary responses (`application/octet-stream`) and handle 404 as either missing file or not authorized to view it.
+4) For id-or-slug show endpoints (`posts`, `events`, `files`), pass either numeric ID or slug as path param in the same route.
+5) Respect numeric-only constraints for secured mutating routes where applicable (`{user}`, `{post}`, `{event}`, `{file}`, `{file_folder}`).
+6) Treat `GET /api/v1/users/invitation/{user}` as non-production-ready until backend method is implemented.

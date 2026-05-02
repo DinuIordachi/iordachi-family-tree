@@ -1,0 +1,2357 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Garage Manager API",
+		"version": "1.0.0"
+	},
+	"servers": [
+		{
+			"description": "Version 1",
+			"url": "https://api.gm.md/api/v1"
+		}
+	],
+	"paths": {
+		"/": {
+			"get": {
+				"tags": [
+					"Health Check"
+				],
+				"summary": "Health Check",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "object",
+											"properties": {
+												"health": {
+													"type": "boolean",
+													"description": "Health confirmation"
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/login": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Login",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": {
+										"type": "string"
+									},
+									"password": {
+										"type": "string"
+									},
+									"remember": {
+										"type": "boolean",
+										"default": false
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "User logged in successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/AccessToken"
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/logout": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Logout",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "User logged out successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/me": {
+			"get": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Me",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/MeUser"
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/verify/resend": {
+			"post": {
+				"tags": [
+					"Verify Email"
+				],
+				"summary": "Verify Email: Resend verification code",
+				"description": "Only for unverified accounts",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "The code has been sent to your email address"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/verify": {
+			"post": {
+				"tags": [
+					"Verify Email"
+				],
+				"summary": "Verify Email",
+				"description": "Only for unverified accounts",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Account is activated successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/forgot-password": {
+			"post": {
+				"tags": [
+					"Reset Password"
+				],
+				"summary": "Reset Password: Send verification code",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": {
+										"type": "string",
+										"format": "email"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "The verification code has been sent to your email address"
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/reset-password": {
+			"post": {
+				"tags": [
+					"Reset Password"
+				],
+				"summary": "Reset Password",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": {
+										"type": "string"
+									},
+									"password": {
+										"type": "string",
+										"format": "password"
+									},
+									"passwordConfirmation": {
+										"type": "string",
+										"format": "password"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Your password has been reset successfully. Please login with your new password"
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/personal-access-tokens": {
+			"get": {
+				"tags": [
+					"Personal Access Tokens"
+				],
+				"summary": "Personal Access Tokens - Paginated List",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/TermParam"
+					},
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/PerPageParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderByParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderDirectionParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/PersonalAccessToken"
+											}
+										},
+										"links": {
+											"$ref": "#/components/schemas/PaginationLinks"
+										},
+										"meta": {
+											"$ref": "#/components/schemas/PaginationMeta"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/personal-access-tokens/{id}": {
+			"get": {
+				"tags": [
+					"Personal Access Tokens"
+				],
+				"summary": "Personal Access Tokens - Get one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/PersonalAccessToken"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"Personal Access Tokens"
+				],
+				"summary": "Personal Access Tokens - Update one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"expiresAt": {
+										"type": "string",
+										"format": "date",
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Personal access token was updated successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/PersonalAccessToken"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Personal Access Tokens"
+				],
+				"summary": "Personal Access Tokens - Delete one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Personal access token was deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/activities": {
+			"get": {
+				"tags": [
+					"Activities"
+				],
+				"summary": "Activities - Paginated List",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/TermParam"
+					},
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/PerPageParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderByParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderDirectionParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Activity"
+											}
+										},
+										"links": {
+											"$ref": "#/components/schemas/PaginationLinks"
+										},
+										"meta": {
+											"$ref": "#/components/schemas/PaginationMeta"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/activities/{id}": {
+			"get": {
+				"tags": [
+					"Activities"
+				],
+				"summary": "Activities - Get one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/Activity"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Activities"
+				],
+				"summary": "Activities - Delete one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Activity was deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/permissions": {
+			"get": {
+				"tags": [
+					"Permissions"
+				],
+				"summary": "Permissions - Paginated List",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/TermParam"
+					},
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/PerPageParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderByParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderDirectionParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Permission"
+											}
+										},
+										"links": {
+											"$ref": "#/components/schemas/PaginationLinks"
+										},
+										"meta": {
+											"$ref": "#/components/schemas/PaginationMeta"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Permissions"
+				],
+				"summary": "Permissions - Create one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"displayName": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Permission was created successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/Permission"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/permissions/{id}": {
+			"get": {
+				"tags": [
+					"Permissions"
+				],
+				"summary": "Permissions - Get one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/Permission"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"Permissions"
+				],
+				"summary": "Permissions - Update one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"nullable": true
+									},
+									"displayName": {
+										"type": "string",
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Permission was updated successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/Permission"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Permissions"
+				],
+				"summary": "Permissions - Delete one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Permission was deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/roles": {
+			"get": {
+				"tags": [
+					"Roles"
+				],
+				"summary": "Roles - Paginated List",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/TermParam"
+					},
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/PerPageParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderByParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderDirectionParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Role"
+											}
+										},
+										"links": {
+											"$ref": "#/components/schemas/PaginationLinks"
+										},
+										"meta": {
+											"$ref": "#/components/schemas/PaginationMeta"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Roles"
+				],
+				"summary": "Roles - Create one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"displayName": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Role was created successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/Role"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/roles/{id}": {
+			"get": {
+				"tags": [
+					"Roles"
+				],
+				"summary": "Roles - Get one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/Role"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"Roles"
+				],
+				"summary": "Roles - Update one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"nullable": true
+									},
+									"displayName": {
+										"type": "string",
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Role was updated successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/Role"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Roles"
+				],
+				"summary": "Roles - Delete one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "Role was deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/users": {
+			"get": {
+				"tags": [
+					"Users"
+				],
+				"summary": "Users - Paginated List",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/TermParam"
+					},
+					{
+						"$ref": "#/components/parameters/PageParam"
+					},
+					{
+						"$ref": "#/components/parameters/PerPageParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderByParam"
+					},
+					{
+						"$ref": "#/components/parameters/OrderDirectionParam"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/User"
+											}
+										},
+										"links": {
+											"$ref": "#/components/schemas/PaginationLinks"
+										},
+										"meta": {
+											"$ref": "#/components/schemas/PaginationMeta"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Users"
+				],
+				"summary": "Users - Create one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"firstName": {
+										"type": "string"
+									},
+									"lastName": {
+										"type": "string"
+									},
+									"email": {
+										"type": "string",
+										"format": "email"
+									},
+									"phone": {
+										"type": "string",
+										"nullable": true
+									},
+									"gender": {
+										"type": "string",
+										"enum": [
+											"male",
+											"female"
+										],
+										"nullable": true
+									},
+									"uyniversityName": {
+										"type": "string",
+										"nullable": true
+									},
+									"roles": {
+										"type": "array",
+										"items": {
+											"type": "integer",
+											"minimum": 1
+										}
+									},
+									"password": {
+										"type": "string",
+										"format": "password"
+									},
+									"passwordConfirmation": {
+										"type": "string",
+										"format": "password"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "User was created successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/User"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		},
+		"/users/{id}": {
+			"get": {
+				"tags": [
+					"Users"
+				],
+				"summary": "Users - Get one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"data": {
+											"$ref": "#/components/schemas/User"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"Users"
+				],
+				"summary": "Users - Update one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"firstName": {
+										"type": "string"
+									},
+									"lastName": {
+										"type": "string"
+									},
+									"email": {
+										"type": "string",
+										"format": "email"
+									},
+									"phone": {
+										"type": "string",
+										"nullable": true
+									},
+									"gender": {
+										"type": "string",
+										"enum": [
+											"male",
+											"female"
+										],
+										"nullable": true
+									},
+									"uyniversityName": {
+										"type": "string",
+										"nullable": true
+									},
+									"roles": {
+										"type": "array",
+										"items": {
+											"type": "integer",
+											"minimum": 1
+										}
+									},
+									"blockedAt": {
+										"type": "string",
+										"format": "date",
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "User was updated successfully"
+										},
+										"data": {
+											"$ref": "#/components/schemas/User"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"422": {
+						"$ref": "#/components/responses/UnprocessableContentResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Users"
+				],
+				"summary": "Users - Delete one",
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/IdPath"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": {
+											"type": "string",
+											"default": "User was deleted successfully"
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/UnauthorizedResponse"
+					},
+					"403": {
+						"$ref": "#/components/responses/ForbiddenResponse"
+					},
+					"404": {
+						"$ref": "#/components/responses/PageNotFoundResponse"
+					},
+					"500": {
+						"$ref": "#/components/responses/ServerErrorResponse"
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			}
+		},
+		"schemas": {
+			"AccessToken": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"default": "Bearer"
+					},
+					"accessToken": {
+						"type": "string",
+						"description": "Authentication token"
+					},
+					"expiresIn": {
+						"type": "number",
+						"description": "Expiration time in UNIX format"
+					}
+				}
+			},
+			"MeUser": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"firstName": {
+						"type": "string"
+					},
+					"lastName": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"gender": {
+						"type": "string",
+						"nullable": true,
+						"pattern": "(male|female)"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					},
+					"avatarUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"properties": {
+						"type": "string",
+						"nullable": true
+					},
+					"emailVerified": {
+						"type": "boolean",
+						"default": false
+					},
+					"blocked": {
+						"type": "boolean",
+						"default": false
+					},
+					"roles": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"permissions": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"blockedAt": {
+						"type": "string",
+						"nullable": true,
+						"format": "date"
+					},
+					"emailVerifiedAt": {
+						"type": "string",
+						"nullable": true,
+						"format": "date"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					}
+				}
+			},
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"firstName": {
+						"type": "string"
+					},
+					"lastName": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"gender": {
+						"type": "string",
+						"nullable": true,
+						"pattern": "(male|female)"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					},
+					"avatarUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"properties": {
+						"type": "array",
+						"nullable": true
+					},
+					"emailVerified": {
+						"type": "boolean",
+						"default": false
+					},
+					"emailCode": {
+						"type": "object",
+						"properties": {
+							"code": {
+								"type": "string",
+								"nullable": true
+							},
+							"expiresAt": {
+								"type": "string",
+								"format": "date",
+								"nullable": true
+							}
+						}
+					},
+					"blocked": {
+						"type": "boolean",
+						"default": false
+					},
+					"blockedAt": {
+						"type": "string",
+						"nullable": true,
+						"format": "date"
+					},
+					"emailVerifiedAt": {
+						"type": "string",
+						"nullable": true,
+						"format": "date"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"roles": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Role"
+						}
+					},
+					"can": {
+						"type": "object",
+						"properties": {
+							"view": {
+								"type": "boolean"
+							},
+							"update": {
+								"type": "boolean"
+							},
+							"delete": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"Role": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"name": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"can": {
+						"type": "object",
+						"properties": {
+							"view": {
+								"type": "boolean"
+							},
+							"update": {
+								"type": "boolean"
+							},
+							"delete": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"Permission": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"name": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"can": {
+						"type": "object",
+						"properties": {
+							"view": {
+								"type": "boolean"
+							},
+							"update": {
+								"type": "boolean"
+							},
+							"delete": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"PersonalAccessToken": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"name": {
+						"type": "string"
+					},
+					"expiresAt": {
+						"type": "string",
+						"nullable": true,
+						"format": "date"
+					},
+					"userAgent": {
+						"type": "string"
+					},
+					"issued": {
+						"type": "object",
+						"properties": {
+							"ip": {
+								"type": "string",
+								"format": "ipv4",
+								"nullable": true
+							},
+							"countryCode": {
+								"type": "string",
+								"nullable": true
+							},
+							"country": {
+								"type": "string",
+								"nullable": true
+							}
+						}
+					},
+					"last": {
+						"type": "object",
+						"properties": {
+							"ip": {
+								"type": "string",
+								"format": "ipv4",
+								"nullable": true
+							},
+							"countryCode": {
+								"type": "string",
+								"nullable": true
+							},
+							"country": {
+								"type": "string",
+								"nullable": true
+							},
+							"usedAt": {
+								"type": "string",
+								"nullable": true,
+								"format": "date"
+							}
+						}
+					},
+					"user": {
+						"$ref": "#/components/schemas/User"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"can": {
+						"type": "object",
+						"properties": {
+							"view": {
+								"type": "boolean"
+							},
+							"update": {
+								"type": "boolean"
+							},
+							"delete": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"Activity": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"logName": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"event": {
+						"type": "string"
+					},
+					"properties": {
+						"type": "object"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date"
+					},
+					"can": {
+						"type": "object",
+						"properties": {
+							"view": {
+								"type": "boolean"
+							},
+							"update": {
+								"type": "boolean"
+							},
+							"delete": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"PaginationLinks": {
+				"type": "object",
+				"properties": {
+					"first": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					},
+					"last": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					},
+					"prev": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					},
+					"next": {
+						"type": "string",
+						"format": "uri",
+						"nullable": true
+					}
+				}
+			},
+			"PaginationMeta": {
+				"type": "object",
+				"properties": {
+					"current_page": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"from": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"last_page": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"links": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"url": {
+									"type": "string",
+									"format": "uri",
+									"nullable": true
+								},
+								"label": {
+									"type": "string"
+								},
+								"active": {
+									"type": "boolean"
+								}
+							}
+						}
+					},
+					"path": {
+						"type": "string",
+						"format": "uri"
+					},
+					"per_page": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"to": {
+						"type": "integer",
+						"minimum": 1
+					},
+					"total": {
+						"type": "integer",
+						"minimum": 1
+					}
+				}
+			}
+		},
+		"parameters": {
+			"IdPath": {
+				"name": "id",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "string"
+				}
+			},
+			"TermParam": {
+				"in": "query",
+				"name": "term",
+				"schema": {
+					"type": "string"
+				},
+				"required": false
+			},
+			"PageParam": {
+				"in": "query",
+				"name": "page",
+				"schema": {
+					"type": "integer",
+					"minimum": 1
+				},
+				"required": false
+			},
+			"PerPageParam": {
+				"in": "query",
+				"name": "pageSize",
+				"schema": {
+					"type": "integer",
+					"minimum": 1
+				},
+				"required": false
+			},
+			"OrderByParam": {
+				"in": "query",
+				"name": "orderBy",
+				"schema": {
+					"type": "string"
+				},
+				"required": false
+			},
+			"OrderDirectionParam": {
+				"in": "query",
+				"name": "orderDirection",
+				"schema": {
+					"type": "string",
+					"enum": [
+						"asc",
+						"desc"
+					]
+				},
+				"required": false
+			}
+		},
+		"responses": {
+			"UnprocessableContentResponse": {
+				"description": "Unprocessable Content",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string"
+								},
+								"data": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "object",
+											"properties": {
+												"string": {
+													"type": "array",
+													"items": {
+														"type": "string"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"ForbiddenResponse": {
+				"description": "Forbidden",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"default": "This action is unauthorized."
+								}
+							}
+						}
+					}
+				}
+			},
+			"PageNotFoundResponse": {
+				"description": "Page Not Found",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"default": "Entity not found"
+								}
+							}
+						}
+					}
+				}
+			},
+			"UnauthorizedResponse": {
+				"description": "Unauthorized",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"default": "Unauthorized."
+								}
+							}
+						}
+					}
+				}
+			},
+			"ServerErrorResponse": {
+				"description": "Server Error",
+				"content": {
+					"application/json": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"message": {
+									"type": "string",
+									"default": "Failed to [operation]. Contact our support or try again later."
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

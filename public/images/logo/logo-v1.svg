@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1568 321" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g id="Layer_2">
+        <g id="AAI_Logo_Dark_1">
+            <g id="AAI_Logo_Dark">
+                <g transform="matrix(1,0,0,1,428.85,145.4)">
+                    <text x="0px" y="0px" style="font-family:'Helvetica';font-size:95px;fill:rgb(117,117,117);">A<tspan x="63.934px 127.869px 202.333px 271.509px 298.473px 362.407px 421.007px 447.971px " y="0px 0px 0px 0px 0px 0px 0px 0px ">SOCIAȚIA</tspan></text>
+                    <g transform="matrix(1,0,0,1,0,112)">
+                        <text x="0px" y="0px" style="font-family:'Helvetica-Bold', 'Helvetica';font-weight:700;font-size:95px;fill:rgb(76,76,76);">A<tspan x="69.176px 138.352px 207.528px 234.492px 291.422px 365.886px 435.062px 462.026px 520.626px 595.09px 664.266px 691.23px 718.194px 787.37px 845.969px 909.904px 979.08px 1048.256px " y="0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px 0px ">UDITORILOR INTERNI</tspan></text>
+                    </g>
+                </g>
+                <path d="M189.6,187.36L190.81,189.16L171.09,224.81L162.76,239.83L128.81,256.67L137.14,241.65L170.74,180.94L191.05,170.86L190.15,172.47L185.38,181.09L189.6,187.36Z" style="fill:rgb(63,99,133);fill-rule:nonzero;"/>
+                <path d="M197.62,159L196.63,160.78L192.11,168.97L191.36,170.31L191.05,170.86L170.74,180.94L119.43,104.68L130.36,99.26L131.12,100.4L177.33,169.06L197.62,159Z" style="fill:rgb(81,129,172);fill-rule:nonzero;"/>
+                <path d="M232.62,251.29L221.73,256.69L128.81,256.67L162.76,239.82L224.92,239.84L226.12,241.64L231.34,249.38L232.52,251.14L232.62,251.29Z" style="fill:rgb(84,134,178);fill-rule:nonzero;"/>
+                <path d="M264.39,320.12L0,320.05L119.43,104.67L170.74,180.93L137.14,241.64L128.81,256.66L221.73,256.69L264.39,320.12Z" style="fill:rgb(90,143,191);fill-rule:nonzero;"/>
+                <path d="M275.3,314.71L264.39,320.12L221.73,256.69L232.62,251.29L236.26,256.69L273.06,311.4L275.19,314.54L275.3,314.71Z" style="fill:rgb(81,129,172);fill-rule:nonzero;"/>
+                <path d="M253.4,76.11L241.2,98.17L227.53,104.95L215.23,127.17L215.23,127.18L207.93,140.37L203.02,149.24L199.28,156.01L199.26,156.03L199.26,156.04L198.33,157.71L197.93,158.44L197.62,158.99L177.33,169.06L191.19,144.03L194.96,137.23L219.46,92.95L253.4,76.11Z" style="fill:rgb(73,136,156);fill-rule:nonzero;"/>
+                <path d="M253.4,76.11L219.46,92.95L168.18,16.84L202.12,0L253.4,76.11Z" style="fill:rgb(95,176,202);fill-rule:nonzero;"/>
+                <path d="M219.46,92.95L194.96,137.23L191.19,144.03L177.33,169.06L131.12,100.39L130.36,99.25L130.26,99.11L126.03,92.82L168.18,16.83L219.46,92.95Z" style="fill:rgb(105,195,224);fill-rule:nonzero;"/>
+                <path d="M406.48,303.29L372.54,320.14L237.43,119.65L235.07,116.13L232.97,113.03L232.56,112.43L227.52,104.94L241.19,98.16L261.47,88.1L266.51,95.59L269.01,99.28L271.38,102.81L406.48,303.29Z" style="fill:rgb(195,195,195);fill-rule:nonzero;"/>
+                <path d="M372.54,320.14L278.94,320.12L275.3,314.7L275.19,314.54L273.06,311.4L236.26,256.69L232.62,251.29L232.52,251.14L231.34,249.38L226.13,241.63L224.92,239.84L222.45,236.16L220.83,233.75L219.36,231.57L198.14,200.03L192.9,192.26L190.81,189.16L189.6,187.36L185.38,181.09L190.15,172.47L191.05,170.86L191.05,170.85L191.36,170.3L192.11,168.96L196.63,160.78L197.62,158.99L197.93,158.44L198.33,157.71L199.27,156.03L199.28,156.01L203.02,149.24L207.93,140.37L215.23,127.17L227.53,104.95L232.56,112.44L232.97,113.04L235.07,116.14L237.44,119.65L372.54,320.14Z" style="fill:rgb(217,217,217);fill-rule:nonzero;"/>
+            </g>
+        </g>
+    </g>
+</svg>

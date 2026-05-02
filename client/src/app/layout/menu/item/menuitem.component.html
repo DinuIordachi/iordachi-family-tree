@@ -1,0 +1,48 @@
+        @if (root && item.visible !== false) {
+            @if (item.items) {
+                <li [ngClass]="{ 'layout-root-menuitem': root, 'active-menuitem': active }">
+                    @if (root) {
+                        <div class="layout-menuitem-root-text">{{ item.label }}</div>
+                    }
+                    <ul>
+                        @for (child of item.items; track child.label; let i = $index) {
+                            <app-menuitem [item]="child" [index]="i" [parentKey]="key" [root]="false" />
+                        }
+                    </ul>
+                </li>
+            }
+        }
+        @if (!root && item.visible !== false) {
+            <li [ngClass]="{ 'active-menuitem': active }">
+                @if (item.routerLink && !item.items) {
+                    <a
+                        [routerLink]="item.routerLink"
+                        routerLinkActive="active-route"
+                        [routerLinkActiveOptions]="{ exact: item.routerLink![0] === '/dashboard' }"
+                        class="layout-menuitem-link"
+                        pRipple
+                        (click)="itemClick()"
+                    >
+                        <i [class]="item.icon" class="layout-menuitem-icon"></i>
+                        <span class="layout-menuitem-text">{{ item.label }}</span>
+                    </a>
+                }
+                @if (item.items) {
+                    <a
+                        class="layout-menuitem-link"
+                        pRipple
+                        (click)="itemClick()"
+                        tabindex="0"
+                    >
+                        <i [class]="item.icon" class="layout-menuitem-icon"></i>
+                        <span class="layout-menuitem-text">{{ item.label }}</span>
+                        <i class="pi pi-fw pi-angle-down layout-submenu-toggler"></i>
+                    </a>
+                    <ul [@children]="active ? 'expanded' : 'collapsed'">
+                        @for (child of item.items; track child.label; let i = $index) {
+                            <app-menuitem [item]="child" [index]="i" [parentKey]="key" [root]="false" />
+                        }
+                    </ul>
+                }
+            </li>
+        }

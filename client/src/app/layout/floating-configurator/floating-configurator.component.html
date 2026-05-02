@@ -1,0 +1,13 @@
+<div class="fixed flex gap-2" style="right: 1rem; top: 1rem; z-index: 1000;">
+  <p-button
+    icon="pi pi-palette"
+    [rounded]="true"
+    (onClick)="layoutService.showConfigSidebar()"
+  />
+  <p-button
+    [icon]="layoutService.isDarkTheme() ? 'pi pi-sun' : 'pi pi-moon'"
+    [rounded]="true"
+    (onClick)="layoutService.toggleDarkMode()"
+  />
+</div>
+<app-configurator />

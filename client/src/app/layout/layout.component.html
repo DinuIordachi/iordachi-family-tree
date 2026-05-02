@@ -1,0 +1,15 @@
+        <div class="layout-wrapper" [ngClass]="containerClass()">
+            <app-topbar />
+            <app-sidebar />
+            <div class="layout-main-container">
+                <div class="layout-main">
+                    <router-outlet />
+                </div>
+                <app-footer />
+            </div>
+            @if (layoutService.layoutState().staticMenuMobileActive) {
+                <div class="layout-mask animate-fadein"></div>
+            }
+        </div>
+        <p-toast />
+        <p-confirmdialog />

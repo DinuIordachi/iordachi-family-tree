@@ -1,0 +1,79 @@
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [transitionOptions]="'.3s cubic-bezier(0, 0, 0.2, 1)'"
+  styleClass="layout-config-sidebar w-80"
+>
+  <ng-template #header>
+    <h2 class="text-lg font-semibold m-0">Theme Configuration</h2>
+  </ng-template>
+
+  <div class="flex flex-col gap-6">
+    <!-- Primary Colors -->
+    <div>
+      <span class="text-sm font-semibold block mb-3">Primary Color</span>
+      <div class="flex flex-wrap gap-2">
+        @for (color of primaryColors; track color.name) {
+          <button
+            type="button"
+            (click)="updatePrimaryColor(color.name)"
+            class="border-none w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-110"
+            [style.background-color]="color.palette['500']"
+            [ngClass]="{ 'ring-2 ring-offset-2 ring-primary': layoutService.layoutConfig().primary === color.name }"
+          ></button>
+        }
+      </div>
+    </div>
+
+    <!-- Surface Colors -->
+    <div>
+      <span class="text-sm font-semibold block mb-3">Surface Color</span>
+      <div class="flex flex-wrap gap-2">
+        @for (surface of surfaces; track surface.name) {
+          <button
+            type="button"
+            (click)="updateSurface(surface.name, surface.palette)"
+            class="border-none w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-110"
+            [style.background-color]="layoutService.isDarkTheme() ? surface.palette['800'] : surface.palette['200']"
+            [ngClass]="{ 'ring-2 ring-offset-2 ring-primary': layoutService.layoutConfig().surface === surface.name }"
+          ></button>
+        }
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div>
+      <span class="text-sm font-semibold block mb-3">Preset</span>
+      <div class="flex flex-wrap gap-2">
+        @for (presetOption of presets; track presetOption.name) {
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border cursor-pointer transition-colors"
+            [ngClass]="{
+              'bg-primary text-primary-contrast border-primary': layoutService.layoutConfig().preset === presetOption.name,
+              'border-surface-200 dark:border-surface-700 hover:bg-surface-100 dark:hover:bg-surface-800': layoutService.layoutConfig().preset !== presetOption.name
+            }"
+            (click)="changePreset(presetOption.name)"
+          >
+            {{ presetOption.name }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Menu Mode -->
+    <div>
+      <span class="text-sm font-semibold block mb-3">Menu Mode</span>
+      <div class="flex flex-wrap gap-2">
+        <p-selectbutton
+          [options]="menuModes"
+          [ngModel]="layoutService.layoutConfig().menuMode"
+          (ngModelChange)="changeMenuMode($event)"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+        />
+      </div>
+    </div>
+  </div>
+</p-drawer>
