@@ -25,7 +25,7 @@ export class LayoutService {
         preset: 'Aura',
         primary: 'emerald',
         surface: null,
-        darkTheme: false,
+        darkTheme: true,
         menuMode: 'static'
     });
 
@@ -159,14 +159,12 @@ export class LayoutService {
         const stored = localStorage.getItem('layout-config');
         if (stored) {
             try {
-                const config = JSON.parse(stored) as LayoutConfig;
-                this._layoutConfig.set(config);
-                if (config.darkTheme) {
-                    this.document.documentElement.classList.add('app-dark');
-                }
+                this._layoutConfig.set(JSON.parse(stored) as LayoutConfig);
             } catch {
                 // ignore invalid stored config
             }
         }
+
+        this.document.documentElement.classList.toggle('app-dark', this._layoutConfig().darkTheme);
     }
 }

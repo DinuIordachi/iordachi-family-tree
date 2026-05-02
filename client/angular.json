@@ -52,7 +52,11 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss", "src/assets/tailwind.css"]
+            "styles": [
+              "src/styles.scss",
+              "src/assets/tailwind.css",
+              "node_modules/family-chart/dist/styles/family-chart.css"
+            ]
           },
           "configurations": {
             "production": {

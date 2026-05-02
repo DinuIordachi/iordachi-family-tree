@@ -1,0 +1,31 @@
+:host {
+  display: block;
+}
+
+.tree-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background-color: var(--surface-ground);
+
+  &__header {
+    flex: 0 0 auto;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--surface-border);
+    background-color: var(--surface-card);
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+  }
+
+  &__chart {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+  }
+}

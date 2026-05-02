@@ -12,6 +12,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'tree',
+    loadComponent: () => import('./features/tree/tree.component').then(m => m.TreeComponent)
+  },
+  {
     path: '',
     component: AppLayout,
     canActivate: [authGuard],
