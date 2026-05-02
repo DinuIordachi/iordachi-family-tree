@@ -3,5 +3,19 @@
     <h1>Iordachi Family Tree</h1>
   </header>
 
-  <div id="FamilyChart" class="f3 tree-page__chart"></div>
+  <div class="tree-page__chart-wrap">
+    <div id="FamilyChart" class="f3 tree-page__chart"></div>
+
+    @if (loading()) {
+      <div class="tree-page__overlay">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Loading family tree…</span>
+      </div>
+    } @else if (error()) {
+      <div class="tree-page__overlay tree-page__overlay--error">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ error() }}</span>
+      </div>
+    }
+  </div>
 </div>

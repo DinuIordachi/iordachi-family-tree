@@ -25,16 +25,8 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
-        path: 'garages',
-        loadChildren: () => import('./features/garages/garage.routes').then(m => m.GARAGE_ROUTES)
-      },
-      {
-        path: 'persons',
-        loadChildren: () => import('./features/persons/person.routes').then(m => m.PERSON_ROUTES)
-      },
-      {
-        path: 'associations',
-        loadChildren: () => import('./features/associations/association.routes').then(m => m.ASSOCIATION_ROUTES)
+        path: 'family-members',
+        loadChildren: () => import('./features/family-members/family-member.routes').then(m => m.FAMILY_MEMBER_ROUTES)
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

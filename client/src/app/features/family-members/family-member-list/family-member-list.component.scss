@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+/* Deceased rows: 2px slate ribbon on the leading edge — quiet but
+ * unmistakable, paired with the † stamp + lifespan rendered in the row. */
+::ng-deep .p-datatable tbody tr.is-deceased {
+  position: relative;
+
+  > td:first-child {
+    box-shadow: inset 2px 0 0 0 var(--deceased-accent);
+  }
+
+  .deceased-stamp--inline {
+    margin-left: 0.25rem;
+  }
+}

@@ -25,9 +25,7 @@ export class AppMenu {
     {
       label: 'Management',
       items: [
-        { label: 'Garages', icon: 'pi pi-fw pi-warehouse', routerLink: ['/garages'] },
-        { label: 'Persons', icon: 'pi pi-fw pi-users', routerLink: ['/persons'] },
-        { label: 'Associations', icon: 'pi pi-fw pi-building', routerLink: ['/associations'] },
+        { label: 'Family Members', icon: 'pi pi-fw pi-users', routerLink: ['/family-members'] },
       ],
     },
   ];

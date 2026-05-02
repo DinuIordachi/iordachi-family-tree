@@ -1,0 +1,391 @@
+<p-confirmdialog />
+
+<div class="member-edit">
+  <!-- Sticky action bar -->
+  <header class="member-edit__bar">
+    <div class="flex items-center gap-3">
+      <p-button icon="pi pi-arrow-left" [text]="true" [rounded]="true"
+                routerLink="/family-members"
+                aria-label="Back to family members" />
+      <div>
+        <h1 class="text-xl font-semibold text-color m-0">
+          {{ isCreate() ? 'Add Family Member' : 'Edit Family Member' }}
+        </h1>
+        @if (isCreate()) {
+          <p class="text-muted-color text-sm m-0">A new member of the tree.</p>
+        } @else if (member()) {
+          <p class="text-muted-color text-sm m-0">{{ fullName(member()) }}</p>
+        }
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="cancel()" />
+      <p-button [label]="isCreate() ? 'Create member' : 'Save changes'"
+                [icon]="isCreate() ? 'pi pi-user-plus' : 'pi pi-check'"
+                [loading]="saving()" [disabled]="loading()"
+                (onClick)="save()" />
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="member-edit__placeholder">
+      <i class="pi pi-spin pi-spinner text-2xl"></i>
+      <span class="ml-3 text-muted-color">Loading…</span>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="member-edit__placeholder">
+      <p-message severity="error" [text]="errorMessage()!" />
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" class="member-edit__grid">
+      <!-- Hero / identity card (edit mode only — in create the hero would be empty) -->
+      @if (member(); as m) {
+      <section class="member-edit__hero card" [class.is-deceased]="m.deceased">
+        <div class="member-edit__hero-avatar"
+             [class.is-uploading]="uploadingAvatar()">
+          <button type="button"
+                  class="member-edit__hero-avatar-trigger"
+                  [disabled]="uploadingAvatar()"
+                  [attr.aria-label]="m.thumbnailUrl ? 'Change avatar' : 'Upload avatar'"
+                  (click)="avatarFileInput.click()">
+            @if (m.thumbnailUrl) {
+              <p-avatar [image]="m.thumbnailUrl" shape="circle" size="xlarge" />
+            } @else {
+              <p-avatar [label]="initials(fullName(m))"
+                        shape="circle" size="xlarge"
+                        styleClass="member-edit__avatar-fallback" />
+            }
+            <span class="member-edit__hero-avatar-overlay" aria-hidden="true">
+              @if (uploadingAvatar()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-camera"></i>
+                <span class="text-xs">{{ m.thumbnailUrl ? 'Change' : 'Upload' }}</span>
+              }
+            </span>
+          </button>
+
+          <input #avatarFileInput type="file" hidden
+                 [accept]="avatarAccept"
+                 (change)="onAvatarSelected($event)" />
+
+          @if (m.deceased) {
+            <span class="deceased-stamp member-edit__hero-stamp" aria-label="Deceased">&dagger;</span>
+          }
+        </div>
+        <div class="member-edit__hero-meta">
+          <h2 class="text-2xl font-semibold text-color m-0">{{ fullName(m) }}</h2>
+          <div class="flex flex-wrap items-center gap-2 mt-2">
+            <app-tag [value]="genderLabel(m.data.gender)"
+                     [severity]="genderSeverity(m.data.gender)" />
+            @if (m.deceased) {
+              <span class="deceased-stamp deceased-stamp--inline" aria-label="In memoriam">In memoriam</span>
+            }
+            @if (m.data.birthday) {
+              <span class="text-muted-color text-sm">
+                @if (m.deceased) {
+                  {{ m.data.birthday | date: 'yyyy' }} – {{ m.diedAt | date: 'yyyy' }}
+                  @if (age(m.data.birthday) !== null) {
+                    · lived ~{{ age(m.data.birthday) }} years
+                  }
+                } @else {
+                  Born {{ m.data.birthday | date: 'mediumDate' }}
+                  @if (age(m.data.birthday) !== null) {
+                    · {{ age(m.data.birthday) }} years old
+                  }
+                }
+              </span>
+            }
+          </div>
+          @if (m.deceased && m.diedAt) {
+            <div class="text-muted-color text-xs mt-2">
+              Passed away {{ m.diedAt | date: 'medium' }}
+            </div>
+          }
+          <div class="text-muted-color text-xs mt-3">
+            Member ID #{{ m.id }} · Last updated {{ m.updatedAt | date: 'medium' }}
+          </div>
+          @if (m.thumbnailUrl) {
+            <div class="mt-3">
+              <p-button label="Remove avatar" icon="pi pi-times"
+                        [text]="true" severity="secondary" size="small"
+                        [disabled]="uploadingAvatar()"
+                        (onClick)="removeAvatar()" />
+            </div>
+          }
+        </div>
+      </section>
+      }
+
+      <!-- Personal details -->
+      <section class="member-edit__section card">
+        <header class="member-edit__section-head">
+          <i class="pi pi-id-card"></i>
+          <div>
+            <h3 class="m-0">Personal details</h3>
+            <p class="text-muted-color text-sm m-0">
+              @if (member(); as m) {
+                Identity and biography for {{ fullName(m) }}.
+              } @else {
+                Fill in the basics to add a new member to the tree.
+              }
+            </p>
+          </div>
+        </header>
+
+        <div class="member-edit__fields">
+          <div class="member-edit__field">
+            <label for="firstName">First name <span class="text-red-400">*</span></label>
+            <input pInputText id="firstName" formControlName="firstName"
+                   placeholder="First name" autocomplete="given-name" />
+            @if (form.get('firstName')?.touched && form.get('firstName')?.invalid) {
+              <small class="text-red-400">First name is required.</small>
+            }
+          </div>
+
+          <div class="member-edit__field">
+            <label for="lastName">Last name</label>
+            <input pInputText id="lastName" formControlName="lastName"
+                   placeholder="Last name" autocomplete="family-name" />
+          </div>
+
+          <div class="member-edit__field">
+            <label for="birthdate">Birthdate</label>
+            <p-datepicker inputId="birthdate" formControlName="birthdate"
+                          [showIcon]="true" [maxDate]="$any(today)"
+                          dateFormat="yy-mm-dd" placeholder="Select a date"
+                          appendTo="body" />
+          </div>
+
+          <div class="member-edit__field">
+            <label for="gender">Gender</label>
+            <p-select inputId="gender" formControlName="gender"
+                      [options]="genderOptions" optionLabel="label" optionValue="value"
+                      placeholder="Unspecified" [showClear]="true" appendTo="body" />
+          </div>
+
+          <div class="member-edit__field member-edit__field--full">
+            <label for="diedAt" class="flex items-center gap-2">
+              <span class="deceased-stamp" aria-hidden="true">&dagger;</span>
+              Died at <span class="text-muted-color font-normal">— optional, leave empty if living</span>
+            </label>
+            <p-datepicker inputId="diedAt" formControlName="diedAt"
+                          [showIcon]="true" [showTime]="true" hourFormat="24"
+                          [maxDate]="$any(today)"
+                          dateFormat="yy-mm-dd" placeholder="Select a date and time"
+                          [showClear]="true" appendTo="body" />
+          </div>
+
+          <div class="member-edit__field member-edit__field--full">
+            <label for="biography">Biography</label>
+            <textarea pTextarea id="biography" formControlName="biography"
+                      rows="5" [autoResize]="true"
+                      placeholder="Anything worth remembering about this person…"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Family relations -->
+      <section class="member-edit__section card">
+        <header class="member-edit__section-head">
+          <i class="pi pi-share-alt"></i>
+          <div>
+            <h3 class="m-0">Family relations</h3>
+            <p class="text-muted-color text-sm m-0">
+              Mother, father, spouses, and children. Brothers and sisters are derived from shared parents.
+            </p>
+          </div>
+        </header>
+
+        <!-- Parents lane -->
+        <div class="member-edit__lane">
+          <div class="member-edit__lane-label">Parents</div>
+          <div class="member-edit__parents">
+            <!-- Mother -->
+            <div class="member-edit__parent">
+              <span class="member-edit__parent-tag">Mother</span>
+              @if (optionById(form.get('motherId')?.value); as mother) {
+                <button type="button" class="member-edit__relation-card"
+                        [class.is-deceased]="mother.deceased"
+                        (click)="goToMember(mother.id)">
+                  <ng-container *ngTemplateOutlet="relationCard; context: { $implicit: mother }"></ng-container>
+                </button>
+                <p-button icon="pi pi-times" [text]="true" [rounded]="true"
+                          severity="secondary" size="small"
+                          aria-label="Remove mother"
+                          (onClick)="clearParent('motherId')" />
+              } @else {
+                <p-select formControlName="motherId" appendTo="body"
+                          [options]="motherOptions()"
+                          optionLabel="label" optionValue="id"
+                          placeholder="Select mother" [filter]="true" filterBy="label"
+                          [showClear]="true" styleClass="member-edit__picker" />
+              }
+            </div>
+
+            <!-- Father -->
+            <div class="member-edit__parent">
+              <span class="member-edit__parent-tag">Father</span>
+              @if (optionById(form.get('fatherId')?.value); as father) {
+                <button type="button" class="member-edit__relation-card"
+                        [class.is-deceased]="father.deceased"
+                        (click)="goToMember(father.id)">
+                  <ng-container *ngTemplateOutlet="relationCard; context: { $implicit: father }"></ng-container>
+                </button>
+                <p-button icon="pi pi-times" [text]="true" [rounded]="true"
+                          severity="secondary" size="small"
+                          aria-label="Remove father"
+                          (onClick)="clearParent('fatherId')" />
+              } @else {
+                <p-select formControlName="fatherId" appendTo="body"
+                          [options]="fatherOptions()"
+                          optionLabel="label" optionValue="id"
+                          placeholder="Select father" [filter]="true" filterBy="label"
+                          [showClear]="true" styleClass="member-edit__picker" />
+              }
+            </div>
+          </div>
+        </div>
+
+        <p-divider />
+
+        <!-- Siblings lane (read-only, computed) -->
+        <div class="member-edit__lane">
+          <div class="member-edit__lane-label">
+            Brothers &amp; sisters
+            <span class="member-edit__lane-hint">— derived from shared parents</span>
+          </div>
+          @if (siblings().length === 0) {
+            <div class="member-edit__empty">
+              No siblings yet. Pick a mother or father to populate this list automatically.
+            </div>
+          } @else {
+            <div class="member-edit__cards">
+              @for (sib of siblings(); track sib.id) {
+                <button type="button" class="member-edit__relation-card"
+                        [class.is-deceased]="sib.deceased"
+                        (click)="goToMember($any(sib.id))">
+                  <ng-container *ngTemplateOutlet="relationCard; context: { $implicit: toOption(sib) }"></ng-container>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <p-divider />
+
+        <!-- Spouses lane -->
+        <div class="member-edit__lane">
+          <div class="member-edit__lane-label">Spouses</div>
+          <div class="member-edit__lane-row">
+            <p-multiselect formControlName="spouseIds"
+                           [options]="spouseOptions()"
+                           optionLabel="label" optionValue="id"
+                           placeholder="Add a spouse" [filter]="true" filterBy="label"
+                           appendTo="body" display="chip" [showHeader]="true"
+                           styleClass="member-edit__picker" />
+          </div>
+          @if (optionsByIds(form.get('spouseIds')?.value ?? []); as spouses) {
+            @if (spouses.length > 0) {
+              <div class="member-edit__cards">
+                @for (sp of spouses; track sp.id) {
+                  <div class="member-edit__relation-card member-edit__relation-card--with-action"
+                       [class.is-deceased]="sp.deceased">
+                    <button type="button" class="member-edit__relation-card-link"
+                            (click)="goToMember(sp.id)">
+                      <ng-container *ngTemplateOutlet="relationCard; context: { $implicit: sp }"></ng-container>
+                    </button>
+                    <p-button icon="pi pi-times" [text]="true" [rounded]="true"
+                              severity="secondary" size="small"
+                              [attr.aria-label]="'Remove spouse ' + sp.label"
+                              (onClick)="removeFromArray('spouseIds', sp.id)" />
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        <p-divider />
+
+        <!-- Children lane -->
+        <div class="member-edit__lane">
+          <div class="member-edit__lane-label">Children</div>
+          <div class="member-edit__lane-row">
+            <p-multiselect formControlName="childIds"
+                           [options]="childOptions()"
+                           optionLabel="label" optionValue="id"
+                           placeholder="Add a child" [filter]="true" filterBy="label"
+                           appendTo="body" display="chip" [showHeader]="true"
+                           styleClass="member-edit__picker" />
+          </div>
+          @if (optionsByIds(form.get('childIds')?.value ?? []); as children) {
+            @if (children.length > 0) {
+              <div class="member-edit__cards">
+                @for (ch of children; track ch.id) {
+                  <div class="member-edit__relation-card member-edit__relation-card--with-action"
+                       [class.is-deceased]="ch.deceased">
+                    <button type="button" class="member-edit__relation-card-link"
+                            (click)="goToMember(ch.id)">
+                      <ng-container *ngTemplateOutlet="relationCard; context: { $implicit: ch }"></ng-container>
+                    </button>
+                    <p-button icon="pi pi-times" [text]="true" [rounded]="true"
+                              severity="secondary" size="small"
+                              [attr.aria-label]="'Remove child ' + ch.label"
+                              (onClick)="removeFromArray('childIds', ch.id)" />
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      <!-- Danger zone (edit mode only) -->
+      @if (member()) {
+        <section class="member-edit__section card member-edit__danger">
+          <header class="member-edit__section-head">
+            <i class="pi pi-exclamation-triangle text-red-400"></i>
+            <div>
+              <h3 class="m-0">Danger zone</h3>
+              <p class="text-muted-color text-sm m-0">
+                Removing this member soft-deletes them; an admin can restore them later.
+              </p>
+            </div>
+          </header>
+          <p-button label="Delete this member" icon="pi pi-trash"
+                    severity="danger" [outlined]="true"
+                    (onClick)="confirmDelete()" />
+        </section>
+      }
+    </form>
+  }
+</div>
+
+<!-- Reusable relation-card template -->
+<ng-template #relationCard let-item>
+  <div class="member-edit__relation-card-inner">
+    <div class="member-edit__relation-card-avatar">
+      @if (item.thumbnailUrl) {
+        <p-avatar [image]="item.thumbnailUrl" shape="circle" size="large" />
+      } @else {
+        <p-avatar [label]="initials(item.label)" shape="circle" size="large"
+                  styleClass="member-edit__avatar-fallback" />
+      }
+      @if (item.deceased) {
+        <span class="deceased-stamp member-edit__relation-card-stamp" aria-label="Deceased">&dagger;</span>
+      }
+    </div>
+    <div class="flex-1 min-w-0 text-left">
+      <div class="font-medium text-color truncate">{{ item.label }}</div>
+      <div class="text-muted-color text-xs flex items-center gap-2 flex-wrap">
+        <app-tag [value]="genderLabel(item.gender)"
+                 [severity]="genderSeverity(item.gender)" />
+        @if (lifespan(item.birthday, item.diedAt); as ls) {
+          <span>{{ ls }}</span>
+        }
+      </div>
+    </div>
+    <i class="pi pi-arrow-up-right text-muted-color text-sm"></i>
+  </div>
+</ng-template>

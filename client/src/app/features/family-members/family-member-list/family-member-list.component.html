@@ -1,0 +1,92 @@
+<div class="card">
+  <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-color m-0">Family Members</h1>
+      <p class="text-muted-color mt-1 mb-0">All family members across the tree.</p>
+    </div>
+    <p-button label="New member" icon="pi pi-user-plus"
+              routerLink="/family-members/new" />
+  </div>
+
+  <p-table
+    [value]="members()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="defaultPageSize"
+    [rowsPerPageOptions]="[10, 20, 50, 100]"
+    [totalRecords]="total()"
+    [loading]="loading()"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+    sortMode="single"
+    dataKey="id"
+    selectionMode="single"
+    [rowHover]="true"
+    (onLazyLoad)="loadPage($event)"
+    (onRowSelect)="openEdit($any($event.data))"
+    styleClass="p-datatable-striped"
+  >
+    <ng-template #header>
+      <tr>
+        <th pSortableColumn="firstName" style="min-width: 14rem">
+          First name <p-sortIcon field="firstName" />
+        </th>
+        <th pSortableColumn="lastName" style="min-width: 14rem">
+          Last name <p-sortIcon field="lastName" />
+        </th>
+        <th pSortableColumn="birthdate" style="min-width: 10rem">
+          Birthdate <p-sortIcon field="birthdate" />
+        </th>
+        <th style="width: 8rem">Gender</th>
+        <th style="width: 4rem"></th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-member>
+      <tr [pSelectableRow]="member" class="cursor-pointer"
+          [class.is-deceased]="member.deceased">
+        <td>
+          <div class="flex items-center gap-3">
+            @if (member.thumbnailUrl) {
+              <img [src]="member.thumbnailUrl" [alt]="member.data['first name']"
+                   class="w-9 h-9 rounded-full object-cover member-avatar" />
+            } @else {
+              <div class="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-muted-color">
+                <i class="pi pi-user"></i>
+              </div>
+            }
+            <span class="font-medium">{{ member.data['first name'] }}</span>
+            @if (member.deceased) {
+              <span class="deceased-stamp deceased-stamp--inline" aria-label="In memoriam">In memoriam</span>
+            }
+          </div>
+        </td>
+        <td>{{ member.data['last name'] || '—' }}</td>
+        <td>
+          @if (member.deceased && member.data.birthday) {
+            {{ member.data.birthday | date: 'yyyy' }} – {{ member.diedAt | date: 'yyyy' }}
+          } @else if (member.data.birthday) {
+            {{ member.data.birthday | date: 'mediumDate' }}
+          } @else {
+            <span class="text-muted-color">—</span>
+          }
+        </td>
+        <td>
+          <app-tag [value]="genderLabel(member)" [severity]="genderSeverity(member)" />
+        </td>
+        <td>
+          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true"
+                    severity="secondary" (onClick)="openEdit(member); $event.stopPropagation()" />
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="5" class="text-center text-muted-color py-8">
+          No family members found.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
