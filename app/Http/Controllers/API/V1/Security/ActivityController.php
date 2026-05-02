@@ -89,8 +89,8 @@ class ActivityController extends Controller
                 activity()
                     ->causedBy($request->user())
                     ->performedOn($activity)
-                    ->event(PermissionsEnum::ROLE_DELETE->value)
-                    ->log('Activity :subject.display_name was deleted by :causer.email');
+                    ->event(PermissionsEnum::ACTIVITY_DELETE->value)
+                    ->log('Activity #:subject.id was deleted by :causer.email');
 
                 return EmptyJsonResource::messageResponse('Activity was deleted successfully');
             },

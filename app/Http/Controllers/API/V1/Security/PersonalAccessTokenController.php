@@ -43,11 +43,7 @@ class PersonalAccessTokenController extends Controller
             $data->get('term', ''),
             $data->get('order_by', 'created_at'),
             $data->get('order_direction', 'desc'),
-            $data->only([
-                'userAgent', 'lastIp', 'lastCountryCode',
-                'issuedIp', 'issuedCountryCode', 'expired',
-                'user',
-            ])->toArray(),
+            $data->only(['user_agent', 'last_ip', 'issued_ip', 'expired', 'user'])->toArray(),
         )->paginate($data->get('page_size', 20));
 
         return PersonalAccessTokenResource::collection($records)

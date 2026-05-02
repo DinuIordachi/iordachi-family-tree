@@ -5,43 +5,28 @@ namespace App\Http\Resources\PersonalAccessToken;
 use Illuminate\Http\Request;
 use App\Enums\PermissionsEnum;
 use App\Http\Resources\EmptyJsonResource;
-use App\Http\Resources\User\UserResource;
 use App\Http\Resources\User\LimitedUserResource;
 
 class PersonalAccessTokenResource extends EmptyJsonResource
 {
     /**
-     * Resource
-     *
      * @var \App\Models\PersonalAccessToken
      */
     public $resource;
 
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->resource->id,
+            'name' => $this->resource->name,
             'userAgent' => $this->resource->user_agent,
-            'issued' => [
-                'ip' => $this->resource->issued_ip,
-                'countryCode' => $this->resource->issued_country_code,
-                'country' => $this->resource->issued_country,
-            ],
-            'last' => [
-                'ip' => $this->resource->last_ip,
-                'countryCode' => $this->resource->last_country_code,
-                'country' => $this->resource->last_country,
-                'usedAt' => $this->resource->last_used_at,
-            ],
+            'issuedIp' => $this->resource->issued_ip,
+            'lastIp' => $this->resource->last_ip,
+            'lastUsedAt' => $this->resource->last_used_at,
             'user' => $this->when(
                 $this->resource->tokenable()->exists(),
-                LimitedUserResource::make($this->resource->tokenable),
-                null
+                fn () => LimitedUserResource::make($this->resource->tokenable),
+                null,
             ),
             'expiresAt' => $this->resource->expires_at,
             'createdAt' => $this->resource->created_at,

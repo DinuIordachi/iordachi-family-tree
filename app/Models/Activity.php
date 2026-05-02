@@ -108,15 +108,15 @@ class Activity extends BaseActivity
         /* @var User $user */
         $user = auth()->user();
 
-        $hasAnyPermission = $user->hasAnyPermission(
-            PermissionsEnum::ROLE_VIEW_ANY->value,
-            PermissionsEnum::ROLE_VIEW->value,
-        );
-
-        if ($user->isAdmin() || $hasAnyPermission) {
+        if ($user?->isAdmin()) {
             return $builder;
         }
 
-        return $builder->limit(0);
+        $hasAnyPermission = $user?->hasAnyPermission(
+            PermissionsEnum::ACTIVITY_VIEW_ANY->value,
+            PermissionsEnum::ACTIVITY_VIEW->value,
+        );
+
+        return $hasAnyPermission ? $builder : $builder->limit(0);
     }
 }

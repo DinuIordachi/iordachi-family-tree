@@ -9,12 +9,10 @@ use App\Enums\RolesEnum;
 use Illuminate\Http\Response;
 use App\Services\UserService;
 use App\Enums\PermissionsEnum;
-use App\Services\PhoneService;
-use App\Services\CountryService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\Controller;
 use App\Traits\DBTransactionWrapper;
-use App\Http\Resources\Auth\MeResource;
 use App\Http\Resources\EmptyJsonResource;
 use App\Http\Resources\User\UserResource;
 use App\Http\Requests\User\ListUserRequest;
@@ -31,22 +29,14 @@ class UserController extends Controller
 {
     use DBTransactionWrapper;
 
-    public function __construct(
-        protected readonly UserService $userService,
-        protected readonly CountryService $countryService,
-        protected readonly PhoneService $phoneService
-    ) {
-
+    public function __construct(protected readonly UserService $userService)
+    {
     }
 
     /**
-     * List users
+     * List users.
      *
      * @response array{data:UserResource[]}
-     *
-     * @param ListUserRequest $request
-     *
-     * @return JsonResponse
      */
     public function index(ListUserRequest $request): JsonResponse
     {
@@ -55,15 +45,8 @@ class UserController extends Controller
             $data->get('term', ''),
             $data->get('order_by', 'created_at'),
             $data->get('order_direction', 'desc'),
-            $data->only([
-                'gender', 'email', 'properties',
-                'first_name', 'last_name', 'phone',
-                'verified', 'blocked', 'role',
-                'country', 'archived', 'paid',
-            ])->toArray(),
-        );
-
-        $records = $records->paginate($data->get('page_size', 20));
+            $data->only(['first_name', 'last_name', 'email', 'verified', 'blocked', 'role', 'archived'])->toArray(),
+        )->paginate($data->get('page_size', 20));
 
         return UserResource::collection($records)
             ->response()
@@ -71,71 +54,41 @@ class UserController extends Controller
     }
 
     /**
-     * Get a user
+     * Get a user.
      *
      * @response array{data:UserResource}
-     *
-     * @param ShowUserRequest $request
-     * @param User            $user
-     *
-     * @return JsonResponse
      */
     public function show(ShowUserRequest $request, User $user): JsonResponse
     {
-        if ($request->user()->hasPermissionTo(PermissionsEnum::USER_VIEW)) {
-            return UserResource::make($user)
-                ->response()
-                ->setStatusCode(Response::HTTP_OK);
-        }
-
-        return MeResource::make($user)
+        return UserResource::make($user)
             ->response()
             ->setStatusCode(Response::HTTP_OK);
     }
 
     /**
-     * Create a user
+     * Create a user.
      *
      * @response array{message:string,data:UserResource}
      *
-     * @param StoreUserRequest $request
-     *
-     * @return JsonResponse
      * @throws Throwable
      */
     public function store(StoreUserRequest $request): JsonResponse
     {
         return $this->wrapInTransaction(
             function () use ($request) {
-                $requestCollection = $request->collect();
-                $data = $requestCollection->only([
-                    'first_name', 'last_name', 'email',
-                    'birthdate', 'phone', 'gender',
-                    'password', 'active_at', 'approved_at',
-                ])->toArray();
-                $properties = $requestCollection->only(['taxId', 'workPosition', 'workOrganization'])->toArray();
-                $countryCode = $requestCollection->get('country_code');
-                $avatarFile = $request->file('avatarFile');
-
-                $data['phone'] = $this->phoneService->formatInternational($data['phone'] ?? null);
-                $data['country_id'] = $this->countryService->findByIso2($countryCode)?->id;
-                $data['properties'] = $properties;
+                $data = $request->collect()->only(['first_name', 'last_name', 'email', 'password'])->toArray();
+                $data['password'] = Hash::make($data['password']);
 
                 $user = $this->userService->create($data);
                 if (! $user) {
                     throw new Exception('Failed to create the user');
                 }
 
-                if ($request->has('roles')) {
-                    $user->syncRoles($request->get('roles'));
-                }
+                $roles = (array) $request->input('roles', [RolesEnum::MEMBER->value]);
+                $this->userService->setRoles($user, $roles);
 
-                if ($user->roles()->doesntExist()) {
-                    $this->userService->setRoles($user, RolesEnum::MEMBER->value);
-                }
-
-                if ($avatarFile) {
-                    $this->userService->saveAvatar($user, $avatarFile);
+                if ($file = $request->file('avatarFile')) {
+                    $this->userService->saveAvatar($user, $file);
                 }
 
                 $user->refresh();
@@ -151,71 +104,39 @@ class UserController extends Controller
                     ->response()
                     ->setStatusCode(Response::HTTP_CREATED);
             },
-            function (Throwable $throwable) {
-                logger()->error('[User] Failed to create the user. Error: ' . $throwable->getMessage(),
-                    $throwable->getTrace());
-
-                if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
-                    throw $throwable;
-                }
-
-                return EmptyJsonResource::messageResponse(
-                    'Failed to create the user. Contact our support or try again later',
-                    Response::HTTP_INTERNAL_SERVER_ERROR
-                );
-            }
+            fn (Throwable $t) => $this->reportFailure('create', $t),
         );
     }
 
     /**
-     * Update a user
+     * Update a user.
      *
      * @response array{message:string,data:UserResource}
      *
-     * @param UpdateUserRequest $request
-     * @param User              $user
-     *
-     * @return JsonResponse
      * @throws Throwable
      */
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         return $this->wrapInTransaction(
             function () use ($request, $user) {
-                $requestCollection = $request->collect();
-                $data = $requestCollection->only([
-                    'first_name', 'last_name', 'email',
-                    'birthdate', 'phone', 'gender',
-                    'blocked_at', 'active_at', 'approved_at',
-                ])->toArray();
-                $properties = $requestCollection->only(['taxId', 'workPosition', 'workOrganization'])->toArray();
-                $countryCode = $requestCollection->get('country_code');
-                $password = $requestCollection->get('password');
-                $avatarFile = $request->file('avatarFile');
+                $data = $request->collect()
+                    ->only(['first_name', 'last_name', 'email', 'blocked_at'])
+                    ->toArray();
 
-                $data['phone'] = $this->phoneService->formatInternational($data['phone'] ?? null);
-                $data['country_id'] = $this->countryService->findByIso2($countryCode)?->id;
-                $data['properties'] = $properties;
-
-                if (! empty($password)) {
-                    $data['password'] = $password;
+                if ($password = $request->input('password')) {
+                    $data['password'] = Hash::make($password);
                 }
 
-                $response = $this->userService->update($user, $data);
-                if (! $response) {
-                    throw new Exception('Something went wrong while updating the user');
+                if (! $this->userService->update($user, $data)) {
+                    throw new Exception('Failed to update the user');
                 }
 
                 if ($request->has('roles')) {
-                    $user->syncRoles($request->get('roles'));
+                    $this->userService->setRoles($user, (array) $request->input('roles'));
                 }
 
-                if ($user->roles()->doesntExist()) {
-                    $this->userService->setRoles($user, RolesEnum::MEMBER->value);
-                }
-
-                if ($avatarFile) {
-                    $this->userService->saveAvatar($user, $avatarFile);
+                if ($file = $request->file('avatarFile')) {
+                    $this->userService->saveAvatar($user, $file);
                 }
 
                 $user->refresh();
@@ -231,40 +152,22 @@ class UserController extends Controller
                     ->response()
                     ->setStatusCode(Response::HTTP_OK);
             },
-            function (Throwable $throwable) {
-                logger()->error('[User] Failed to update the user. Error: ' . $throwable->getMessage(),
-                    $throwable->getTrace());
-
-                if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
-                    throw $throwable;
-                }
-
-                return EmptyJsonResource::messageResponse(
-                    'Failed to update the user. Contact our support or try again later',
-                    Response::HTTP_INTERNAL_SERVER_ERROR
-                );
-            }
+            fn (Throwable $t) => $this->reportFailure('update', $t),
         );
     }
 
     /**
-     * Delete a user
+     * Soft-delete a user.
      *
      * @response array{message:string}
      *
-     * @param DeleteUserRequest $request
-     * @param User              $user
-     *
-     * @return JsonResponse
      * @throws Throwable
      */
     public function destroy(DeleteUserRequest $request, User $user): JsonResponse
     {
         return $this->wrapInTransaction(
             function () use ($request, $user) {
-                $response = $this->userService->delete($user);
-
-                if (! $response) {
+                if (! $this->userService->delete($user)) {
                     throw new Exception('Failed to delete the user');
                 }
 
@@ -276,119 +179,86 @@ class UserController extends Controller
 
                 return EmptyJsonResource::messageResponse('User was deleted successfully');
             },
-            function (Throwable $throwable) {
-                logger()->error('[User] Failed to delete the user. Error: ' . $throwable->getMessage(),
-                    $throwable->getTrace());
-
-                if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
-                    throw $throwable;
-                }
-
-                return EmptyJsonResource::messageResponse(
-                    'Failed to delete the user. Contact our support or try again later',
-                    Response::HTTP_INTERNAL_SERVER_ERROR
-                );
-            }
+            fn (Throwable $t) => $this->reportFailure('delete', $t),
         );
     }
 
     /**
-     * Force delete a user
+     * Permanently delete a user.
      *
-     * @param ForceDeleteUserRequest $request
-     * @param User                   $user
-     *
-     * @return JsonResponse
      * @throws Throwable
      */
     public function forceDestroy(ForceDeleteUserRequest $request, User $user): JsonResponse
     {
         return $this->wrapInTransaction(
             function () use ($request, $user) {
-                $response = $this->userService->forceDelete($user);
+                $email = $user->email;
 
-                if (! $response) {
+                if (! $this->userService->forceDelete($user)) {
                     throw new Exception('Failed to force delete the user');
                 }
 
                 activity()
                     ->causedBy($request->user())
                     ->event(PermissionsEnum::USER_FORCE_DELETE->value)
-                    ->log("User $user->email was force deleted by :causer.email");
+                    ->log("User {$email} was force deleted by :causer.email");
 
                 return EmptyJsonResource::messageResponse('User was force deleted successfully');
             },
-            function (Throwable $throwable) {
-                logger()->error('[PersonalAccessToken] Failed to force delete the user. Error: ' . $throwable->getMessage(),
-                    $throwable->getTrace());
-
-                if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
-                    throw $throwable;
-                }
-
-                return EmptyJsonResource::messageResponse(
-                    'Failed to force delete the user. Contact our support or try again later',
-                    Response::HTTP_INTERNAL_SERVER_ERROR
-                );
-            }
+            fn (Throwable $t) => $this->reportFailure('force delete', $t),
         );
     }
 
     /**
-     * Invite users
+     * Invite users by email.
      *
      * @response array{data:UserResource[]}
      *
-     * @param InviteUserRequest $request
-     *
-     * @return JsonResponse
      * @throws Throwable
      */
     public function invite(InviteUserRequest $request): JsonResponse
     {
         return $this->wrapInTransaction(
             function () use ($request) {
-                $invites = $request->collect('invites');
-                $invitations = Collection::make([]);
+                $invitations = Collection::make();
 
-                $invites->each(function ($data) use ($request, $invitations) {
-                    $data['phone'] = $this->phoneService->formatInternational($data['phone'] ?? null);
+                foreach ($request->collect('invites') as $data) {
+                    $user = $this->userService->invite($data);
 
-                    $response = $this->userService->invite($data);
-
-                    if (! $response) {
+                    if (! $user) {
                         logger()->warning('[User] Failed to invite a user', $data);
-
-                        return;
+                        continue;
                     }
 
-                    $invitations->push($response);
+                    $invitations->push($user);
 
                     activity()
                         ->causedBy($request->user())
-                        ->performedOn($response)
+                        ->performedOn($user)
                         ->event(PermissionsEnum::USER_INVITE->value)
                         ->log('User :subject.email was invited by :causer.email');
-                });
+                }
 
                 return UserResource::collection($invitations)
                     ->additional(['message' => 'Users were invited successfully'])
                     ->response()
                     ->setStatusCode(Response::HTTP_CREATED);
             },
-            function (Throwable $throwable) {
-                logger()->error('[User] Failed to invite the users. Error: ' . $throwable->getMessage(),
-                    $throwable->getTrace());
+            fn (Throwable $t) => $this->reportFailure('invite', $t),
+        );
+    }
 
-                if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
-                    throw $throwable;
-                }
+    private function reportFailure(string $action, Throwable $throwable): JsonResponse
+    {
+        logger()->error("[User] Failed to {$action} the user. Error: " . $throwable->getMessage(), $throwable->getTrace());
 
-                return EmptyJsonResource::messageResponse(
-                    'Failed to invite the users. Contact our support or try again later',
-                    Response::HTTP_INTERNAL_SERVER_ERROR
-                );
-            }
+        if ($throwable instanceof ValidationException || app()->hasDebugModeEnabled()) {
+            throw $throwable;
+        }
+
+        return EmptyJsonResource::messageResponse(
+            "Failed to {$action} the user. Contact our support or try again later",
+            Response::HTTP_INTERNAL_SERVER_ERROR,
         );
     }
 }

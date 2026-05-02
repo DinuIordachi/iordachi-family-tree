@@ -5,8 +5,6 @@ namespace App\Console\Commands\Sync;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Repositories\IPermissionRepository;
-use App\Repositories\IRoleRepository;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Spatie\Permission\Exceptions\RoleDoesNotExist;

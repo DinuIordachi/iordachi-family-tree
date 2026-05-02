@@ -10,9 +10,6 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $admin = User::create([
@@ -22,24 +19,24 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
         ]);
-        $admin->assignRole(RolesEnum::ADMIN->value);
+        $admin->syncRoles(RolesEnum::ADMIN->value);
 
-        $organizer = User::create([
+        $publisher = User::create([
             'first_name' => 'Publisher',
             'email' => 'publisher@example.com',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
         ]);
-        $organizer->assignRole(RolesEnum::PUBLISHER->value);
+        $publisher->syncRoles(RolesEnum::PUBLISHER->value);
 
-        $participant = User::create([
+        $member = User::create([
             'first_name' => 'Member',
             'email' => 'member@example.com',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
         ]);
-        $participant->assignRole(RolesEnum::MEMBER->value);
+        $member->syncRoles(RolesEnum::MEMBER->value);
     }
 }
