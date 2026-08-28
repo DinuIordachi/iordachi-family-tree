@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\V1\Auth;
 use App\Http\Controllers\API\V1\Security;
 use App\Http\Controllers\API\V1\Management;
+use App\Http\Controllers\API\V1\FamilyTree;
 use Spatie\Health\Http\Controllers\SimpleHealthCheckController;
 
 /**
@@ -21,6 +22,14 @@ Route::prefix('v1')->group(function () {
     Route::post('/register', Auth\RegisterController::class);
     Route::post('/forgot-password', Auth\ForgotPasswordController::class);
     Route::post('/reset-password', Auth\ResetPasswordController::class);
+
+    /*
+     * Public family tree (read-only).
+     */
+    Route::prefix('family-tree')->controller(FamilyTree\FamilyTreeController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/{family_member}', 'show')->withTrashed();
+    });
 
     /*
      * Authenticated routes (no email verification required)
@@ -64,6 +73,23 @@ Route::prefix('v1')->group(function () {
             Route::put('/{user}', 'update')->withTrashed();
             Route::delete('/{user}', 'destroy');
             Route::delete('/{user}/force-delete', 'forceDestroy')->withTrashed();
+        });
+
+        /*
+         * Family tree writes (protected).
+         */
+        Route::prefix('family-tree')->controller(FamilyTree\FamilyTreeController::class)->group(function () {
+            Route::post('/', 'store');
+            Route::put('/{family_member}', 'update');
+            Route::delete('/{family_member}', 'destroy');
+            Route::delete('/{family_member}/force-delete', 'forceDestroy')->withTrashed();
+        });
+
+        Route::prefix('family-tree/{family_member}')->controller(FamilyTree\FamilyMemberMediaController::class)->group(function () {
+            Route::post('/thumbnail', 'storeThumbnail');
+            Route::delete('/thumbnail', 'destroyThumbnail');
+            Route::post('/media', 'storeMedia');
+            Route::delete('/media/{media}', 'destroyMedia');
         });
     });
 });

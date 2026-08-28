@@ -93,7 +93,8 @@ class EmptyJsonResource extends JsonResource
 
     public function toResponse($request): JsonResponse
     {
-        return parent::toResponse($request)
+        return (new AlwaysWrapResourceResponse($this))
+            ->toResponse($request)
             ->setEncodingOptions(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 }

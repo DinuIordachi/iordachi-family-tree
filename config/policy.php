@@ -25,6 +25,7 @@ return [
         'permissions' => ['va', 'v', 'c', 'u', 'd'],
         'activities' => ['va', 'v', 'd'],
         'personal-access-tokens' => ['va', 'v', 'u', 'd', 'fd'],
+        'family-members' => ['va', 'v', 'c', 'u', 'd', 'fd'],
     ],
     'permission_role' => [
         User::GUARD_NAME => [
@@ -36,17 +37,20 @@ return [
                 'permissions' => ['va', 'v', 'c', 'u', 'd'],
                 'activities' => ['va', 'v', 'd'],
                 'personal-access-tokens' => ['va', 'v', 'u', 'd', 'fd'],
+                'family-members' => ['va', 'v', 'c', 'u', 'd', 'fd'],
             ],
             RolesEnum::PUBLISHER->value => [
                 'dashboard' => ['v'],
                 'account' => ['v', 'u', 'd'],
                 'users' => ['va', 'v'],
                 'personal-access-tokens' => ['va', 'v', 'u', 'd'],
+                'family-members' => ['va', 'v', 'c', 'u'],
             ],
             RolesEnum::MEMBER->value => [
                 'dashboard' => ['v'],
                 'account' => ['v', 'u', 'd'],
                 'personal-access-tokens' => ['v', 'u', 'd'],
+                'family-members' => ['va', 'v'],
             ],
         ],
     ],

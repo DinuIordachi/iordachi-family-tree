@@ -34,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         Repositories\PermissionRepository::class => ERepositories\PermissionRepositoryImplementation::class,
         Repositories\ActivityRepository::class => ERepositories\ActivityRepositoryImplementation::class,
         Repositories\PersonalAccessTokenRepository::class => ERepositories\PersonalAccessTokenRepositoryImplementation::class,
+        Repositories\FamilyMemberRepository::class => ERepositories\FamilyMemberRepositoryImplementation::class,
     ];
 
     /**
@@ -47,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
         Models\Permission::class => Policies\PermissionPolicy::class,
         Models\Activity::class => Policies\ActivityPolicy::class,
         Models\PersonalAccessToken::class => Policies\PersonalAccessTokenPolicy::class,
+        Models\FamilyMember::class => Policies\FamilyMemberPolicy::class,
     ];
 
     public function register(): void

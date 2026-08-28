@@ -75,4 +75,14 @@ enum PermissionsEnum: string
     case PERSONAL_ACCESS_TOKEN_UPDATE = 'update-personal-access-tokens';
     case PERSONAL_ACCESS_TOKEN_DELETE = 'delete-personal-access-tokens';
     case PERSONAL_ACCESS_TOKEN_FORCE_DELETE = 'force-delete-personal-access-tokens';
+
+    /**
+     * Family members
+     */
+    case FAMILY_MEMBER_VIEW_ANY = 'viewAny-family-members';
+    case FAMILY_MEMBER_VIEW = 'view-family-members';
+    case FAMILY_MEMBER_CREATE = 'create-family-members';
+    case FAMILY_MEMBER_UPDATE = 'update-family-members';
+    case FAMILY_MEMBER_DELETE = 'delete-family-members';
+    case FAMILY_MEMBER_FORCE_DELETE = 'force-delete-family-members';
 }
