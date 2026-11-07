@@ -152,5 +152,5 @@ return [
      *
      * @link https://spatie.be/docs/laravel-health/v1/basic-usage/conditionally-running-or-modifying-checks
      */
-    // 'treat_skipped_as_failure' => false
+    'treat_skipped_as_failure' => false,
 ];

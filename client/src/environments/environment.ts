@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://iordachi-family.local/api/v1',
+  apiUrl: 'http://iordachi-family-tree.test/api/v1',
 };
