@@ -1,0 +1,53 @@
+/* Engraved family tree — design tokens (spec §5).
+   Included globally from src/styles.scss so the SVG tree (rendered by a
+   child component) is not cut off by emulated view encapsulation. */
+@import '@fontsource/im-fell-english/400.css';
+@import '@fontsource/im-fell-english/400-italic.css';
+@import '@fontsource/im-fell-english-sc/400.css';
+@import '@fontsource/cormorant-garamond/400.css';
+@import '@fontsource/cormorant-garamond/400-italic.css';
+
+.engraved-tree {
+  /* Color — parchment */
+  --et-paper: #efe3c6;
+  --et-paper-shade: #d9c49a;
+  --et-ink: #2b1d12;
+  --et-ink-soft: #5a4330;
+  --et-sepia: #8a5a2b;
+  --et-gilt: #b08a3e;
+  --et-oxblood: #7a2e22;
+  --et-focus: #1f5f8b;
+
+  /* Typography. IM Fell is Latin-1 only: Cormorant Garamond supplies ă, ș, ț. */
+  --et-font-display: 'IM Fell English SC', 'Cormorant Garamond', serif;
+  --et-font-name: 'IM Fell English', 'Cormorant Garamond', serif;
+  --et-font-body: 'Cormorant Garamond', serif;
+  --et-size-title: clamp(1.75rem, 3vw, 2.75rem);
+  --et-size-name: 15px;
+  --et-size-years: 12px;
+
+  /* Line weights (SVG user units) */
+  --et-stroke-hair: 0.6;
+  --et-stroke-fine: 1;
+  --et-stroke-main: 1.6;
+  --et-stroke-bold: 2.4;
+
+  /* Motion */
+  --et-dur-grow: 1600ms;
+  --et-ease: cubic-bezier(.2,.7,.2,1);
+
+  color: var(--et-ink);
+  background-color: var(--et-paper);
+}
+
+:root.app-dark .engraved-tree {
+  /* Color — candlelit */
+  --et-paper: #2a1f17;
+  --et-paper-shade: #1c140e;
+  --et-ink: #ead9b0;
+  --et-ink-soft: #b89f74;
+  --et-sepia: #c08a4c;
+  --et-gilt: #e0b862;
+  --et-oxblood: #c4614e;
+  --et-focus: #8cc4ec;
+}
