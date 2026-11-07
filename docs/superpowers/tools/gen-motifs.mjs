@@ -53,11 +53,11 @@ function rose(cx, cy, s = 1) {
 const crescent = (cx, cy, r) =>
   `M${f(cx + r * 0.2)} ${f(cy - r)} A${r} ${r} 0 1 0 ${f(cx + r * 0.2)} ${f(cy + r)} A${f(r * 0.8)} ${f(r * 0.8)} 0 1 1 ${f(cx + r * 0.2)} ${f(cy - r)}Z`;
 
-function file(name, w, h, body) {
+function file(name, w, h, body, symbolAttrs = '') {
   clipSeq = 0;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w * 2}" height="${h * 2}">
 <!-- Engraved motif: ${name}. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
-<symbol id="motif" viewBox="0 0 ${w} ${h}" style="${BASE}">
+<symbol id="motif" viewBox="0 0 ${w} ${h}"${symbolAttrs} style="${BASE}">
 ${body.trim()}
 </symbol>
 <use href="#motif" width="${w}" height="${h}"/>
@@ -253,6 +253,7 @@ ${hatch('M106 74 Q99 62 100 54 Q98 58 92 56 Q94 64 96 74 Z', [92, 54, 106, 74], 
 ${rows}
 <path d="M0 54 L600 54" ${FINE}/>
 `,
+    ' preserveAspectRatio="none"',
   );
 }
 

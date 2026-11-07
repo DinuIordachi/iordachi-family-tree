@@ -1,0 +1,72 @@
+<svg #svg class="engraved-tree" role="img" aria-label="Iordachi family tree">
+  <defs etEngravingDefs></defs>
+
+  <!-- Paper grain stays fixed to the viewport so it is not re-rasterised on every zoom frame. -->
+  <rect class="et-paper" width="100%" height="100%" filter="url(#et-paper-grain)" />
+
+  <g #viewport class="et-viewport">
+    @if (crownD()) {
+      <path class="et-crown" [attr.d]="crownD()" />
+    }
+
+    <g class="et-ground">
+      <rect [attr.x]="ground().x" [attr.y]="ground().y" [attr.width]="ground().width" height="110" class="et-ground-fill" />
+      <line [attr.x1]="ground().x" [attr.y1]="ground().y" [attr.x2]="ground().x + ground().width" [attr.y2]="ground().y" class="et-ground-line" />
+    </g>
+
+    @for (motif of motifs(); track motif.motif + motif.center.x + motif.center.y) {
+      @if (motif.motif === 'river-moldova') {
+        <g etMotif [placement]="motif"></g>
+      }
+    }
+
+    <path class="et-roots" [attr.d]="rootsD()" />
+    <path class="et-trunk" [attr.d]="trunkD()" />
+    <path class="et-trunk-hatch" [attr.d]="trunkD()" />
+
+    @for (branch of branches(); track branch.id) {
+      <path
+        class="et-branch"
+        [class.is-lineage]="lineage().has(branch.id)"
+        [attr.data-branch-id]="branch.id"
+        [attr.d]="branch.d"
+        [style.--et-gen]="branch.generation"
+      />
+    }
+
+    @for (motif of motifs(); track motif.motif + motif.center.x + motif.center.y) {
+      @if (motif.motif !== 'river-moldova') {
+        <g etMotif [placement]="motif"></g>
+      }
+    }
+
+    @for (p of placedMembers(); track p.id) {
+      <g
+        etMedallion
+        [attr.transform]="'translate(' + p.center.x + ' ' + p.center.y + ')'"
+        [style.--et-gen]="p.generation"
+        [member]="p.member"
+        [selected]="selectedId() === p.id"
+        (activate)="memberActivate.emit($event)"
+        (hoverChange)="onHover(p.id, $event)"
+      ></g>
+    }
+
+    <g class="et-title" [attr.transform]="'translate(' + titleAt().x + ' ' + titleAt().y + ')'">
+      <path class="et-title-scroll" d="M-230 -34 Q-246 -34 -246 -18 L-246 18 Q-246 34 -230 34 L230 34 Q246 34 246 18 L246 -18 Q246 -34 230 -34 Z" />
+      <path class="et-title-curl" d="M-246 -18 Q-262 -18 -262 0 Q-262 16 -246 18 M246 -18 Q262 -18 262 0 Q262 16 246 18" />
+      <text class="et-title-main" x="0" y="2" text-anchor="middle">Arbor Gentis Iordachi</text>
+      <text class="et-title-sub" x="0" y="24" text-anchor="middle">Iordachi Family Tree</text>
+    </g>
+
+    @if (unplacedNames().length) {
+      <g class="et-alii" [attr.transform]="'translate(' + aliiAt().x + ' ' + aliiAt().y + ')'">
+        <rect class="et-alii-frame" x="-10" y="-34" width="220" [attr.height]="unplacedNames().length * 20 + 50" />
+        <text class="et-alii-heading" x="100" y="-10" text-anchor="middle">Alii</text>
+        @for (name of unplacedNames(); track $index) {
+          <text class="et-alii-name" x="100" [attr.y]="14 + $index * 20" text-anchor="middle">{{ name }}</text>
+        }
+      </g>
+    }
+  </g>
+</svg>

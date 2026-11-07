@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.engraved-tree {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  box-shadow: inset 0 0 140px var(--et-paper-shade);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.et-paper {
+  fill: var(--et-paper);
+  pointer-events: none;
+}
+
+.et-crown {
+  fill: url(#et-stipple);
+  stroke: var(--et-ink-soft);
+  stroke-width: var(--et-stroke-hair);
+  stroke-dasharray: 2 5;
+  opacity: 0.75;
+}
+
+.et-ground-fill {
+  fill: url(#et-hatch-135);
+  opacity: 0.55;
+}
+
+.et-ground-line {
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-main);
+}
+
+.et-roots,
+.et-trunk,
+.et-branch {
+  fill: var(--et-sepia);
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-fine);
+  stroke-linejoin: round;
+}
+
+.et-trunk {
+  stroke-width: var(--et-stroke-bold);
+}
+
+.et-trunk-hatch {
+  fill: url(#et-hatch-45);
+  stroke: none;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.et-branch {
+  transition: fill 250ms var(--et-ease);
+
+  &.is-lineage {
+    fill: var(--et-gilt);
+  }
+}
+
+.et-title-scroll,
+.et-title-curl,
+.et-alii-frame {
+  fill: var(--et-paper);
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-main);
+}
+
+.et-title-curl {
+  fill: var(--et-paper-shade);
+}
+
+.et-title-main {
+  font-family: var(--et-font-display);
+  font-size: 30px;
+  fill: var(--et-ink);
+  letter-spacing: 0.04em;
+}
+
+.et-title-sub {
+  font-family: var(--et-font-body);
+  font-style: italic;
+  font-size: 14px;
+  fill: var(--et-ink-soft);
+}
+
+.et-alii-frame {
+  stroke-dasharray: 6 3;
+}
+
+.et-alii-heading {
+  font-family: var(--et-font-display);
+  font-size: 18px;
+  fill: var(--et-ink);
+}
+
+.et-alii-name {
+  font-family: var(--et-font-name);
+  font-size: var(--et-size-name);
+  fill: var(--et-ink);
+}

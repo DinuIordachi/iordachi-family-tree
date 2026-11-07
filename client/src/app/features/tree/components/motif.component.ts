@@ -35,10 +35,20 @@ export const MOTIF_SIZES: Record<MotifId, { width: number; height: number }> = {
 export class MotifComponent {
   readonly placement = input.required<MotifPlacement>();
 
-  protected readonly size = computed(() => MOTIF_SIZES[this.placement().motif]);
+  /** The river stretches horizontally only, so a wide tree doesn't get a tall river. */
+  private readonly stretched = computed(() => this.placement().motif === 'river-moldova');
+
+  protected readonly size = computed(() => {
+    const base = MOTIF_SIZES[this.placement().motif];
+    return this.stretched() ? { width: base.width * this.placement().scale, height: base.height } : base;
+  });
   protected readonly href = computed(() => `motifs/${this.placement().motif}.svg#motif`);
   protected readonly transform = computed(() => {
     const { center, scale, mirrored } = this.placement();
-    return `translate(${center.x} ${center.y}) scale(${scale})${mirrored ? ' scale(-1 1)' : ''}`;
+    const translate = `translate(${center.x} ${center.y})`;
+    if (this.stretched()) {
+      return translate;
+    }
+    return `${translate} scale(${scale})${mirrored ? ' scale(-1 1)' : ''}`;
   });
 }

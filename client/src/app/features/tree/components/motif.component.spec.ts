@@ -35,6 +35,15 @@ describe('MotifComponent', () => {
     expect(host.getAttribute('transform')).toBe('translate(1 2) scale(0.5) scale(-1 1)');
   });
 
+  it('stretches the river horizontally only', async () => {
+    const host = await render({ motif: 'river-moldova', center: { x: 0, y: 40 }, scale: 2, mirrored: false });
+    const use = host.querySelector('use')!;
+    expect(use.getAttribute('width')).toBe('1200');
+    expect(use.getAttribute('height')).toBe('60');
+    expect(use.getAttribute('x')).toBe('-600');
+    expect(host.getAttribute('transform')).toBe('translate(0 40)');
+  });
+
   it('is decorative for assistive tech', async () => {
     const host = await render();
     expect(host.getAttribute('aria-hidden')).toBe('true');
