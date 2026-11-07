@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FamilyMember } from '@app/core/models';
+import { bannerSpan } from '../engraving/member-text';
 import { member } from '../engraving/testing/member-factory';
 import { SEED_MEMBERS } from '../engraving/testing/seed-fixture';
 import { EngravedTreeComponent } from './engraved-tree.component';
@@ -49,10 +50,10 @@ describe('EngravedTreeComponent', () => {
     }
   });
 
-  it('is an accessible image with the trunk and roots drawn', async () => {
+  it('is a labelled group (not an image) with the trunk and roots drawn', async () => {
     const { root } = await setup();
     const svg = root.querySelector('svg.engraved-tree')!;
-    expect(svg.getAttribute('role')).toBe('img');
+    expect(svg.getAttribute('role')).toBe('group'); // img would hide the medallion buttons from assistive tech
     expect(svg.getAttribute('aria-label')).toBe('Iordachi family tree');
     expect(root.querySelector('path.et-trunk')!.getAttribute('d')).toMatch(/^M/);
     expect(root.querySelector('path.et-roots')!.getAttribute('d')).toMatch(/^M/);
@@ -114,6 +115,70 @@ describe('EngravedTreeComponent', () => {
     expect(viewport()).not.toBe(initial);
     tree.resetView();
     expect(viewport()).toBe(initial);
+  });
+
+  it('ties each couple with a ribbon knot between their medallions', async () => {
+    const { root } = await setup();
+    const knots = [...root.querySelectorAll('g.et-knot')];
+    expect(knots).toHaveLength(3); // 1+2, 3+4, 5+6
+    const at = (id: string) =>
+      root.querySelector(`g[etMedallion][data-member-id="${id}"]`)!.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!.slice(1).map(Number);
+    const [x3, y3] = at('3');
+    const [x4] = at('4');
+    expect(knots.map((k) => k.getAttribute('transform'))).toContain(`translate(${(x3 + x4) / 2} ${y3})`);
+  });
+
+  it('spaces medallions so long names never make neighbouring banners collide', async () => {
+    const long = 'Alexandra-Maria Constantinescu';
+    const { root } = await setup([
+      member('1', { spouses: ['2'] }, { 'first name': long, 'last name': 'Iordachi' }),
+      member('2', { spouses: ['1'] }, { 'first name': 'Gheorghița', 'last name': 'Iordachi' }),
+    ]);
+    const xs = [...root.querySelectorAll('g[etMedallion]')].map(
+      (g) => Number(g.getAttribute('transform')!.match(/translate\(([-\d.]+)/)![1]),
+    );
+    const gap = Math.abs(xs[0] - xs[1]);
+    expect(gap).toBeGreaterThan(170); // the slot widened for the long names
+    // every rendered banner (band + 2 × 16 tails) fits inside its slot: long names are condensed, not overflowed
+    for (const banner of root.querySelectorAll('g[etBanner]')) {
+      expect(Number(banner.getAttribute('data-width')) + 32).toBeLessThanOrEqual(gap);
+    }
+    const condensed = root.querySelector('g[etMedallion][data-member-id="1"] .et-banner-name')!;
+    expect(condensed.getAttribute('lengthAdjust')).toBe('spacingAndGlyphs');
+    expect(bannerSpan('Gheorghița Iordachi')).toBeLessThanOrEqual(gap);
+  });
+
+  it('pans a keyboard-focused medallion into view when zoomed in', async () => {
+    const { fixture, root } = await setup();
+    const tree = fixture.debugElement.children[0].componentInstance as EngravedTreeComponent;
+    tree.zoomBy(2.5);
+    tree.zoomBy(2.5);
+    const medallion = root.querySelector('g[etMedallion][data-member-id="9"]')!;
+    medallion.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await fixture.whenStable();
+    const [, tx, ty, k] = root.querySelector('g.et-viewport')!.getAttribute('transform')!.match(/translate\(([-\d.]+),([-\d.]+)\) scale\(([-\d.]+)\)/)!.map(Number);
+    const [mx, my] = medallion.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!.slice(1).map(Number);
+    const sx = tx + k * mx;
+    const sy = ty + k * my;
+    expect(sx).toBeGreaterThan(0);
+    expect(sx).toBeLessThan(1200);
+    expect(sy).toBeGreaterThan(0);
+    expect(sy).toBeLessThan(800);
+  });
+
+  it('makes Alii names activatable and keeps a long list above the ground', async () => {
+    const isolated = Array.from({ length: 20 }, (_, i) => member(String(100 + i), {}, { 'first name': `Alius${i}` }));
+    const { fixture, root } = await setup([...SEED_MEMBERS, ...isolated]);
+    const alii = root.querySelector('g.et-alii')!;
+    const top = Number(alii.getAttribute('transform')!.match(/translate\([-\d.]+ ([-\d.]+)\)/)![1]);
+    const frame = alii.querySelector('rect.et-alii-frame')!;
+    expect(top + Number(frame.getAttribute('y')) + Number(frame.getAttribute('height'))).toBeLessThanOrEqual(0);
+
+    const name = alii.querySelector('[role="button"][data-member-id="105"]') as SVGGElement;
+    expect(name.getAttribute('tabindex')).toBe('0');
+    name.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(fixture.componentInstance.activated.map((m) => m.id)).toEqual(['105', '105']);
   });
 
   it('renders the trunk and ground motifs even when empty', async () => {

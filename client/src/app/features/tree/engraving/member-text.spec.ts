@@ -1,4 +1,4 @@
-import { fullName, lifespan, memberAriaLabel } from './member-text';
+import { bannerSpan, fullName, lifespan, memberAriaLabel } from './member-text';
 import { member } from './testing/member-factory';
 
 describe('lifespan', () => {
@@ -11,6 +11,10 @@ describe('lifespan', () => {
   it('is empty for an unparseable birthday', () =>
     expect(lifespan(member('1', {}, { birthday: 'garbage' }))).toBe(''));
   it('is empty without a birthday', () => expect(lifespan(member('1', {}, {}))).toBe(''));
+  it('reads years from the date string, whatever the viewer time zone', () =>
+    expect(lifespan(member('1', {}, { birthday: '1925-01-01', diedAt: '1998-01-01T00:00:00+00:00' }))).toBe(
+      '1925 – 1998',
+    ));
 });
 
 describe('fullName', () => {
@@ -39,4 +43,11 @@ describe('memberAriaLabel', () => {
     ));
   it('omits unknown dates', () =>
     expect(memberAriaLabel(member('1', {}, { 'first name': 'Ion', 'last name': 'Iordachi' }))).toBe('Ion Iordachi'));
+});
+
+describe('bannerSpan', () => {
+  it('covers band (min 120) plus both swallow tails', () => {
+    expect(bannerSpan('Ion')).toBe(120 + 32);
+    expect(bannerSpan('Gheorghița Iordachi')).toBe(19 * 8 + 28 + 32);
+  });
 });

@@ -46,8 +46,11 @@ describe('placeMotifs', () => {
 
   it('caps scattered ornaments at 8', () => expect(scattered(placeMotifs(bigTree(), 1))).toHaveLength(8));
 
-  it('places none when no valid slot exists', () =>
-    expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(0));
+  it('flanks a lone founder with the minimum two ornaments', () =>
+    expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(2));
+
+  it('places none when there are no members at all', () =>
+    expect(scattered(placeMotifs(layoutTree(buildHouseholds([])), 1))).toHaveLength(0));
 
   it('keeps 90 units from medallions and other ornaments', () => {
     const layout = bigTree();
@@ -59,6 +62,20 @@ describe('placeMotifs', () => {
       for (const other of s) {
         if (other !== o) {
           expect(Math.hypot(o.center.x - other.center.x, o.center.y - other.center.y)).toBeGreaterThanOrEqual(90);
+        }
+      }
+    }
+  });
+
+  it('keeps ornaments off every name banner and its years', () => {
+    for (const layout of [seedLayout, bigTree()]) {
+      const s = scattered(placeMotifs(layout, 3));
+      for (const o of s) {
+        for (const m of layout.members) {
+          // ornament box (80×80) vs banner box: x ± 85 (half the 170 slot), y + 44 … y + 94
+          const overlapX = Math.abs(o.center.x - m.center.x) < 40 + 85;
+          const overlapY = o.center.y + 40 > m.center.y + 44 && o.center.y - 40 < m.center.y + 94;
+          expect(overlapX && overlapY, `${o.motif} over banner of ${m.id}`).toBe(false);
         }
       }
     }

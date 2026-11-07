@@ -4,11 +4,12 @@ import { BannerComponent } from './banner.component';
 
 @Component({
   imports: [BannerComponent],
-  template: `<svg><g etBanner [name]="name()" [years]="years()"></g></svg>`,
+  template: `<svg><g etBanner [name]="name()" [years]="years()" [maxWidth]="maxWidth()"></g></svg>`,
 })
 class HostComponent {
   name = signal('Vasile Iordachi');
   years = signal('1925 – 1998');
+  maxWidth = signal(1000);
 }
 
 describe('BannerComponent', () => {
@@ -34,5 +35,23 @@ describe('BannerComponent', () => {
     fixture.componentInstance.name.set('Alexandra-Maria Constantinescu-Iordachi');
     await fixture.whenStable();
     expect(width()).toBeGreaterThan(120);
+  });
+
+  it('condenses a name wider than its slot instead of overflowing', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.name.set('Alexandra-Maria Constantinescu Iordachi');
+    fixture.componentInstance.maxWidth.set(200);
+    await fixture.whenStable();
+    const host = fixture.nativeElement.querySelector('g[etBanner]');
+    expect(Number(host.getAttribute('data-width'))).toBe(200);
+    const text = host.querySelector('.et-banner-name');
+    expect(text.getAttribute('textLength')).toBe('172');
+    expect(text.getAttribute('lengthAdjust')).toBe('spacingAndGlyphs');
+  });
+
+  it('leaves names that fit at their natural width', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.et-banner-name').getAttribute('textLength')).toBeNull();
   });
 });

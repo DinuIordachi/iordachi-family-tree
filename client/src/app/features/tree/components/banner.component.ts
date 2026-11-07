@@ -23,7 +23,15 @@ const PADDING = 28;
       <path class="et-banner-tail" [attr.d]="rightTail()" />
       <path class="et-banner-fold" [attr.d]="folds()" />
       <path class="et-banner-band" [attr.d]="band()" />
-      <text #nameText class="et-banner-name" x="0" y="4.5" text-anchor="middle">{{ name() }}</text>
+      <text
+        #nameText
+        class="et-banner-name"
+        x="0"
+        y="4.5"
+        text-anchor="middle"
+        [attr.textLength]="condensed() ? width() - padding : null"
+        [attr.lengthAdjust]="condensed() ? 'spacingAndGlyphs' : null"
+      >{{ name() }}</text>
       @if (years()) {
         <text class="et-banner-years" x="0" y="27" text-anchor="middle">{{ years() }}</text>
       }
@@ -70,12 +78,17 @@ const PADDING = 28;
 export class BannerComponent {
   readonly name = input.required<string>();
   readonly years = input('');
+  /** Widest the band may be (its slot minus the tails); longer names are condensed to fit. */
+  readonly maxWidth = input(Number.POSITIVE_INFINITY);
+  protected readonly padding = PADDING;
 
   private readonly nameText = viewChild<ElementRef<SVGTextElement>>('nameText');
   /** Text width: estimated from length, replaced by the real measurement once rendered. */
   private readonly measured = linkedSignal(() => this.name().length * 8);
 
-  readonly width = computed(() => Math.max(MIN_WIDTH, Math.ceil(this.measured() + PADDING)));
+  private readonly natural = computed(() => Math.max(MIN_WIDTH, Math.ceil(this.measured() + PADDING)));
+  readonly condensed = computed(() => this.natural() > this.maxWidth());
+  readonly width = computed(() => Math.min(this.natural(), this.maxWidth()));
   private readonly half = computed(() => this.width() / 2);
 
   readonly band = computed(() => {
@@ -99,6 +112,9 @@ export class BannerComponent {
     afterRenderEffect(() => {
       this.name();
       const el = this.nameText()?.nativeElement;
+      if (el?.hasAttribute('textLength')) {
+        return; // a condensed name reports its condensed length; keep the natural measurement
+      }
       const length = el && typeof el.getComputedTextLength === 'function' ? el.getComputedTextLength() : 0;
       if (length > 0) {
         this.measured.set(length);

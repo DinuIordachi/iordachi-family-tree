@@ -76,7 +76,7 @@ const LEAVES = laurelLeaves();
       <text class="et-dagger" x="26" y="-30" aria-hidden="true">†</svg:text>
     }
     </svg:g>
-    <svg:g etBanner transform="translate(0 58)" [name]="name()" [years]="years()" />
+    <svg:g etBanner transform="translate(0 58)" [name]="name()" [years]="years()" [maxWidth]="bannerMaxWidth()" />
   `,
   styles: `
     :host {
@@ -143,6 +143,8 @@ const LEAVES = laurelLeaves();
 export class MedallionComponent {
   readonly member = input.required<FamilyMember>();
   readonly selected = input(false);
+  /** Widest the name banner's band may be before its lettering is condensed. */
+  readonly bannerMaxWidth = input(Number.POSITIVE_INFINITY);
   readonly activate = output<FamilyMember>();
   readonly hoverChange = output<boolean>();
 

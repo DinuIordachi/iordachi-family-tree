@@ -14,12 +14,12 @@ import {
 import { FamilyMember } from '@app/core/models';
 import { select } from 'd3-selection';
 import { curveBasisClosed, line } from 'd3-shape';
-import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity } from 'd3-zoom';
+import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
 import { branchPath, branchWidths, rootsPath, trunkPath } from '../engraving/branch-geometry';
 import { buildHouseholds } from '../engraving/households';
 import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
 import { lineageBranchIds } from '../engraving/lineage';
-import { fullName } from '../engraving/member-text';
+import { bannerSpan, fullName } from '../engraving/member-text';
 import { FIXED_MOTIFS, placeMotifs } from '../engraving/motif-placement';
 import { hashSeed } from '../engraving/seeded-random';
 import { MotifPlacement, Point, TreeLayout } from '../engraving/types';
@@ -30,6 +30,12 @@ import { MotifComponent } from './motif.component';
 const SCALE_EXTENT: [number, number] = [0.25, 2.5];
 const CROWN_PAD = 80;
 const FALLBACK_VIEWPORT = { width: 1200, height: 800 };
+/** Person slots widen (up to this cap) so the longest name's banner never touches its neighbours. */
+const MAX_PERSON_GAP = 280;
+const FOCUS_MARGIN = 80;
+const ALII_LINE = 20;
+/** Medallion rim plus laurel ring: a couple's cord runs between these on each side. */
+const MEDALLION_REACH = 46;
 /** Spec §5: --et-dur-grow (1600ms) plus one 300ms stagger per generation after the first. */
 const GROW_MS = 1600;
 const STAGGER_MS = 300;
@@ -98,10 +104,16 @@ export class EngravedTreeComponent {
   protected readonly hoveredId = signal<string | null>(null);
   protected readonly growth = signal<'growing' | 'grown'>(prefersReducedMotion() ? 'grown' : 'growing');
 
-  protected readonly layout = computed(() => layoutTree(buildHouseholds(this.members())));
+  protected readonly personGap = computed(() => {
+    const widest = Math.max(0, ...this.members().map((m) => bannerSpan(fullName(m)) + 10));
+    return Math.min(MAX_PERSON_GAP, Math.max(DEFAULT_LAYOUT_OPTIONS.personGap, widest));
+  });
+  protected readonly layout = computed(() =>
+    layoutTree(buildHouseholds(this.members()), { personGap: this.personGap() }),
+  );
   protected readonly motifs = computed(() => {
     const layout = this.layout();
-    return placeMotifs(layout, hashSeed('iordachi')).map((placement) => ({
+    return placeMotifs(layout, hashSeed('iordachi'), this.personGap() / 2).map((placement) => ({
       placement,
       generation: motifGeneration(placement, layout),
     }));
@@ -126,9 +138,22 @@ export class EngravedTreeComponent {
     const id = this.hoveredId();
     return new Set(id ? lineageBranchIds(id, this.layout()) : []);
   });
-  protected readonly unplacedNames = computed(() =>
-    this.layout().unplacedMemberIds.map((id) => fullName(this.byId().get(id)!)),
+  protected readonly unplaced = computed(() =>
+    this.layout().unplacedMemberIds.map((id) => ({ id, member: this.byId().get(id)!, name: fullName(this.byId().get(id)!) })),
   );
+  /** One knot between each pair of neighbouring spouses, with a cord from rim to rim. */
+  protected readonly knots = computed(() => {
+    const knots: Point[] = [];
+    const members = this.layout().members;
+    for (let i = 1; i < members.length; i++) {
+      const [a, b] = [members[i - 1], members[i]];
+      if (a.householdId === b.householdId) {
+        knots.push({ x: (a.center.x + b.center.x) / 2, y: a.center.y });
+      }
+    }
+    return knots;
+  });
+  protected readonly cordHalf = computed(() => Math.max(0, this.personGap() / 2 - MEDALLION_REACH));
 
   protected readonly ground = computed(() => {
     const { bounds, trunk } = this.layout();
@@ -140,17 +165,20 @@ export class EngravedTreeComponent {
     x: this.layout().trunk.base.x,
     y: this.layout().bounds.minY - 290,
   }));
+  /** The Alii list grows upward from just above the ground, so a long list never sinks into the river. */
   protected readonly aliiAt = computed<Point>(() => ({
     x: Math.max(this.layout().bounds.maxX, this.layout().trunk.base.x + 330) + 120,
-    y: this.layout().trunk.base.y - 160,
+    y: this.layout().trunk.base.y - 40 - this.unplaced().length * ALII_LINE,
   }));
 
   /** World-space box that must fit the viewport. */
   private readonly contentBox = computed(() => {
     const { bounds, trunk } = this.layout();
     const minX = Math.min(bounds.minX - 110, trunk.base.x - 340);
-    const maxX = Math.max(bounds.maxX + 110, trunk.base.x + 340, this.unplacedNames().length ? this.aliiAt().x + 220 : -Infinity);
-    return { minX, maxX, minY: this.titleAt().y - 50, maxY: trunk.base.y + 110 };
+    const hasAlii = this.unplaced().length > 0;
+    const maxX = Math.max(bounds.maxX + 110, trunk.base.x + 340, hasAlii ? this.aliiAt().x + 220 : -Infinity);
+    const minY = Math.min(this.titleAt().y - 50, hasAlii ? this.aliiAt().y - 50 : Infinity);
+    return { minX, maxX, minY, maxY: trunk.base.y + 110 };
   });
 
   constructor() {
@@ -190,6 +218,29 @@ export class EngravedTreeComponent {
   resetView(): void {
     if (this.zoomBehavior) {
       this.zoomBehavior.transform(select(this.svgRef().nativeElement), this.fitTransform());
+    }
+  }
+
+  /** Keyboard focus on a medallion outside the visible area pans it to the centre. */
+  protected onFocusIn(event: FocusEvent): void {
+    const id = (event.target as Element | null)?.closest('g[etMedallion]')?.getAttribute('data-member-id');
+    const placed = id ? this.layout().members.find((m) => m.id === id) : undefined;
+    if (!placed || !this.zoomBehavior) {
+      return;
+    }
+    const svg = this.svgRef().nativeElement;
+    const [sx, sy] = zoomTransform(svg).apply([placed.center.x, placed.center.y]);
+    const { width, height } = this.viewportSize();
+    const visible = sx >= FOCUS_MARGIN && sx <= width - FOCUS_MARGIN && sy >= FOCUS_MARGIN && sy <= height - FOCUS_MARGIN;
+    if (!visible) {
+      this.zoomBehavior.translateTo(select(svg), placed.center.x, placed.center.y);
+    }
+  }
+
+  protected onAliiKeydown(event: KeyboardEvent, member: FamilyMember): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.memberActivate.emit(member);
     }
   }
 

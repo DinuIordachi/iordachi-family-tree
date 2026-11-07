@@ -3,7 +3,7 @@
   class="engraved-tree"
   [class.is-growing]="growth() === 'growing'"
   [class.is-grown]="growth() === 'grown'"
-  role="img"
+  role="group"
   aria-label="Iordachi family tree"
 >
   <defs etEngravingDefs></defs>
@@ -11,7 +11,7 @@
   <!-- Paper grain stays fixed to the viewport so it is not re-rasterised on every zoom frame. -->
   <rect class="et-paper" width="100%" height="100%" filter="url(#et-paper-grain)" />
 
-  <g #viewport class="et-viewport">
+  <g #viewport class="et-viewport" (focusin)="onFocusIn($event)">
     @if (crownD()) {
       <path class="et-crown" [attr.d]="crownD()" />
     }
@@ -42,6 +42,15 @@
       <path class="et-branch-hatch" [attr.d]="branch.d" [style.--et-gen]="branch.generation" />
     }
 
+    @for (knot of knots(); track $index) {
+      <g class="et-knot" [attr.transform]="'translate(' + knot.x + ' ' + knot.y + ')'" aria-hidden="true">
+        <path class="et-knot-cord" [attr.d]="'M' + -cordHalf() + ' 0 Q0 7 ' + cordHalf() + ' 0'" />
+        <path class="et-knot-bow" d="M0 0 C-10 -11 -19 -4 -14 4 C-10 10 -4 5 0 0 Z M0 0 C10 -11 19 -4 14 4 C10 10 4 5 0 0 Z" />
+        <path class="et-knot-tails" d="M0 0 L-7 15 L-3 13 M0 0 L7 15 L3 13" />
+        <circle class="et-knot-bow" r="2.6" />
+      </g>
+    }
+
     @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
       @if (m.placement.motif !== 'river-moldova') {
         <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
@@ -55,6 +64,7 @@
         [style.--et-gen]="p.generation"
         [member]="p.member"
         [selected]="selectedId() === p.id"
+        [bannerMaxWidth]="personGap() - 40"
         (activate)="memberActivate.emit($event)"
         (hoverChange)="onHover(p.id, $event)"
       ></g>
@@ -67,12 +77,22 @@
       <text class="et-title-sub" x="0" y="24" text-anchor="middle">Iordachi Family Tree</text>
     </g>
 
-    @if (unplacedNames().length) {
+    @if (unplaced().length) {
       <g class="et-alii" [attr.transform]="'translate(' + aliiAt().x + ' ' + aliiAt().y + ')'">
-        <rect class="et-alii-frame" x="-10" y="-34" width="220" [attr.height]="unplacedNames().length * 20 + 50" />
+        <rect class="et-alii-frame" x="-10" y="-34" width="220" [attr.height]="unplaced().length * 20 + 50" />
         <text class="et-alii-heading" x="100" y="-10" text-anchor="middle">Alii</text>
-        @for (name of unplacedNames(); track $index) {
-          <text class="et-alii-name" x="100" [attr.y]="14 + $index * 20" text-anchor="middle">{{ name }}</text>
+        @for (entry of unplaced(); track entry.id) {
+          <g
+            class="et-alii-entry"
+            role="button"
+            tabindex="0"
+            [attr.data-member-id]="entry.id"
+            [attr.aria-label]="entry.name + ', not linked into the tree'"
+            (click)="memberActivate.emit(entry.member)"
+            (keydown)="onAliiKeydown($event, entry.member)"
+          >
+            <text class="et-alii-name" x="100" [attr.y]="14 + $index * 20" text-anchor="middle">{{ entry.name }}</text>
+          </g>
         }
       </g>
     }

@@ -105,6 +105,34 @@
   fill: var(--et-ink);
 }
 
+.et-knot-cord,
+.et-knot-tails {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-fine);
+}
+
+.et-knot-bow {
+  fill: var(--et-gilt);
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-fine);
+}
+
+.et-alii-entry {
+  cursor: pointer;
+  outline: none;
+
+  &:hover .et-alii-name,
+  &:focus-visible .et-alii-name {
+    fill: var(--et-oxblood);
+    text-decoration: underline;
+  }
+
+  &:focus-visible .et-alii-name {
+    outline: 2px solid var(--et-focus);
+  }
+}
+
 .et-alii-name {
   font-family: var(--et-font-name);
   font-size: var(--et-size-name);
@@ -142,6 +170,7 @@
   }
 
   .et-motif,
+  .et-knot,
   .et-title {
     animation: et-fade-in 500ms var(--et-ease) both;
     animation-delay: calc(400ms + var(--et-gen, 0) * 300ms);
