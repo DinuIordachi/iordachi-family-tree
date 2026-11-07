@@ -54,28 +54,35 @@ function taperedCurve(p0: Point, c1: Point, c2: Point, p3: Point, w0: number, w1
   );
 }
 
-/** Organic tapered branch: rises vertically from the parent, then bends toward the child. */
-export function branchPath(seg: BranchSegment): string {
+/**
+ * Organic tapered branch: rises vertically from the parent, then bends toward the child.
+ * `endWidth` lets a branch that forks again end at its children's start width (no step at the fork);
+ * leaf branches default to the spec taper.
+ */
+export function branchPath(seg: BranchSegment, endWidth?: number): string {
   const rnd = seededRandom(hashSeed(seg.id));
   const j = () => (rnd() * 2 - 1) * 12;
   const dy = seg.to.y - seg.from.y;
   const c1 = { x: seg.from.x + j(), y: seg.from.y + 0.4 * dy + j() };
   const c2 = { x: seg.to.x + j(), y: seg.to.y - 0.3 * dy + j() };
   const { start, end } = branchWidths(seg.generation);
-  return taperedCurve(seg.from, c1, c2, seg.to, start, end);
+  return taperedCurve(seg.from, c1, c2, seg.to, start, endWidth ?? end);
 }
 
-/** Trunk with a flared base, narrowing to 36 units at the top. */
+/**
+ * Trunk with a flared base, narrowing to the first branch's width at the top
+ * and closed by a rounded crown so no flat cap shows beneath the founders.
+ */
 export function trunkPath(trunk: TreeLayout['trunk'], widthAtBase = 90): string {
   const { base, top } = trunk;
   const h = base.y - top.y;
   const wb = widthAtBase / 2;
-  const wt = 18;
+  const wt = branchWidths(0).start / 2;
   return [
     `M${pt({ x: base.x - wb, y: base.y })}`,
-    `C${pt({ x: base.x - wb * 0.45, y: base.y - h * 0.12 })} ${pt({ x: top.x - wt * 1.15, y: base.y - h * 0.55 })} ${pt({ x: top.x - wt, y: top.y })}`,
-    `L${pt({ x: top.x + wt, y: top.y })}`,
-    `C${pt({ x: top.x + wt * 1.15, y: base.y - h * 0.55 })} ${pt({ x: base.x + wb * 0.45, y: base.y - h * 0.12 })} ${pt({ x: base.x + wb, y: base.y })}`,
+    `C${pt({ x: base.x - wb * 0.45, y: base.y - h * 0.12 })} ${pt({ x: top.x - wt * 1.6, y: base.y - h * 0.55 })} ${pt({ x: top.x - wt, y: top.y })}`,
+    `Q${pt({ x: top.x, y: top.y - wt * 0.8 })} ${pt({ x: top.x + wt, y: top.y })}`,
+    `C${pt({ x: top.x + wt * 1.6, y: base.y - h * 0.55 })} ${pt({ x: base.x + wb * 0.45, y: base.y - h * 0.12 })} ${pt({ x: base.x + wb, y: base.y })}`,
     'Z',
   ].join(' ');
 }

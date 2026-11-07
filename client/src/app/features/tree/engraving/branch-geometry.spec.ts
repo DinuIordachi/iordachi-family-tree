@@ -44,6 +44,13 @@ describe('branchPath', () => {
     expect(Math.hypot(p.x - 0, p.y - -220)).toBeLessThanOrEqual(start / 2 + 1);
   });
   it('jitters by id', () => expect(branchPath(seg({ id: 'other' }))).not.toBe(branchPath(seg())));
+  it('tapers a leaf branch to the spec tip width', () => expect(branchPath(seg())).toContain('A4.2 4.2 ')); // 24 × 0.35 / 2
+
+  it('ends at a given width so forks continue without a step', () => {
+    const d = branchPath(seg(), branchWidths(2).start);
+    expect(d).toContain(`A${branchWidths(2).start / 2} ${branchWidths(2).start / 2} `);
+  });
+
   it('survives a zero-length segment', () => {
     const d = branchPath(seg({ to: { x: 0, y: -220 } }));
     expect(d).not.toContain('NaN');
@@ -58,6 +65,19 @@ describe('trunkPath / rootsPath', () => {
     expect(d).not.toContain('NaN');
     expect(d.trim().endsWith('Z')).toBe(true);
   });
+  it('trunk narrows to the first branch width at the top, with no flat cap', () => {
+    const d = trunkPath(trunk);
+    const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+    const pts = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push({ x: nums[i], y: nums[i + 1] });
+    const nearTop = pts.filter((p) => p.y <= trunk.top.y + 1);
+    expect(nearTop.length).toBeGreaterThan(0);
+    for (const p of nearTop) {
+      expect(Math.abs(p.x - trunk.top.x)).toBeLessThanOrEqual(branchWidths(0).start / 2);
+    }
+    expect(d).not.toMatch(/L-?[\d.]+ -220\b/);
+  });
+
   it('trunk is 90 wide at the base', () => {
     const xs = trunkPath(trunk).match(/-?\d+(\.\d+)?/g)!.map(Number).filter((_, i) => i % 2 === 0);
     expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThanOrEqual(90);

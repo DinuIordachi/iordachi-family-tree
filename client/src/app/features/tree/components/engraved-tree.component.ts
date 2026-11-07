@@ -15,7 +15,7 @@ import { FamilyMember } from '@app/core/models';
 import { select } from 'd3-selection';
 import { curveBasisClosed, line } from 'd3-shape';
 import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity } from 'd3-zoom';
-import { branchPath, rootsPath, trunkPath } from '../engraving/branch-geometry';
+import { branchPath, branchWidths, rootsPath, trunkPath } from '../engraving/branch-geometry';
 import { buildHouseholds } from '../engraving/households';
 import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
 import { lineageBranchIds } from '../engraving/lineage';
@@ -111,9 +111,14 @@ export class EngravedTreeComponent {
   protected readonly placedMembers = computed(() =>
     this.layout().members.map((p) => ({ ...p, member: this.byId().get(p.id)! })),
   );
-  protected readonly branches = computed(() =>
-    this.layout().branches.map((b) => ({ id: b.id, generation: b.generation, d: branchPath(b) })),
-  );
+  protected readonly branches = computed(() => {
+    const forks = new Set(this.layout().branches.map((b) => b.parentHouseholdId));
+    return this.layout().branches.map((b) => ({
+      id: b.id,
+      generation: b.generation,
+      d: branchPath(b, forks.has(b.childHouseholdId) ? branchWidths(b.generation + 1).start : undefined),
+    }));
+  });
   protected readonly trunkD = computed(() => trunkPath(this.layout().trunk));
   protected readonly rootsD = computed(() => rootsPath(this.layout().trunk.base, hashSeed('roots')));
   protected readonly crownD = computed(() => crownPath(this.layout()));

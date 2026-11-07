@@ -16,8 +16,8 @@ export interface FamilyMemberMedia {
 /**
  * Single family member returned by the backend.
  *
- * The `id`/`data`/`rels` triple is the family-chart `Datum` shape
- * (the library reads only those three keys and ignores the rest).
+ * The `id`/`data`/`rels` triple is the shape used by the tree layout
+ * (the layout reads only those three keys and ignores the rest).
  * The remaining fields are back-office concerns.
  */
 export interface FamilyMember {
@@ -28,7 +28,7 @@ export interface FamilyMember {
     birthday?: string;
     gender?: 'M' | 'F';
     avatar?: string;
-    /** Mirrored on `data` so family-chart's post-render hook can flag cards. */
+    /** Mirrored on `data` for consumers that only read the `data` object. */
     deceased?: boolean;
   };
   rels: {

@@ -19,7 +19,7 @@ html:not(.app-dark) .p-tag.app-tag-pink {
 }
 
 /* ===== Deceased / "in memoriam" treatment =====
-   Reusable across the table row, relation cards, and family-chart cards.
+   Reusable across the table row and relation cards (the engraved tree has its own medallion treatment).
    Pairs a † (dagger) glyph with subtle desaturation; never relies on color alone. */
 .is-deceased {
   --deceased-mark-bg: color-mix(in oklab, #94a3b8 18%, transparent);  /* slate-400 */
@@ -61,49 +61,6 @@ html:not(.app-dark) .p-tag.app-tag-pink {
     font-family: 'Times New Roman', Times, serif;
     font-size: 0.95rem;
     line-height: 0.85;
-  }
-}
-
-/* ===== family-chart override =====
-   The library applies the same CSS transform to the SVG `.view` group and the
-   HTML `.cards_view` overlay to keep them in sync during zoom. The HTML side
-   pins its origin via inline style (`transform-origin: 0 0`), but the SVG
-   side inherits the CSS default of `50% 50%`, so they diverge on scale.
-   Pin the SVG side to the same origin so lines stay glued to the cards. */
-.f3 svg.main_svg .view {
-  transform-origin: 0 0;
-}
-
-/* Read-only info panel polish: hide fields with no value (so the
- * "Passed away" row never renders for living members and "Biography"
- * disappears for members without a bio), and let long biographies
- * wrap instead of overflowing. */
-.f3 .f3-info-field:has(> .f3-info-field-value:empty) {
-  display: none;
-}
-.f3 .f3-info-field-value {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Deceased family-chart card treatment (class toggled by onCardUpdate hook in TreeComponent). */
-.f3 .card_cont.is-deceased {
-  .card .card-inner {
-    box-shadow:
-      inset 0 0 0 1px rgba(148, 163, 184, 0.55),  /* slate-400 ring */
-      0 0 0 0 rgba(0, 0, 0, 0.8);
-    filter: saturate(0.85);
-  }
-
-  .card .card-label > div:first-child {
-    font-style: italic;
-  }
-
-  .f3-card-deceased-stamp {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    z-index: 1;
   }
 }
 

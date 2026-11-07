@@ -54,8 +54,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "src/assets/tailwind.css",
-              "node_modules/family-chart/dist/styles/family-chart.css"
+              "src/assets/tailwind.css"
             ]
           },
           "configurations": {

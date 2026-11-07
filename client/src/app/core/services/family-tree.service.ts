@@ -27,7 +27,7 @@ export class FamilyTreeService {
   private readonly api = inject(ApiService);
 
   /**
-   * Full tree (unpaginated) — drop-in for `f3.createChart(...)`.
+   * Full tree (unpaginated) — feeds the engraved tree on /tree.
    */
   list(): Observable<FamilyMember[]> {
     return this.api

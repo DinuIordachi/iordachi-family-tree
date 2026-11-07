@@ -32,6 +32,13 @@ describe('EngravedTreeComponent', () => {
     expect(ids).toEqual(['1+2>3+4', '3+4>5+6', '3+4>7', '5+6>8', '5+6>9', 'trunk>1+2']);
   });
 
+  it('joins forks smoothly: a branch with children ends at its children’s start width', async () => {
+    const { root } = await setup();
+    const d = (id: string) => root.querySelector(`path.et-branch[data-branch-id="${id}"]`)!.getAttribute('d')!;
+    expect(d('1+2>3+4')).toContain('A10 10 '); // 3+4 has children → ends at branchWidths(2).start = 20
+    expect(d('3+4>7')).toContain('A3.5 3.5 '); // 7 is a leaf → ends at 20 × 0.35 = 7
+  });
+
   it('engraves bark hatching over every branch', async () => {
     const { root } = await setup();
     const hatched = [...root.querySelectorAll('path.et-branch-hatch')];
