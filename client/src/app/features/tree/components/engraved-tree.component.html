@@ -39,6 +39,7 @@
         [attr.d]="branch.d"
         [style.--et-gen]="branch.generation"
       />
+      <path class="et-branch-hatch" [attr.d]="branch.d" [style.--et-gen]="branch.generation" />
     }
 
     @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {

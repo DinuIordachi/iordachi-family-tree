@@ -53,7 +53,8 @@
   stroke-width: var(--et-stroke-bold);
 }
 
-.et-trunk-hatch {
+.et-trunk-hatch,
+.et-branch-hatch {
   fill: url(#et-hatch-45);
   stroke: none;
   opacity: 0.7;
@@ -124,11 +125,13 @@
 .engraved-tree.is-growing {
   .et-roots,
   .et-trunk,
-  .et-trunk-hatch {
+  .et-trunk-hatch,
+.et-branch-hatch {
     animation: et-grow-up 400ms var(--et-ease) both;
   }
 
-  .et-branch {
+  .et-branch,
+  .et-branch-hatch {
     animation: et-grow-up 300ms var(--et-ease) both;
     animation-delay: calc(400ms + var(--et-gen, 0) * 300ms);
   }

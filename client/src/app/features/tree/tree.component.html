@@ -1,21 +1,48 @@
-<div class="tree-page">
-  <header class="tree-page__header">
-    <h1>Iordachi Family Tree</h1>
-  </header>
-
-  <div class="tree-page__chart-wrap">
-    <div id="FamilyChart" class="f3 tree-page__chart"></div>
-
-    @if (loading()) {
-      <div class="tree-page__overlay">
-        <i class="pi pi-spin pi-spinner"></i>
-        <span>Loading family tree…</span>
-      </div>
-    } @else if (error()) {
-      <div class="tree-page__overlay tree-page__overlay--error">
-        <i class="pi pi-exclamation-triangle"></i>
-        <span>{{ error() }}</span>
+<div class="engraved-tree tree-page">
+  @switch (state()) {
+    @case ('loading') {
+      <div class="et-notice et-loader" role="status" aria-live="polite">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <path class="et-inkwell" d="M34 86 Q34 74 46 72 L74 72 Q86 74 86 86 L86 100 Q86 106 80 106 L40 106 Q34 106 34 100 Z" />
+          <path class="et-inkwell-hatch" d="M40 80 L46 106 M48 78 L54 106 M56 76 L62 106 M64 76 L70 106 M72 78 L78 106" />
+          <ellipse class="et-inkwell" cx="60" cy="72" rx="12" ry="4" />
+          <g class="et-quill">
+            <path d="M60 70 L92 14 Q100 6 104 12 Q100 24 86 34 Q78 40 70 50 Z" class="et-feather" />
+            <path d="M60 70 L98 10" class="et-shaft" />
+            <path d="M74 44 L82 40 M78 36 L88 30 M84 28 L94 20" class="et-barbs" />
+          </g>
+        </svg>
+        <p lang="ro">Se încarcă arborele…</p>
+        <p>Loading tree…</p>
       </div>
     }
-  </div>
+    @case ('error') {
+      <div class="et-notice et-torn" role="alert">
+        <p class="et-notice-title">The tree could not be fetched</p>
+        <p>Failed to load the family tree. Please try again later.</p>
+        <button type="button" class="et-brass" (click)="load()">Retry</button>
+      </div>
+    }
+    @default {
+      <et-engraved-tree
+        [members]="members()"
+        [selectedId]="selected()?.id ?? null"
+        (memberActivate)="selected.set($event)"
+      />
+
+      @if (state() === 'empty') {
+        <div class="et-notice et-cartouche" role="status">
+          <p class="et-notice-title">No family members yet</p>
+        </div>
+      }
+
+      <div class="et-controls" role="group" aria-label="Tree view controls">
+        <button type="button" class="et-brass" aria-label="Zoom in" (click)="zoomIn()">+</button>
+        <button type="button" class="et-brass" aria-label="Zoom out" (click)="zoomOut()">−</button>
+        <button type="button" class="et-brass" aria-label="Reset view" (click)="resetView()">⟲</button>
+      </div>
+
+      <et-member-panel [member]="selected()" (closed)="onPanelClosed()" />
+    }
+  }
 </div>

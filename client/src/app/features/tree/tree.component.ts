@@ -1,124 +1,86 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
-import * as f3 from 'family-chart';
-import { Data } from 'family-chart';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FamilyMember } from '@app/core/models';
 import { FamilyTreeService } from '@app/core/services';
+import { Subscription } from 'rxjs';
+import { EngravedTreeComponent } from './components/engraved-tree.component';
+import { MemberPanelComponent } from './components/member-panel.component';
 
+type ViewState = 'loading' | 'error' | 'empty' | 'ready';
+
+/** Public /tree page: loads the family and shows it as an engraved tree. */
 @Component({
   selector: 'app-tree',
-  standalone: true,
+  imports: [EngravedTreeComponent, MemberPanelComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tree.component.html',
   styleUrl: './tree.component.scss',
 })
-export class TreeComponent implements OnInit, OnDestroy {
+export class TreeComponent implements OnInit {
   private readonly familyTreeService = inject(FamilyTreeService);
-  private subscription?: Subscription;
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly tree = viewChild(EngravedTreeComponent);
+  private request?: Subscription;
 
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly state = signal<ViewState>('loading');
+  readonly members = signal<FamilyMember[]>([]);
+  readonly selected = signal<FamilyMember | null>(null);
 
   ngOnInit(): void {
-    this.subscription = this.familyTreeService.list().subscribe({
-      next: (members) => {
-        this.loading.set(false);
-        if (members.length === 0) {
-          this.error.set('No family members yet.');
-          return;
-        }
-        this.create(members as unknown as Data);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('Failed to load the family tree. Please try again later.');
-      },
-    });
+    this.load();
   }
 
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+  load(): void {
+    this.request?.unsubscribe();
+    this.state.set('loading');
+    this.request = this.familyTreeService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (members) => {
+          this.members.set(members);
+          this.state.set(members.length ? 'ready' : 'empty');
+        },
+        error: () => this.state.set('error'),
+      });
   }
 
-  private create(data: Data): void {
-    const f3Chart = f3
-      .createChart('#FamilyChart', data)
-      .setTransitionTime(1000)
-      .setCardXSpacing(350)
-      .setCardYSpacing(180)
-      .setSingleParentEmptyCard(true, { label: 'ADD' })
-      .setShowSiblingsOfMain(false)
-      .setOrientationVertical();
-
-    const f3Card = f3Chart
-      .setCardHtml()
-      .setCardDisplay([['first name', 'last name'], lifespanDisplay])
-      .setMiniTree(true)
-      .setStyle('imageRect')
-      .setOnHoverPathToMain()
-      .setOnCardUpdate(markDeceasedCard);
-
-    f3Chart
-      .editTree()
-      .fixed()
-      .setFields([
-        'first name',
-        'last name',
-        'birthday',
-        { type: 'text', id: 'died_at', label: 'Passed away' },
-        { type: 'text', id: 'biography', label: 'Biography' },
-      ])
-      .setNoEdit()
-      .setCardClickOpen(f3Card);
-
-    f3Chart.updateTree({ initial: true });
+  zoomIn(): void {
+    this.tree()?.zoomBy(1.25);
   }
-}
 
-/**
- * Custom card-display row: shows "1925 – 1998" for deceased members,
- * just the birth year for the living. The function receives the outer
- * member object (the API's top-level FamilyMember), so `d.diedAt` is
- * available alongside `d.data.birthday`.
- */
-function lifespanDisplay(d: any): string {
-  const birthday = d?.data?.birthday;
-  if (!birthday) {
-    return '';
+  zoomOut(): void {
+    this.tree()?.zoomBy(0.8);
   }
-  const birthYear = new Date(birthday).getFullYear();
-  if (Number.isNaN(birthYear)) {
-    return '';
+
+  resetView(): void {
+    this.tree()?.resetView();
   }
-  if (d.diedAt) {
-    const deathYear = new Date(d.diedAt).getFullYear();
-    if (!Number.isNaN(deathYear)) {
-      return `${birthYear} – ${deathYear}`;
+
+  onPanelClosed(): void {
+    const id = this.selected()?.id;
+    this.selected.set(null);
+    if (!id) {
+      return;
     }
-  }
-  return `${birthYear}`;
-}
-
-/**
- * Per-card hook fired by family-chart on every render/update. Toggles the
- * `is-deceased` class on the card_cont and injects a single dagger stamp
- * into the inner card. Idempotent — safe across re-renders.
- */
-function markDeceasedCard(this: HTMLElement, d: any): void {
-  const member = d?.data;
-  const isDeceased = !!member?.deceased;
-  this.classList.toggle('is-deceased', isDeceased);
-
-  const cardEl = this.querySelector('.card');
-  if (!cardEl) {
-    return;
-  }
-  let stamp = cardEl.querySelector('.deceased-stamp');
-  if (isDeceased && !stamp) {
-    stamp = document.createElement('span');
-    stamp.className = 'deceased-stamp f3-card-deceased-stamp';
-    stamp.setAttribute('aria-label', 'Deceased');
-    stamp.innerHTML = '&dagger;';
-    cardEl.appendChild(stamp);
-  } else if (!isDeceased && stamp) {
-    stamp.remove();
+    afterNextRender(
+      () => {
+        this.host.nativeElement.querySelector<SVGGElement>(`g[etMedallion][data-member-id="${id}"]`)?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 }

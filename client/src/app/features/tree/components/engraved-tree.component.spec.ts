@@ -32,6 +32,16 @@ describe('EngravedTreeComponent', () => {
     expect(ids).toEqual(['1+2>3+4', '3+4>5+6', '3+4>7', '5+6>8', '5+6>9', 'trunk>1+2']);
   });
 
+  it('engraves bark hatching over every branch', async () => {
+    const { root } = await setup();
+    const hatched = [...root.querySelectorAll('path.et-branch-hatch')];
+    expect(hatched).toHaveLength(6);
+    const branchD = new Set([...root.querySelectorAll('path.et-branch')].map((b) => b.getAttribute('d')));
+    for (const h of hatched) {
+      expect(branchD.has(h.getAttribute('d'))).toBe(true);
+    }
+  });
+
   it('is an accessible image with the trunk and roots drawn', async () => {
     const { root } = await setup();
     const svg = root.querySelector('svg.engraved-tree')!;

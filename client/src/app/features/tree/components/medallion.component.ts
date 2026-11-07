@@ -16,7 +16,8 @@ function laurelLeaves(): { x: number; y: number; angle: number }[] {
       const t = (100 - (170 * i) / (LEAVES_PER_SIDE - 1)) * (Math.PI / 180);
       const x = side * Math.cos(t) * (RX + 6);
       const y = Math.sin(t) * (RY + 6);
-      const tangent = Math.atan2(Math.cos(t) * (RY + 6), -side * Math.sin(t) * (RX + 6)) * (180 / Math.PI);
+      // Leaves are tall ellipses (long axis = y), so align y with the rim tangent: tangent angle − 90°.
+      const tangent = Math.atan2(Math.cos(t) * (RY + 6), -side * Math.sin(t) * (RX + 6)) * (180 / Math.PI) - 90;
       leaves.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, angle: Math.round(tangent) });
     }
   }

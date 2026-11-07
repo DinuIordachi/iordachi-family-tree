@@ -95,6 +95,19 @@ describe('MedallionComponent', () => {
     expect(host.querySelector('use.et-silhouette')!.getAttribute('href')).toBe('motifs/silhouette-u.svg#motif');
   });
 
+  it('lays laurel leaves along the rim, not radiating from it', async () => {
+    const { host } = await setup();
+    const leaves = [...host.querySelectorAll('.et-laurel ellipse')].map((e) => {
+      const m = e.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\) rotate\(([-\d.]+)\)/)!;
+      return { x: Number(m[1]), y: Number(m[2]), angle: Number(m[3]) };
+    });
+    expect(leaves).toHaveLength(18);
+    // leaf ellipses are tall (ry > rx): beside the rim's widest point the long axis must stay near vertical
+    const side = leaves.reduce((a, b) => (Math.abs(b.y) < Math.abs(a.y) ? b : a));
+    const tilt = ((side.angle % 180) + 180) % 180;
+    expect(Math.min(tilt, 180 - tilt)).toBeLessThan(30);
+  });
+
   it('carries a ribbon banner with name and years', async () => {
     const { host } = await setup();
     const texts = [...host.querySelectorAll('g[etBanner] text')].map((t) => t.textContent!.trim());
