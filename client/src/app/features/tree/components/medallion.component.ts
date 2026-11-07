@@ -46,14 +46,15 @@ const LEAVES = laurelLeaves();
     '(blur)': 'hoverChange.emit(false)',
   },
   template: `
-    <svg:g class="et-laurel">
+    <svg:g class="et-medallion-body">
+    <g class="et-laurel">
       @for (leaf of leaves; track $index) {
         <ellipse rx="2.6" ry="6" [attr.transform]="'translate(' + leaf.x + ' ' + leaf.y + ') rotate(' + leaf.angle + ')'" />
       }
-    </svg:g>
-    <svg:ellipse class="et-medallion-ground" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
+    </g>
+    <ellipse class="et-medallion-ground" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
     @if (showPhoto()) {
-      <svg:image
+      <image
         [attr.href]="member().thumbnailUrl"
         [attr.x]="-rx" [attr.y]="-ry" [attr.width]="rx * 2" [attr.height]="ry * 2"
         preserveAspectRatio="xMidYMid slice"
@@ -62,17 +63,18 @@ const LEAVES = laurelLeaves();
         (error)="photoFailed.set(true)"
       />
     } @else {
-      <svg:use class="et-silhouette" [attr.href]="silhouetteHref()"
+      <use class="et-silhouette" [attr.href]="silhouetteHref()"
         [attr.x]="-rx" [attr.y]="-ry" [attr.width]="rx * 2" [attr.height]="ry * 2" />
     }
     @if (member().deceased) {
-      <svg:ellipse class="et-mourning-ring" cx="0" cy="0" [attr.rx]="rx + 2" [attr.ry]="ry + 2" />
+      <ellipse class="et-mourning-ring" cx="0" cy="0" [attr.rx]="rx + 2" [attr.ry]="ry + 2" />
     }
-    <svg:ellipse class="et-rim" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
-    <svg:ellipse class="et-focus-ring" cx="0" cy="0" [attr.rx]="rx + 12" [attr.ry]="ry + 12" />
+    <ellipse class="et-rim" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
+    <ellipse class="et-focus-ring" cx="0" cy="0" [attr.rx]="rx + 12" [attr.ry]="ry + 12" />
     @if (member().deceased) {
-      <svg:text class="et-dagger" x="26" y="-30" aria-hidden="true">†</svg:text>
+      <text class="et-dagger" x="26" y="-30" aria-hidden="true">†</svg:text>
     }
+    </svg:g>
     <svg:g etBanner transform="translate(0 58)" [name]="name()" [years]="years()" />
   `,
   styles: `
@@ -125,6 +127,15 @@ const LEAVES = laurelLeaves();
     }
     :host(.is-deceased) ::ng-deep .et-banner-name {
       font-style: italic;
+    }
+    @keyframes et-ink-in {
+      from { opacity: 0; transform: scale(0.6); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    /* Spec §5: medallions ink in 150ms after their branch (400ms trunk + 300ms per generation). */
+    :host-context(.engraved-tree.is-growing) .et-medallion-body {
+      animation: et-ink-in 450ms var(--et-ease) both;
+      animation-delay: calc(550ms + var(--et-gen, 0) * 300ms);
     }
   `,
 })

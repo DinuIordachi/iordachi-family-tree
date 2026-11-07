@@ -17,12 +17,12 @@ import { curveBasisClosed, line } from 'd3-shape';
 import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity } from 'd3-zoom';
 import { branchPath, rootsPath, trunkPath } from '../engraving/branch-geometry';
 import { buildHouseholds } from '../engraving/households';
-import { layoutTree } from '../engraving/layout';
+import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
 import { lineageBranchIds } from '../engraving/lineage';
 import { fullName } from '../engraving/member-text';
-import { placeMotifs } from '../engraving/motif-placement';
+import { FIXED_MOTIFS, placeMotifs } from '../engraving/motif-placement';
 import { hashSeed } from '../engraving/seeded-random';
-import { Point, TreeLayout } from '../engraving/types';
+import { MotifPlacement, Point, TreeLayout } from '../engraving/types';
 import { EngravingDefsComponent } from './engraving-defs.component';
 import { MedallionComponent } from './medallion.component';
 import { MotifComponent } from './motif.component';
@@ -30,6 +30,13 @@ import { MotifComponent } from './motif.component';
 const SCALE_EXTENT: [number, number] = [0.25, 2.5];
 const CROWN_PAD = 80;
 const FALLBACK_VIEWPORT = { width: 1200, height: 800 };
+/** Spec §5: --et-dur-grow (1600ms) plus one 300ms stagger per generation after the first. */
+const GROW_MS = 1600;
+const STAGGER_MS = 300;
+
+function prefersReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 /** Convex hull (monotone chain) of points padded into circles, for the foliage mass. */
 function crownPath(layout: TreeLayout): string {
@@ -59,6 +66,18 @@ function crownPath(layout: TreeLayout): string {
   return line().curve(curveBasisClosed)(hull) ?? '';
 }
 
+/** Generation a motif appears with: the eagle last, ground motifs first, ornaments with their branch. */
+function motifGeneration(p: MotifPlacement, layout: TreeLayout): number {
+  if (p.motif === 'eagle-cross') {
+    return layout.generationCount;
+  }
+  if (FIXED_MOTIFS.includes(p.motif)) {
+    return 0;
+  }
+  const g = Math.round((layout.trunk.top.y - p.center.y) / DEFAULT_LAYOUT_OPTIONS.generationSpacing);
+  return Math.max(0, Math.min(Math.max(0, layout.generationCount - 1), g));
+}
+
 /** The engraved SVG family tree: trunk, branches, medallions and Moldovan motifs, with pan/zoom. */
 @Component({
   selector: 'et-engraved-tree',
@@ -77,9 +96,16 @@ export class EngravedTreeComponent {
   private zoomBehavior?: ZoomBehavior<SVGSVGElement, unknown>;
 
   protected readonly hoveredId = signal<string | null>(null);
+  protected readonly growth = signal<'growing' | 'grown'>(prefersReducedMotion() ? 'grown' : 'growing');
 
   protected readonly layout = computed(() => layoutTree(buildHouseholds(this.members())));
-  protected readonly motifs = computed(() => placeMotifs(this.layout(), hashSeed('iordachi')));
+  protected readonly motifs = computed(() => {
+    const layout = this.layout();
+    return placeMotifs(layout, hashSeed('iordachi')).map((placement) => ({
+      placement,
+      generation: motifGeneration(placement, layout),
+    }));
+  });
   private readonly byId = computed(() => new Map(this.members().map((m) => [m.id, m])));
 
   protected readonly placedMembers = computed(() =>
@@ -141,6 +167,12 @@ export class EngravedTreeComponent {
       svg.call(this.zoomBehavior).on('dblclick.zoom', null);
       this.resetView();
       destroyRef.onDestroy(() => svg.on('.zoom', null));
+
+      if (this.growth() === 'growing') {
+        const total = GROW_MS + Math.max(0, this.layout().generationCount - 1) * STAGGER_MS;
+        const timer = setTimeout(() => this.growth.set('grown'), total);
+        destroyRef.onDestroy(() => clearTimeout(timer));
+      }
     });
   }
 

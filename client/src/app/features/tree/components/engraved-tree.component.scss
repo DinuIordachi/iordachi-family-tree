@@ -109,3 +109,45 @@
   font-size: var(--et-size-name);
   fill: var(--et-ink);
 }
+
+/* ===== Growth (spec §5): trunk 0–400ms, then one 300ms stagger per generation ===== */
+@keyframes et-grow-up {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes et-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.engraved-tree.is-growing {
+  .et-roots,
+  .et-trunk,
+  .et-trunk-hatch {
+    animation: et-grow-up 400ms var(--et-ease) both;
+  }
+
+  .et-branch {
+    animation: et-grow-up 300ms var(--et-ease) both;
+    animation-delay: calc(400ms + var(--et-gen, 0) * 300ms);
+  }
+
+  .et-crown {
+    animation: et-fade-in 900ms var(--et-ease) both;
+    animation-delay: 400ms;
+  }
+
+  .et-motif,
+  .et-title {
+    animation: et-fade-in 500ms var(--et-ease) both;
+    animation-delay: calc(400ms + var(--et-gen, 0) * 300ms);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .engraved-tree * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

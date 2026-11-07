@@ -1,4 +1,11 @@
-<svg #svg class="engraved-tree" role="img" aria-label="Iordachi family tree">
+<svg
+  #svg
+  class="engraved-tree"
+  [class.is-growing]="growth() === 'growing'"
+  [class.is-grown]="growth() === 'grown'"
+  role="img"
+  aria-label="Iordachi family tree"
+>
   <defs etEngravingDefs></defs>
 
   <!-- Paper grain stays fixed to the viewport so it is not re-rasterised on every zoom frame. -->
@@ -14,9 +21,9 @@
       <line [attr.x1]="ground().x" [attr.y1]="ground().y" [attr.x2]="ground().x + ground().width" [attr.y2]="ground().y" class="et-ground-line" />
     </g>
 
-    @for (motif of motifs(); track motif.motif + motif.center.x + motif.center.y) {
-      @if (motif.motif === 'river-moldova') {
-        <g etMotif [placement]="motif"></g>
+    @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
+      @if (m.placement.motif === 'river-moldova') {
+        <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
       }
     }
 
@@ -34,9 +41,9 @@
       />
     }
 
-    @for (motif of motifs(); track motif.motif + motif.center.x + motif.center.y) {
-      @if (motif.motif !== 'river-moldova') {
-        <g etMotif [placement]="motif"></g>
+    @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
+      @if (m.placement.motif !== 'river-moldova') {
+        <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
       }
     }
 
@@ -52,7 +59,7 @@
       ></g>
     }
 
-    <g class="et-title" [attr.transform]="'translate(' + titleAt().x + ' ' + titleAt().y + ')'">
+    <g class="et-title" [style.--et-gen]="layout().generationCount" [attr.transform]="'translate(' + titleAt().x + ' ' + titleAt().y + ')'">
       <path class="et-title-scroll" d="M-230 -34 Q-246 -34 -246 -18 L-246 18 Q-246 34 -230 34 L230 34 Q246 34 246 18 L246 -18 Q246 -34 230 -34 Z" />
       <path class="et-title-curl" d="M-246 -18 Q-262 -18 -262 0 Q-262 16 -246 18 M246 -18 Q262 -18 262 0 Q262 16 246 18" />
       <text class="et-title-main" x="0" y="2" text-anchor="middle">Arbor Gentis Iordachi</text>

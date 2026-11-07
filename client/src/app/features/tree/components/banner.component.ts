@@ -18,14 +18,16 @@ const PADDING = 28;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'et-banner', '[attr.data-width]': 'width()' },
   template: `
-    <svg:path class="et-banner-tail" [attr.d]="leftTail()" />
-    <svg:path class="et-banner-tail" [attr.d]="rightTail()" />
-    <svg:path class="et-banner-fold" [attr.d]="folds()" />
-    <svg:path class="et-banner-band" [attr.d]="band()" />
-    <svg:text #nameText class="et-banner-name" x="0" y="4.5" text-anchor="middle">{{ name() }}</svg:text>
-    @if (years()) {
-      <svg:text class="et-banner-years" x="0" y="27" text-anchor="middle">{{ years() }}</svg:text>
-    }
+    <svg:g class="et-banner-body">
+      <path class="et-banner-tail" [attr.d]="leftTail()" />
+      <path class="et-banner-tail" [attr.d]="rightTail()" />
+      <path class="et-banner-fold" [attr.d]="folds()" />
+      <path class="et-banner-band" [attr.d]="band()" />
+      <text #nameText class="et-banner-name" x="0" y="4.5" text-anchor="middle">{{ name() }}</text>
+      @if (years()) {
+        <text class="et-banner-years" x="0" y="27" text-anchor="middle">{{ years() }}</text>
+      }
+    </svg:g>
   `,
   styles: `
     .et-banner-band,
@@ -47,6 +49,15 @@ const PADDING = 28;
       font-family: var(--et-font-name);
       font-size: var(--et-size-name);
       fill: var(--et-ink);
+    }
+    @keyframes et-unroll {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+    /* Spec §5: banners unroll 100ms after their medallion. */
+    :host-context(.engraved-tree.is-growing) .et-banner-body {
+      animation: et-unroll 350ms var(--et-ease) both;
+      animation-delay: calc(650ms + var(--et-gen, 0) * 300ms);
     }
     .et-banner-years {
       font-family: var(--et-font-body);
