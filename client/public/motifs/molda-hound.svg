@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 110" width="400" height="220">
+<!-- Engraved motif: molda-hound. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
+<symbol id="motif" viewBox="0 0 200 110" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<path d="M46 82 Q22 80 12 62 Q9 55 15 57 Q22 72 46 76" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M136 66 Q142 46 154 34 Q164 34 172 42 Q162 58 158 90 Z"/>
+<clipPath id="h1"><path d="M136 66 Q142 46 154 34 Q164 34 172 42 Q162 58 158 90 Z"/></clipPath><path class="hatch" clip-path="url(#h1)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M166.5 15.2L200.8 74.5M163.1 17.2L197.4 76.5M159.6 19.2L193.9 78.5M156.2 21.2L190.4 80.5M152.7 23.2L187 82.5M149.2 25.2L183.5 84.5M145.8 27.2L180.1 86.5M142.3 29.2L176.6 88.5M138.8 31.2L173.1 90.5M135.4 33.2L169.7 92.5M131.9 35.2L166.2 94.5M128.4 37.2L162.7 96.5M125 39.2L159.3 98.5M121.5 41.2L155.8 100.5M118.1 43.2L152.3 102.5M114.6 45.2L148.9 104.5M111.1 47.2L145.4 106.5M107.7 49.2L141.9 108.5"/>
+<path d="M44 84 Q48 66 74 64 Q94 67 110 62 Q132 55 148 62 Q158 72 152 92 Q120 97 70 95 Q48 95 44 84 Z"/>
+<clipPath id="h2"><path d="M48 88 Q90 96 152 90 L152 97 L44 97 Z M110 64 Q132 56 148 62 Q156 70 154 80 Q140 70 112 70 Z"/></clipPath><path class="hatch" clip-path="url(#h2)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M71.1 -6.1L183.1 46.1M69.9 -3.3L181.8 48.9M68.6 -0.6L180.5 51.6M67.3 2.1L179.3 54.3M66.1 4.8L178 57M64.8 7.5L176.7 59.7M63.5 10.3L175.4 62.4M62.3 13L174.2 65.2M61 15.7L172.9 67.9M59.7 18.4L171.6 70.6M58.5 21.1L170.4 73.3M57.2 23.9L169.1 76M55.9 26.6L167.8 78.8M54.7 29.3L166.6 81.5M53.4 32L165.3 84.2M52.1 34.7L164 86.9M50.8 37.4L162.8 89.6M49.6 40.2L161.5 92.4M48.3 42.9L160.2 95.1M47 45.6L159 97.8M45.8 48.3L157.7 100.5M44.5 51L156.4 103.2M43.2 53.8L155.2 106M42 56.5L153.9 108.7M40.7 59.2L152.6 111.4M39.4 61.9L151.4 114.1M38.2 64.6L150.1 116.8M36.9 67.4L148.8 119.5M35.6 70.1L147.6 122.3M34.4 72.8L146.3 125M33.1 75.5L145 127.7M31.8 78.2L143.8 130.4M30.6 81L142.5 133.1M29.3 83.7L141.2 135.9M28 86.4L139.9 138.6M26.8 89.1L138.7 141.3M25.5 91.8L137.4 144M24.2 94.5L136.1 146.7M23 97.3L134.9 149.5M21.7 100L133.6 152.2M20.4 102.7L132.3 154.9M19.2 105.4L131.1 157.6"/>
+<path d="M62 70 Q50 78 52 92" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M66 69 q4 -2 8 0 M84 66 q4 -2 8 0 M100 64 q4 -2 8 0 M118 60 q4 -2 8 0" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M52 88 Q46 99 64 100 L88 100 Q74 94 68 86"/>
+<path d="M132 86 L177 93 Q184 95 179 99 L130 97 Z"/>
+<path d="M128 92 L171 101 Q178 103 173 107 L126 104 Z"/>
+<path d="M177 93 l3 3 M174 101 l3 3" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M148 38 Q152 22 168 20 Q181 20 189 30 L198 38 Q198 45 189 46 L172 48 Q156 50 148 38 Z"/>
+<clipPath id="h3"><path d="M150 40 Q160 48 172 48 L174 44 Q160 44 152 36 Z"/></clipPath><path class="hatch" clip-path="url(#h3)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M171.1 22L182 52.1M169.4 22.6L180.3 52.7M167.7 23.2L178.6 53.3M166 23.9L176.9 53.9M164.3 24.5L175.2 54.5M162.6 25.1L173.5 55.1M160.9 25.7L171.8 55.7M159.2 26.3L170.1 56.4M157.5 26.9L168.5 57M155.8 27.6L166.8 57.6M154.1 28.2L165.1 58.2M152.4 28.8L163.4 58.8M150.8 29.4L161.7 59.4M149.1 30L160 60.1M147.4 30.6L158.3 60.7M145.7 31.2L156.6 61.3M144 31.9L154.9 61.9M142.3 32.5L153.2 62.5"/>
+<path d="M160 26 Q148 36 152 60 Q161 56 168 32 Z"/>
+<clipPath id="h4"><path d="M160 26 Q148 36 152 60 Q161 56 168 32 Z"/></clipPath><path class="hatch" clip-path="url(#h4)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M174.8 19L182 59.8M173 19.3L180.2 60.1M171.3 19.6L178.5 60.4M169.5 19.9L176.7 60.7M167.7 20.2L174.9 61.1M165.9 20.6L173.1 61.4M164.2 20.9L171.4 61.7M162.4 21.2L169.6 62M160.6 21.5L167.8 62.3M158.9 21.8L166.1 62.6M157.1 22.1L164.3 62.9M155.3 22.4L162.5 63.2M153.5 22.7L160.7 63.6M151.8 23.1L159 63.9M150 23.4L157.2 64.2M148.2 23.7L155.4 64.5M146.4 24L153.6 64.8M144.7 24.3L151.9 65.1M142.9 24.6L150.1 65.4M141.1 24.9L148.3 65.7M139.4 25.2L146.6 66.1M137.6 25.6L144.8 66.4M135.8 25.9L143 66.7M134 26.2L141.2 67"/>
+<circle cx="172" cy="30" r="1.6" style="fill:currentColor;stroke:none"/>
+<path d="M168 27 q4 -2 7 0" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<circle cx="197" cy="38.5" r="2" style="fill:currentColor;stroke:none"/>
+<path d="M180 45 Q188 44 193 41" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M145 50 Q155 60 165 52" style="stroke-width:var(--et-stroke-bold, 2.4)"/>
+<circle cx="155" cy="57" r="2.2"/>
+<path d="M0 108 L200 108" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<path d="M10 108 l2 -4 M30 108 l-1 -5 M110 108 l2 -4 M190 108 l-2 -4" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+</symbol>
+<use href="#motif" width="200" height="110"/>
+</svg>

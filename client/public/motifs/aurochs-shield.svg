@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 130" width="220" height="260">
+<!-- Engraved motif: aurochs-shield. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
+<symbol id="motif" viewBox="0 0 110 130" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<path d="M10 10 L100 10 L100 60 Q100 105 55 125 Q10 105 10 60 Z" style="stroke-width:var(--et-stroke-bold, 2.4)"/>
+<clipPath id="h1"><path d="M10 10 L100 10 L100 60 Q100 105 55 125 Q10 105 10 60 Z"/></clipPath><path class="hatch" clip-path="url(#h1)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M129 -6.5L129 141.5M125.8 -6.5L125.8 141.5M122.6 -6.5L122.6 141.5M119.4 -6.5L119.4 141.5M116.2 -6.5L116.2 141.5M113 -6.5L113 141.5M109.8 -6.5L109.8 141.5M106.6 -6.5L106.6 141.5M103.4 -6.5L103.4 141.5M100.2 -6.5L100.2 141.5M97 -6.5L97 141.5M93.8 -6.5L93.8 141.5M90.6 -6.5L90.6 141.5M87.4 -6.5L87.4 141.5M84.2 -6.5L84.2 141.5M81 -6.5L81 141.5M77.8 -6.5L77.8 141.5M74.6 -6.5L74.6 141.5M71.4 -6.5L71.4 141.5M68.2 -6.5L68.2 141.5M65 -6.5L65 141.5M61.8 -6.5L61.8 141.5M58.6 -6.5L58.6 141.5M55.4 -6.5L55.4 141.5M52.2 -6.5L52.2 141.5M49 -6.5L49 141.5M45.8 -6.5L45.8 141.5M42.6 -6.5L42.6 141.5M39.4 -6.5L39.4 141.5M36.2 -6.5L36.2 141.5M33 -6.5L33 141.5M29.8 -6.5L29.8 141.5M26.6 -6.5L26.6 141.5M23.4 -6.5L23.4 141.5M20.2 -6.5L20.2 141.5M17 -6.5L17 141.5M13.8 -6.5L13.8 141.5M10.6 -6.5L10.6 141.5M7.4 -6.5L7.4 141.5M4.2 -6.5L4.2 141.5M1 -6.5L1 141.5M-2.2 -6.5L-2.2 141.5M-5.4 -6.5L-5.4 141.5M-8.6 -6.5L-8.6 141.5M-11.8 -6.5L-11.8 141.5M-15 -6.5L-15 141.5M-18.2 -6.5L-18.2 141.5"/>
+<path d="M55 19.5L57.1 25.1L63.1 25.4L58.4 29.1L60 34.9L55 31.6L50 34.9L51.6 29.1L46.9 25.4L52.9 25.1Z"/>
+<path d="M41 54 Q25 50 23 33 Q30 43 43 46 Z M69 54 Q85 50 87 33 Q80 43 67 46 Z"/>
+<path d="M40 58 Q30 63 27 58 Q32 53 41 55 Z M70 58 Q80 63 83 58 Q78 53 69 55 Z"/>
+<path d="M40 52 Q37 70 46 88 Q50 98 55 100 Q60 98 64 88 Q73 70 70 52 Q62 46 55 47 Q48 46 40 52 Z"/>
+<path d="M49 51 q6 6 12 0" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<circle cx="48" cy="65" r="1.6" style="fill:currentColor;stroke:none"/><circle cx="62" cy="65" r="1.6" style="fill:currentColor;stroke:none"/>
+<path d="M52 72 L50 84 M58 72 L60 84" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+<ellipse cx="55" cy="91" rx="8" ry="6"/>
+<circle cx="52" cy="91" r="1.3" style="fill:currentColor;stroke:none"/><circle cx="58" cy="91" r="1.3" style="fill:currentColor;stroke:none"/>
+<circle cx="86" cy="72.4" r="3"/><circle cx="89.4" cy="74.9" r="3"/><circle cx="88.1" cy="78.9" r="3"/><circle cx="83.9" cy="78.9" r="3"/><circle cx="82.6" cy="74.9" r="3"/><circle cx="86" cy="76" r="2"/><circle cx="86" cy="76" r="0.8" style="fill:currentColor;stroke:none"/>
+<path d="M24.6 68 A8 8 0 1 0 24.6 84 A6.4 6.4 0 1 1 24.6 68Z"/>
+</symbol>
+<use href="#motif" width="110" height="130"/>
+</svg>

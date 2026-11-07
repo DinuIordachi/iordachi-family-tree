@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 84" width="136" height="168">
+<!-- Engraved motif: silhouette-f. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
+<symbol id="motif" viewBox="0 0 68 84" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<clipPath id="oval"><path d="M34 0 A34 42 0 1 1 33.9 0 Z"/></clipPath>
+<g clip-path="url(#oval)">
+<path d="M28 46 L28 56 L40 56 L40 46" />
+<path d="M6 84 Q8 58 34 54 Q60 58 62 84 Z"/>
+<clipPath id="h1"><path d="M34 18 A11 13 0 1 1 33.9 18 Z M6 84 Q8 58 34 54 Q60 58 62 84 Z"/></clipPath><path class="hatch" clip-path="url(#h1)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M34 -15.8L98.8 49M32.2 -14L97 50.8M30.3 -12.1L95.1 52.7M28.5 -10.3L93.3 54.5M26.6 -8.4L91.4 56.4M24.8 -6.6L89.6 58.2M23 -4.8L87.8 60M21.1 -2.9L85.9 61.9M19.3 -1.1L84.1 63.7M17.5 0.7L82.3 65.5M15.6 2.6L80.4 67.4M13.8 4.4L78.6 69.2M11.9 6.3L76.7 71.1M10.1 8.1L74.9 72.9M8.3 9.9L73.1 74.7M6.4 11.8L71.2 76.6M4.6 13.6L69.4 78.4M2.7 15.5L67.5 80.3M0.9 17.3L65.7 82.1M-0.9 19.1L63.9 83.9M-2.8 21L62 85.8M-4.6 22.8L60.2 87.6M-6.4 24.6L58.4 89.4M-8.3 26.5L56.5 91.3M-10.1 28.3L54.7 93.1M-12 30.2L52.8 95M-13.8 32L51 96.8M-15.6 33.8L49.2 98.6M-17.5 35.7L47.3 100.5M-19.3 37.5L45.5 102.3M-21.2 39.4L43.6 104.2M-23 41.2L41.8 106M-24.8 43L40 107.8M-26.7 44.9L38.1 109.7M-28.5 46.7L36.3 111.5M-30.3 48.5L34.5 113.3"/>
+<path d="M34 18 A11 13 0 1 1 33.9 18 Z"/>
+<path d="M20 34 Q20 14 34 14 Q48 14 48 34 Q50 46 44 52 L40 48 Q46 40 44 30 Q40 22 34 22 Q28 22 24 30 Q22 40 28 48 L24 52 Q18 46 20 34 Z"/>
+<path d="M24 60 L26 62 L28 60 M32 62 L34 64 L36 62 M40 60 L42 62 L44 60" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+</g>
+</symbol>
+<use href="#motif" width="68" height="84"/>
+</svg>
