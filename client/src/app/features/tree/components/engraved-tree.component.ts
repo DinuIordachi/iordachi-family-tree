@@ -13,22 +13,23 @@ import {
 } from '@angular/core';
 import { FamilyMember } from '@app/core/models';
 import { select } from 'd3-selection';
-import { curveBasisClosed, line } from 'd3-shape';
 import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
-import { branchPath, branchWidths, rootsPath, trunkPath } from '../engraving/branch-geometry';
+import { branchWidths } from '../engraving/branch-geometry';
+import { Clearing, generateFoliage } from '../engraving/foliage';
 import { buildHouseholds } from '../engraving/households';
 import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
 import { lineageBranchIds } from '../engraving/lineage';
-import { bannerSpan, fullName } from '../engraving/member-text';
+import { bannerSpan, fullName, lifespan } from '../engraving/member-text';
 import { FIXED_MOTIFS, placeMotifs } from '../engraving/motif-placement';
 import { hashSeed } from '../engraving/seeded-random';
-import { MotifPlacement, Point, TreeLayout } from '../engraving/types';
+import { MotifId, MotifPlacement, Point, TreeLayout } from '../engraving/types';
+import { engravedBranch, engravedTrunk, rootSystem, soilHatching } from '../engraving/wood';
+import { seededRandom } from '../engraving/seeded-random';
 import { EngravingDefsComponent } from './engraving-defs.component';
 import { MedallionComponent } from './medallion.component';
 import { MotifComponent } from './motif.component';
 
 const SCALE_EXTENT: [number, number] = [0.25, 2.5];
-const CROWN_PAD = 80;
 const FALLBACK_VIEWPORT = { width: 1200, height: 800 };
 /** Person slots widen (up to this cap) so the longest name's banner never touches its neighbours. */
 const MAX_PERSON_GAP = 280;
@@ -36,40 +37,21 @@ const FOCUS_MARGIN = 80;
 const ALII_LINE = 20;
 /** Medallion rim plus laurel ring: a couple's cord runs between these on each side. */
 const MEDALLION_REACH = 46;
+/** Depth of the soil cutaway holding the roots. */
+const SOIL_DEPTH = 230;
+/** Named layers for the fixed motifs (the brief's SVG architecture). */
+const MOTIF_LAYERS: Partial<Record<MotifId, string>> = {
+  'eagle-cross': 'coat-of-arms',
+  'aurochs-shield': 'trunk-shield',
+  'stefan-cel-mare': 'stephen-the-great',
+  'molda-hound': 'molda',
+};
 /** Spec §5: --et-dur-grow (1600ms) plus one 300ms stagger per generation after the first. */
 const GROW_MS = 1600;
 const STAGGER_MS = 300;
 
 function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-/** Convex hull (monotone chain) of points padded into circles, for the foliage mass. */
-function crownPath(layout: TreeLayout): string {
-  if (!layout.members.length) {
-    return '';
-  }
-  const pts: [number, number][] = [];
-  for (const m of layout.members) {
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      pts.push([m.center.x + Math.cos(a) * CROWN_PAD, m.center.y + Math.sin(a) * (CROWN_PAD + 20)]);
-    }
-  }
-  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lower: [number, number][] = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: [number, number][] = [];
-  for (const p of [...pts].reverse()) {
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  const hull = [...lower.slice(0, -1), ...upper.slice(0, -1)];
-  return line().curve(curveBasisClosed)(hull) ?? '';
 }
 
 /** Generation a motif appears with: the eagle last, ground motifs first, ornaments with their branch. */
@@ -125,15 +107,56 @@ export class EngravedTreeComponent {
   );
   protected readonly branches = computed(() => {
     const forks = new Set(this.layout().branches.map((b) => b.parentHouseholdId));
-    return this.layout().branches.map((b) => ({
-      id: b.id,
-      generation: b.generation,
-      d: branchPath(b, forks.has(b.childHouseholdId) ? branchWidths(b.generation + 1).start : undefined),
-    }));
+    return this.layout().branches.map((b) => {
+      const wood = engravedBranch(b, forks.has(b.childHouseholdId) ? branchWidths(b.generation + 1).start : undefined);
+      return { id: b.id, generation: b.generation, d: wood.body, bark: wood.grooves + wood.shading, twigs: wood.twigs };
+    });
   });
-  protected readonly trunkD = computed(() => trunkPath(this.layout().trunk));
-  protected readonly rootsD = computed(() => rootsPath(this.layout().trunk.base, hashSeed('roots')));
-  protected readonly crownD = computed(() => crownPath(this.layout()));
+  protected readonly trunk = computed(() => engravedTrunk(this.layout().trunk, hashSeed('trunk')));
+  private readonly soil = computed(() => {
+    const { bounds, trunk } = this.layout();
+    const spreadX = Math.max(330, (bounds.maxX - bounds.minX) / 2 + 60);
+    return { base: trunk.base, opts: { spreadX, depth: SOIL_DEPTH } };
+  });
+  protected readonly roots = computed(() => rootSystem(this.soil().base, this.soil().opts, hashSeed('roots')));
+  protected readonly soilD = computed(() => soilHatching(this.soil().base, this.soil().opts, hashSeed('soil')));
+  /** Tufts of grass along the ground line. */
+  protected readonly grassD = computed(() => {
+    const rnd = seededRandom(hashSeed('grass'));
+    const g = this.ground();
+    let d = '';
+    for (let x = g.x + 20; x < g.x + g.width - 20; x += 7 + rnd() * 16) {
+      const h = 3 + rnd() * 6;
+      d += `M${x.toFixed(1)} ${g.y}l${(rnd() * 4 - 2).toFixed(1)} ${(-h).toFixed(1)}M${(x + 2).toFixed(1)} ${g.y}l${(rnd() * 3).toFixed(1)} ${(-h * 0.7).toFixed(1)}`;
+    }
+    return d;
+  });
+  /** Medallions, banners, couple cords and ornaments are kept clear of leaves so they stay legible. */
+  private readonly clearings = computed<Clearing[]>(() => {
+    const list: Clearing[] = [];
+    for (const p of this.placedMembers()) {
+      const { x, y } = p.center;
+      // hug the ribbon itself (band + swallow tails) and the short years line beneath it
+      const ribbonHalf = Math.min(bannerSpan(fullName(p.member)), this.personGap() - 8) / 2 + 3;
+      list.push({ kind: 'ellipse', cx: x, cy: y, rx: 54, ry: 62 });
+      list.push({ kind: 'rect', x: x - ribbonHalf, y: y + 44, w: ribbonHalf * 2, h: 28 });
+      if (lifespan(p.member)) {
+        list.push({ kind: 'rect', x: x - 36, y: y + 72, w: 72, h: 22 });
+      }
+    }
+    for (const k of this.knots()) {
+      list.push({ kind: 'rect', x: k.x - this.cordHalf(), y: k.y - 12, w: this.cordHalf() * 2, h: 26 });
+    }
+    for (const m of this.motifs()) {
+      if (!FIXED_MOTIFS.includes(m.placement.motif)) {
+        list.push({ kind: 'ellipse', cx: m.placement.center.x, cy: m.placement.center.y, rx: 46, ry: 46 });
+      }
+    }
+    return list;
+  });
+  protected readonly foliage = computed(() =>
+    generateFoliage(this.layout(), { seed: hashSeed('foliage'), clearings: this.clearings() }),
+  );
   protected readonly lineage = computed(() => {
     const id = this.hoveredId();
     return new Set(id ? lineageBranchIds(id, this.layout()) : []);
@@ -157,8 +180,8 @@ export class EngravedTreeComponent {
 
   protected readonly ground = computed(() => {
     const { bounds, trunk } = this.layout();
-    const minX = Math.min(bounds.minX, trunk.base.x - 330) - 300;
-    const maxX = Math.max(bounds.maxX, trunk.base.x + 330) + 300;
+    const minX = Math.min(bounds.minX, trunk.base.x - 330) - 160;
+    const maxX = Math.max(bounds.maxX, trunk.base.x + 330) + 160;
     return { x: minX, y: trunk.base.y, width: maxX - minX };
   });
   protected readonly titleAt = computed<Point>(() => ({
@@ -178,7 +201,7 @@ export class EngravedTreeComponent {
     const hasAlii = this.unplaced().length > 0;
     const maxX = Math.max(bounds.maxX + 110, trunk.base.x + 340, hasAlii ? this.aliiAt().x + 220 : -Infinity);
     const minY = Math.min(this.titleAt().y - 50, hasAlii ? this.aliiAt().y - 50 : Infinity);
-    return { minX, maxX, minY, maxY: trunk.base.y + 110 };
+    return { minX, maxX, minY, maxY: trunk.base.y + SOIL_DEPTH + 20 };
   });
 
   constructor() {
@@ -219,6 +242,10 @@ export class EngravedTreeComponent {
     if (this.zoomBehavior) {
       this.zoomBehavior.transform(select(this.svgRef().nativeElement), this.fitTransform());
     }
+  }
+
+  protected motifLayerId(motif: MotifId): string | null {
+    return MOTIF_LAYERS[motif] ?? null;
   }
 
   /** Keyboard focus on a medallion outside the visible area pans it to the centre. */

@@ -12,35 +12,51 @@
   <rect class="et-paper" width="100%" height="100%" filter="url(#et-paper-grain)" />
 
   <g #viewport class="et-viewport" (focusin)="onFocusIn($event)">
-    @if (crownD()) {
-      <path class="et-crown" [attr.d]="crownD()" />
-    }
-
-    <g class="et-ground">
-      <rect [attr.x]="ground().x" [attr.y]="ground().y" [attr.width]="ground().width" height="110" class="et-ground-fill" />
+    <!-- Ground: soil cutaway with the root system, the river beyond the trunk. -->
+    <g id="tree-roots">
+      <path class="et-soil" [attr.d]="soilD()" />
       <line [attr.x1]="ground().x" [attr.y1]="ground().y" [attr.x2]="ground().x + ground().width" [attr.y2]="ground().y" class="et-ground-line" />
+      <path class="et-grass" [attr.d]="grassD()" />
+      @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
+        @if (m.placement.motif === 'river-moldova') {
+          <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
+        }
+      }
+      <path class="et-roots" [attr.d]="roots().bodies" />
+      <path class="et-root-grooves" [attr.d]="roots().grooves" />
+      <path class="et-root-fine" [attr.d]="roots().fine" />
     </g>
 
-    @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
-      @if (m.placement.motif === 'river-moldova') {
-        <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
+    <g id="tree-foliage" aria-hidden="true">
+      <path class="et-leaves-shade" [attr.d]="foliage().shade" />
+      <path class="et-leaves-hatch" [attr.d]="foliage().hatch" />
+      <path class="et-leaves-lit" [attr.d]="foliage().lit" />
+    </g>
+
+    <g id="tree-trunk">
+      <path class="et-trunk" [attr.d]="trunk().body" />
+      <path class="et-wood-grooves et-trunk-detail" [attr.d]="trunk().grooves" />
+      <path class="et-wood-shading et-trunk-detail" [attr.d]="trunk().shading" />
+      <path class="et-wood-knots et-trunk-detail" [attr.d]="trunk().knots" />
+    </g>
+
+    <g id="tree-branches">
+      @for (branch of branches(); track branch.id) {
+        <path class="et-twigs" [attr.d]="branch.twigs" [style.--et-gen]="branch.generation" />
       }
-    }
-
-    <path class="et-roots" [attr.d]="rootsD()" />
-    <path class="et-trunk" [attr.d]="trunkD()" />
-    <path class="et-trunk-hatch" [attr.d]="trunkD()" />
-
-    @for (branch of branches(); track branch.id) {
-      <path
-        class="et-branch"
-        [class.is-lineage]="lineage().has(branch.id)"
-        [attr.data-branch-id]="branch.id"
-        [attr.d]="branch.d"
-        [style.--et-gen]="branch.generation"
-      />
-      <path class="et-branch-hatch" [attr.d]="branch.d" [style.--et-gen]="branch.generation" />
-    }
+      <g id="genealogical-connections">
+        @for (branch of branches(); track branch.id) {
+          <path
+            class="et-branch"
+            [class.is-lineage]="lineage().has(branch.id)"
+            [attr.data-branch-id]="branch.id"
+            [attr.d]="branch.d"
+            [style.--et-gen]="branch.generation"
+          />
+          <path class="et-branch-bark" [attr.d]="branch.bark" [style.--et-gen]="branch.generation" />
+        }
+      </g>
+    </g>
 
     @for (knot of knots(); track $index) {
       <g class="et-knot" [attr.transform]="'translate(' + knot.x + ' ' + knot.y + ')'" aria-hidden="true">
@@ -51,12 +67,15 @@
       </g>
     }
 
-    @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
-      @if (m.placement.motif !== 'river-moldova') {
-        <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
+    <g id="decorative-details">
+      @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
+        @if (m.placement.motif !== 'river-moldova') {
+          <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation" [attr.id]="motifLayerId(m.placement.motif)"></g>
+        }
       }
-    }
+    </g>
 
+    <g id="family-portraits">
     @for (p of placedMembers(); track p.id) {
       <g
         etMedallion
@@ -69,6 +88,7 @@
         (hoverChange)="onHover(p.id, $event)"
       ></g>
     }
+    </g>
 
     <g class="et-title" [style.--et-gen]="layout().generationCount" [attr.transform]="'translate(' + titleAt().x + ' ' + titleAt().y + ')'">
       <path class="et-title-scroll" d="M-230 -34 Q-246 -34 -246 -18 L-246 18 Q-246 34 -230 34 L230 34 Q246 34 246 18 L246 -18 Q246 -34 230 -34 Z" />

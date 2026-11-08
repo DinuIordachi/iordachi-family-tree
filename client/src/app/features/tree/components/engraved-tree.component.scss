@@ -22,43 +22,58 @@
   pointer-events: none;
 }
 
-.et-crown {
-  fill: url(#et-stipple);
-  stroke: var(--et-ink-soft);
-  stroke-width: var(--et-stroke-hair);
-  stroke-dasharray: 2 5;
-  opacity: 0.75;
-}
-
-.et-ground-fill {
-  fill: url(#et-hatch-135);
-  opacity: 0.55;
-}
-
 .et-ground-line {
   stroke: var(--et-ink);
   stroke-width: var(--et-stroke-main);
 }
 
+/* ===== Engraved wood: paper-filled bodies, inked contours, bark lines ===== */
 .et-roots,
 .et-trunk,
 .et-branch {
-  fill: var(--et-sepia);
+  fill: var(--et-paper);
   stroke: var(--et-ink);
   stroke-width: var(--et-stroke-fine);
   stroke-linejoin: round;
 }
 
 .et-trunk {
-  stroke-width: var(--et-stroke-bold);
+  stroke-width: var(--et-stroke-main);
 }
 
-.et-trunk-hatch,
-.et-branch-hatch {
-  fill: url(#et-hatch-45);
-  stroke: none;
-  opacity: 0.7;
+.et-wood-grooves,
+.et-root-grooves,
+.et-branch-bark {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: var(--et-stroke-hair);
+  stroke-linecap: round;
   pointer-events: none;
+}
+
+.et-wood-shading {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.55;
+  pointer-events: none;
+}
+
+.et-wood-knots {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.7;
+}
+
+.et-root-fine {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+}
+
+.et-twigs {
+  fill: var(--et-ink);
+  stroke: none;
 }
 
 .et-branch {
@@ -67,6 +82,39 @@
   &.is-lineage {
     fill: var(--et-gilt);
   }
+}
+
+/* ===== Soil cutaway and ground ===== */
+.et-soil {
+  fill: none;
+  stroke: var(--et-ink-soft);
+  stroke-width: var(--et-stroke-hair);
+}
+
+.et-grass {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+}
+
+/* ===== Foliage: outlined lit leaves, filled shade leaves, dark interstitial strokes ===== */
+.et-leaves-lit {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.65;
+}
+
+.et-leaves-shade {
+  fill: var(--et-ink);
+  stroke: none;
+}
+
+.et-leaves-hatch {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: 0.6;
+  stroke-linecap: round;
 }
 
 .et-title-scroll,
@@ -151,22 +199,25 @@
 }
 
 .engraved-tree.is-growing {
+  .et-soil,
   .et-roots,
+  .et-root-grooves,
+  .et-root-fine,
   .et-trunk,
-  .et-trunk-hatch,
-.et-branch-hatch {
+  .et-trunk-detail {
     animation: et-grow-up 400ms var(--et-ease) both;
   }
 
   .et-branch,
-  .et-branch-hatch {
+  .et-branch-bark,
+  .et-twigs {
     animation: et-grow-up 300ms var(--et-ease) both;
     animation-delay: calc(400ms + var(--et-gen, 0) * 300ms);
   }
 
-  .et-crown {
-    animation: et-fade-in 900ms var(--et-ease) both;
-    animation-delay: 400ms;
+  #tree-foliage {
+    animation: et-fade-in 1200ms var(--et-ease) both;
+    animation-delay: 500ms;
   }
 
   .et-motif,

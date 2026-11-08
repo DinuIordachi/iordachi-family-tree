@@ -40,13 +40,49 @@ describe('EngravedTreeComponent', () => {
     expect(d('3+4>7')).toContain('A3.5 3.5 '); // 7 is a leaf → ends at 20 × 0.35 = 7
   });
 
-  it('engraves bark hatching over every branch', async () => {
+  it('engraves bark grooves and twigs on every branch', async () => {
     const { root } = await setup();
-    const hatched = [...root.querySelectorAll('path.et-branch-hatch')];
-    expect(hatched).toHaveLength(6);
-    const branchD = new Set([...root.querySelectorAll('path.et-branch')].map((b) => b.getAttribute('d')));
-    for (const h of hatched) {
-      expect(branchD.has(h.getAttribute('d'))).toBe(true);
+    const bark = [...root.querySelectorAll('path.et-branch-bark')];
+    expect(bark).toHaveLength(6);
+    expect(bark.filter((b) => (b.getAttribute('d') ?? '').startsWith('M')).length).toBeGreaterThan(3);
+    expect([...root.querySelectorAll('path.et-twigs')].some((t) => (t.getAttribute('d') ?? '').length > 0)).toBe(true);
+  });
+
+  it('lets foliage grow between neighbouring banners instead of leaving a bare band per generation', async () => {
+    const { root } = await setup();
+    const d = ['et-leaves-lit', 'et-leaves-shade'].map((c) => root.querySelector(`#tree-foliage path.${c}`)!.getAttribute('d')!).join('');
+    const leaves = [...d.matchAll(/M(-?[\d.]+) (-?[\d.]+)/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
+    const at = (id: string) =>
+      root.querySelector(`g[etMedallion][data-member-id="${id}"]`)!.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)/)!.slice(1).map(Number);
+    const [x5, rowY] = at('5'); // generation 2: 5, 6 and 7 share the row
+    const [x7] = at('7');
+    const [minX, maxX] = [Math.min(x5, x7), Math.max(x5, x7)];
+    // under the ribbons, only the short years line stays bare; foliage fills the rest of the row
+    const beside = leaves.filter(
+      (p) => p.x > minX - 40 && p.x < maxX + 40 && p.y > rowY + 76 && p.y < rowY + 92 && Math.min(Math.abs(p.x - x5), Math.abs(p.x - x7)) > 40,
+    );
+    expect(beside.length).toBeGreaterThan(10);
+  });
+
+  it('groups the engraving into named layers', async () => {
+    const { root } = await setup();
+    for (const id of ['tree-roots', 'tree-trunk', 'tree-branches', 'tree-foliage', 'genealogical-connections', 'family-portraits', 'decorative-details', 'coat-of-arms', 'stephen-the-great', 'molda']) {
+      expect(root.querySelector(`#${id}`), id).not.toBeNull();
+    }
+  });
+
+  it('fills the crown with engraved leaves and keeps them out of the medallions', async () => {
+    const { root } = await setup();
+    const lit = root.querySelector('#tree-foliage path.et-leaves-lit')!.getAttribute('d')!;
+    const leaves = [...lit.matchAll(/M(-?[\d.]+) (-?[\d.]+)/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]) }));
+    expect(leaves.length).toBeGreaterThan(300);
+    const centres = [...root.querySelectorAll('g[etMedallion]')].map((g) =>
+      g.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!.slice(1).map(Number),
+    );
+    for (const p of leaves) {
+      for (const [cx, cy] of centres) {
+        expect(((p.x - cx) / 50) ** 2 + ((p.y - cy) / 58) ** 2).toBeGreaterThan(1);
+      }
     }
   });
 
