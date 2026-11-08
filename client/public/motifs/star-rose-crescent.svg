@@ -1,12 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="160" height="160">
 <!-- Engraved motif: star-rose-crescent. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
-<symbol id="motif" viewBox="0 0 80 80" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<symbol id="motif" viewBox="0 0 80 80">
+<g style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
 <circle cx="40" cy="40" r="35"/>
 <path d="M40 10 A30 30 0 1 1 39.9 10 Z"/><clipPath id="h1"><path d="M40 10 A30 30 0 1 1 39.9 10 Z"/></clipPath><path class="hatch" clip-path="url(#h1)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M-3.4 -3.4L83.4 -3.4M-3.4 -0.6L83.4 -0.6M-3.4 2.2L83.4 2.2M-3.4 5L83.4 5M-3.4 7.8L83.4 7.8M-3.4 10.6L83.4 10.6M-3.4 13.4L83.4 13.4M-3.4 16.2L83.4 16.2M-3.4 19L83.4 19M-3.4 21.8L83.4 21.8M-3.4 24.6L83.4 24.6M-3.4 27.4L83.4 27.4M-3.4 30.2L83.4 30.2M-3.4 33L83.4 33M-3.4 35.8L83.4 35.8M-3.4 38.6L83.4 38.6M-3.4 41.4L83.4 41.4M-3.4 44.2L83.4 44.2M-3.4 47L83.4 47M-3.4 49.8L83.4 49.8M-3.4 52.6L83.4 52.6M-3.4 55.4L83.4 55.4M-3.4 58.2L83.4 58.2M-3.4 61L83.4 61M-3.4 63.8L83.4 63.8M-3.4 66.6L83.4 66.6M-3.4 69.4L83.4 69.4M-3.4 72.2L83.4 72.2M-3.4 75L83.4 75M-3.4 77.8L83.4 77.8M-3.4 80.6L83.4 80.6M-3.4 83.4L83.4 83.4"/>
 <circle cx="40" cy="40" r="30" style="fill:none"/>
-<path d="M40 14.5L42.1 20.1L48.1 20.4L43.4 24.1L45 29.9L40 26.6L35 29.9L36.6 24.1L31.9 20.4L37.9 20.1Z"/>
-<path d="M26.6 41 A8 8 0 1 0 26.6 57 A6.4 6.4 0 1 1 26.6 41Z"/>
-<circle cx="55" cy="45.4" r="3"/><circle cx="58.4" cy="47.9" r="3"/><circle cx="57.1" cy="51.9" r="3"/><circle cx="52.9" cy="51.9" r="3"/><circle cx="51.6" cy="47.9" r="3"/><circle cx="55" cy="49" r="2"/><circle cx="55" cy="49" r="0.8" style="fill:currentColor;stroke:none"/>
+<path d="M40 14.5L41.4 19.7L46 17L43.3 21.6L48.5 23L43.3 24.4L46 29L41.4 26.3L40 31.5L38.6 26.3L34 29L36.7 24.4L31.5 23L36.7 21.6L34 17L38.6 19.7Z"/>
+<circle cx="25" cy="45.4" r="3"/><circle cx="28.4" cy="47.9" r="3"/><circle cx="27.1" cy="51.9" r="3"/><circle cx="22.9" cy="51.9" r="3"/><circle cx="21.6" cy="47.9" r="3"/><circle cx="25" cy="49" r="2"/><circle cx="25" cy="49" r="0.8" style="fill:currentColor;stroke:none"/>
+<path d="M58.6 41 A8 8 0 1 0 58.6 57 A6.4 6.4 0 1 1 58.6 41Z"/>
+</g>
 </symbol>
 <use href="#motif" width="80" height="80"/>
 </svg>

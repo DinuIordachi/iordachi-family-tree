@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 84" width="136" height="168">
 <!-- Engraved motif: silhouette-f. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
-<symbol id="motif" viewBox="0 0 68 84" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<symbol id="motif" viewBox="0 0 68 84">
+<g style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
 <clipPath id="oval"><path d="M34 0 A34 42 0 1 1 33.9 0 Z"/></clipPath>
 <g clip-path="url(#oval)">
 <path d="M28 46 L28 56 L40 56 L40 46" />
@@ -9,6 +10,7 @@
 <path d="M34 18 A11 13 0 1 1 33.9 18 Z"/>
 <path d="M20 34 Q20 14 34 14 Q48 14 48 34 Q50 46 44 52 L40 48 Q46 40 44 30 Q40 22 34 22 Q28 22 24 30 Q22 40 28 48 L24 52 Q18 46 20 34 Z"/>
 <path d="M24 60 L26 62 L28 60 M32 62 L34 64 L36 62 M40 60 L42 62 L44 60" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
+</g>
 </g>
 </symbol>
 <use href="#motif" width="68" height="84"/>

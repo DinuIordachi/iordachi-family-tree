@@ -1,4 +1,5 @@
-// Composes the engraved motif SVGs. Usage: node gen-motifs.mjs <outDir>
+// Composes the smaller engraved motif SVGs. Usage: node gen-motifs.mjs <outDir>
+// Ștefan (gen-stefan.mjs), Molda (trace-etching.py + molda-trace.json) and the eagle (gen-eagle.mjs) have their own generators.
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const out = process.argv[2];
@@ -31,11 +32,11 @@ function hatch(shapeD, [x0, y0, x1, y1], angle, sp = 3, extra = '') {
   return `<clipPath id="${id}"><path d="${shapeD}"${extra}/></clipPath><path class="hatch" clip-path="url(#${id})" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="${d}"/>`;
 }
 
-function star(cx, cy, R, r) {
+function star(cx, cy, R, r, points = 8) {
   let d = '';
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < points * 2; i++) {
     const rad = i % 2 === 0 ? R : r;
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const a = -Math.PI / 2 + (i * Math.PI) / points;
     d += `${i === 0 ? 'M' : 'L'}${f(cx + rad * Math.cos(a))} ${f(cy + rad * Math.sin(a))}`;
   }
   return d + 'Z';
@@ -57,107 +58,15 @@ function file(name, w, h, body, symbolAttrs = '') {
   clipSeq = 0;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w * 2}" height="${h * 2}">
 <!-- Engraved motif: ${name}. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
-<symbol id="motif" viewBox="0 0 ${w} ${h}"${symbolAttrs} style="${BASE}">
+<symbol id="motif" viewBox="0 0 ${w} ${h}"${symbolAttrs}>
+<g style="${BASE}">
 ${body.trim()}
+</g>
 </symbol>
 <use href="#motif" width="${w}" height="${h}"/>
 </svg>
 `;
   writeFileSync(`${out}/${name}.svg`, svg);
-}
-
-/* ───────────── Ștefan cel Mare — seated, crowned, holding Putna church ───────────── */
-{
-  const throne = 'M40 72 L40 202 L140 202 L140 72 Q90 54 40 72 Z';
-  const mantle = 'M58 100 Q40 142 28 206 L152 206 Q142 142 122 100 Z';
-  const robe = 'M72 102 Q66 150 62 206 L120 206 Q116 150 110 102 Z';
-  const roof = 'M43 126 L61 106 L79 126 Z';
-  const hair = 'M78 58 Q70 84 74 104 Q80 100 82 86 Q80 70 82 58 Z M106 58 Q114 84 108 104 Q102 100 101 86 Q104 70 102 58 Z';
-  file(
-    'stefan-cel-mare',
-    180,
-    220,
-    `
-<path d="${throne}"/>
-${hatch(throne, [40, 54, 140, 202], 82, 2.6)}
-<circle cx="40" cy="70" r="4.5"/><circle cx="140" cy="70" r="4.5"/>
-<circle cx="92" cy="60" r="25" ${FINE}/><circle cx="92" cy="60" r="21.5" style="fill:var(--et-paper, white);stroke-width:var(--et-stroke-hair, 0.6);stroke-dasharray:1.2 2.2"/>
-<path d="${mantle}"/>
-${hatch(mantle, [28, 100, 152, 206], 100, 3.4)}
-<path d="M58 100 Q48 150 44 204 M122 100 Q134 150 138 204" ${FINE}/>
-<path d="${robe}"/>
-<path d="M82 122 Q80 160 78 204 M92 120 Q93 160 94 204 M103 122 Q106 160 108 204" ${FINE}/>
-<path d="M62 176 Q92 168 122 177" ${FINE}/>
-<path d="M68 152 Q91 158 114 152" ${BOLD}/>
-<path d="M68 102 Q91 114 114 102 Q112 93 91 97 Q70 93 68 102 Z"/>
-<circle cx="76" cy="102" r="1" ${INK}/><circle cx="86" cy="106" r="1" ${INK}/><circle cx="97" cy="106" r="1" ${INK}/><circle cx="107" cy="102" r="1" ${INK}/>
-<path d="M72 206 q6 -7 14 0 M98 206 q6 -7 14 0" ${FINE}/>
-<path d="M86 84 L86 96 L98 96 L98 84" />
-<ellipse cx="92" cy="68" rx="13" ry="16"/>
-<path d="${hair}"/>
-${hatch(hair, [70, 58, 114, 104], 75, 2.2)}
-<path d="M86 64 q2 -1.6 4 0 M95 64 q2 -1.6 4 0" ${FINE}/>
-<circle cx="88" cy="65.5" r="0.9" ${INK}/><circle cx="97" cy="65.5" r="0.9" ${INK}/>
-<path d="M92 66 L90 74 L93 75" ${FINE}/>
-<path d="M83 79 Q88 75.5 92 77.5 Q96 75.5 101 79 Q97 81.5 92 79.5 Q87 81.5 83 79 Z" ${INK}/>
-<path d="M88 83.5 Q92 85 96 83.5" ${FINE}/>
-<path d="M77 54 L107 54 L107 47 L77 47 Z"/>
-${hatch('M77 54 L107 54 L107 47 L77 47 Z', [77, 47, 107, 54], 45, 2)}
-<path d="M77 47 L80 36 L84 47 M88 47 L92 31 L96 47 M100 47 L104 36 L107 47"/>
-<circle cx="80" cy="34.5" r="1.8"/><circle cx="92" cy="29.5" r="1.8"/><circle cx="104" cy="34.5" r="1.8"/>
-<path d="M72 104 Q52 114 46 140 L55 142 Q60 124 78 116 Z"/>
-<path d="M110 104 Q102 130 80 140 L76 133 Q92 124 101 104 Z"/>
-<path d="M46 142 L46 126 L78 126 L78 142 Z"/>
-<path d="${roof}"/>
-${hatch(roof, [43, 106, 79, 126], 60, 2)}
-<path d="M58 106 L58 97 L66 97 L66 106"/>
-<path d="M62 97 Q57 94 62 90 Q67 94 62 97 Z"/>
-<path d="M62 90 L62 84 M59.5 86.5 L64.5 86.5" ${FINE}/>
-<path d="M58.5 142 L58.5 134 Q62 130 65.5 134 L65.5 142" ${FINE}/>
-<path d="M50 131 L50 137 M73 131 L73 137" ${FINE}/>
-<ellipse cx="45" cy="142" rx="4" ry="3.2"/><ellipse cx="79" cy="142" rx="4" ry="3.2"/>
-<path d="M0 210 L180 210" ${FINE}/>
-${hatch('M0 210 L180 210 L180 220 L0 220 Z', [0, 210, 180, 220], 160, 3)}
-`,
-  );
-}
-
-/* ───────────── Molda — lean hunting hound lying, head raised (faces right) ───────────── */
-{
-  const body = 'M44 84 Q48 66 74 64 Q94 67 110 62 Q132 55 148 62 Q158 72 152 92 Q120 97 70 95 Q48 95 44 84 Z';
-  const neck = 'M136 66 Q142 46 154 34 Q164 34 172 42 Q162 58 158 90 Z';
-  const head = 'M148 38 Q152 22 168 20 Q181 20 189 30 L198 38 Q198 45 189 46 L172 48 Q156 50 148 38 Z';
-  const ear = 'M160 26 Q148 36 152 60 Q161 56 168 32 Z';
-  file(
-    'molda-hound',
-    200,
-    110,
-    `
-<path d="M46 82 Q22 80 12 62 Q9 55 15 57 Q22 72 46 76" ${FINE}/>
-<path d="${neck}"/>
-${hatch(neck, [136, 34, 172, 90], 60, 4)}
-<path d="${body}"/>
-${hatch('M48 88 Q90 96 152 90 L152 97 L44 97 Z M110 64 Q132 56 148 62 Q156 70 154 80 Q140 70 112 70 Z', [44, 55, 158, 97], 25, 3)}
-<path d="M62 70 Q50 78 52 92" ${FINE}/>
-<path d="M66 69 q4 -2 8 0 M84 66 q4 -2 8 0 M100 64 q4 -2 8 0 M118 60 q4 -2 8 0" ${FINE}/>
-<path d="M52 88 Q46 99 64 100 L88 100 Q74 94 68 86"/>
-<path d="M132 86 L177 93 Q184 95 179 99 L130 97 Z"/>
-<path d="M128 92 L171 101 Q178 103 173 107 L126 104 Z"/>
-<path d="M177 93 l3 3 M174 101 l3 3" ${FINE}/>
-<path d="${head}"/>
-${hatch('M150 40 Q160 48 172 48 L174 44 Q160 44 152 36 Z', [148, 36, 175, 49], 70, 1.8)}
-<path d="${ear}"/>
-${hatch(ear, [148, 26, 168, 60], 80, 1.8)}
-<circle cx="172" cy="30" r="1.6" ${INK}/>
-<path d="M168 27 q4 -2 7 0" ${FINE}/>
-<circle cx="197" cy="38.5" r="2" ${INK}/>
-<path d="M180 45 Q188 44 193 41" ${FINE}/>
-<path d="M145 50 Q155 60 165 52" ${BOLD}/>
-<circle cx="155" cy="57" r="2.2"/>
-<path d="M0 108 L200 108" ${FINE}/>
-<path d="M10 108 l2 -4 M30 108 l-1 -5 M110 108 l2 -4 M190 108 l-2 -4" ${FINE}/>
-`,
-  );
 }
 
 /* ───────────── Aurochs (zimbru) head in a heraldic shield, star, rose, crescent ───────────── */
@@ -173,62 +82,15 @@ ${hatch(ear, [148, 26, 168, 60], 80, 1.8)}
 ${hatch(shield, [10, 10, 100, 125], 90, 3.2)}
 <path d="${star(55, 28, 8.5, 3.6)}"/>
 <path d="M41 54 Q25 50 23 33 Q30 43 43 46 Z M69 54 Q85 50 87 33 Q80 43 67 46 Z"/>
-<path d="M40 58 Q30 63 27 58 Q32 53 41 55 Z M70 58 Q80 63 83 58 Q78 53 69 55 Z"/>
+<path d="M40 57 L33 53 L27 57 L33 61 Z M70 57 L77 53 L83 57 L77 61 Z"/>
 <path d="${head}"/>
 <path d="M49 51 q6 6 12 0" ${FINE}/>
 <circle cx="48" cy="65" r="1.6" ${INK}/><circle cx="62" cy="65" r="1.6" ${INK}/>
 <path d="M52 72 L50 84 M58 72 L60 84" ${FINE}/>
 <ellipse cx="55" cy="91" rx="8" ry="6"/>
 <circle cx="52" cy="91" r="1.3" ${INK}/><circle cx="58" cy="91" r="1.3" ${INK}/>
-${rose(86, 76, 1)}
-<path d="${crescent(23, 76, 8)}"/>
-`,
-  );
-}
-
-/* ───────────── Eagle with Orthodox cross, sceptre and olive branch ───────────── */
-{
-  const wingUp = 'M98 72 C70 66 40 50 22 14 C32 22 40 24 46 22 C42 30 48 36 54 36 C50 44 56 50 62 50 C58 58 64 64 72 64 C66 74 78 82 98 88 Z';
-  const wingDown = 'M98 92 C80 100 50 104 28 132 C40 126 48 126 54 128 C50 136 54 142 60 142 C60 132 70 128 76 128 C76 136 82 140 86 140 C86 126 92 112 100 108 Z';
-  const mirror = 'transform="matrix(-1 0 0 1 220 0)"';
-  const body = 'M98 70 Q92 100 96 130 Q104 150 110 152 Q116 150 124 130 Q128 100 122 70 Q110 62 98 70 Z';
-  const tail = 'M100 146 L92 176 L102 170 L110 182 L118 170 L128 176 L120 146 Z';
-  const head = 'M106 74 Q99 62 100 54 Q101 42 92 38 Q84 35 78 40 Q73 41 70 46 Q69 52 74 51 Q74 48 78 48 Q82 50 86 50 Q92 56 96 74 Z';
-  const breast = 'M100 92 L120 92 L120 108 Q120 120 110 124 Q100 120 100 108 Z';
-  let leaves = '';
-  for (let i = 0; i < 6; i++) {
-    const t = i / 5;
-    const x = 128 + 36 * t;
-    const y = 160 + 26 * t * t;
-    leaves += `<ellipse cx="${f(x + (i % 2 ? 4 : -2))}" cy="${f(y + (i % 2 ? -4 : 4))}" rx="2.4" ry="5" transform="rotate(${i % 2 ? 40 : -50} ${f(x + (i % 2 ? 4 : -2))} ${f(y + (i % 2 ? -4 : 4))})"/>`;
-  }
-  file(
-    'eagle-cross',
-    220,
-    200,
-    `
-<path d="${wingUp}"/>${hatch(wingUp, [22, 14, 98, 88], 55, 3.2)}
-<path d="${wingDown}"/>${hatch(wingDown, [28, 92, 100, 142], 120, 3.2)}
-<g ${mirror}><path d="${wingUp}"/><path d="${wingDown}"/></g>
-<g ${mirror}>${hatch(wingUp, [22, 14, 98, 88], 55, 3.2)}${hatch(wingDown, [28, 92, 100, 142], 120, 3.2)}</g>
-<path d="M40 44 Q60 60 84 70 M58 30 Q70 50 90 62 M44 112 Q66 106 92 100" ${FINE}/>
-<g ${mirror}><path d="M40 44 Q60 60 84 70 M58 30 Q70 50 90 62 M44 112 Q66 106 92 100" ${FINE}/></g>
-<path d="${tail}"/>${hatch(tail, [92, 146, 128, 182], 90, 2.4)}
-<path d="M64 184 L84 150" ${BOLD}/><circle cx="86" cy="147" r="3.8"/>
-<path d="M104 140 L90 156 M88 154 l-4 4 M90 156 l-2 6 M92 156 l3 5" ${FINE}/>
-<path d="M128 160 Q148 170 164 186" ${FINE}/>${leaves}
-<path d="M116 140 L130 158 M128 156 l-3 5 M130 158 l1 6 M132 157 l4 4" ${FINE}/>
-<path d="${body}"/>${hatch(body, [92, 62, 128, 152], 30, 3)}
-<path d="${breast}"/>${hatch(breast, [100, 92, 120, 124], 90, 2.2)}
-<path d="M103 99 Q102 94 106 96 M117 99 Q118 94 114 96" ${FINE}/>
-<ellipse cx="110" cy="104" rx="5" ry="6.5"/>
-<path d="${head}"/>
-${hatch('M106 74 Q99 62 100 54 Q98 58 92 56 Q94 64 96 74 Z', [92, 54, 106, 74], 100, 2)}
-<path d="M78 41 Q80 45 78 48" ${FINE}/>
-<path d="M83 40 Q87 38.5 91 41" ${FINE}/>
-<circle cx="86.5" cy="43" r="1.6" ${INK}/>
-<path d="M66 22 L66 64 M58 34 L74 34" ${BOLD}/>
-<path d="M61 56 L71 51" ${FINE}/>
+${rose(24, 76, 1)}
+<path d="${crescent(88, 76, 8)}"/>
 `,
   );
 }
@@ -311,8 +173,8 @@ ${grapes.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.6"/><path d="M${x - 3
 <path d="${field}"/>${hatch(field, [10, 10, 70, 70], 0, 2.8)}
 <circle cx="40" cy="40" r="30" style="fill:none"/>
 <path d="${star(40, 23, 8.5, 3.6)}"/>
-<path d="${crescent(25, 49, 8)}"/>
-${rose(55, 49, 1)}
+${rose(25, 49, 1)}
+<path d="${crescent(57, 49, 8)}"/>
 `,
   );
 }

@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="160" height="160">
 <!-- Engraved motif: oak-sprig. Original line art for the Iordachi family tree. Strokes use currentColor; fills use the et-paper theme token. -->
-<symbol id="motif" viewBox="0 0 80 80" style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
+<symbol id="motif" viewBox="0 0 80 80">
+<g style="fill:var(--et-paper, white);stroke:currentColor;stroke-width:var(--et-stroke-main, 1.6);stroke-linejoin:round;stroke-linecap:round">
 <path d="M10 72 Q36 50 68 12" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
 <path d="M30 52 Q20 50 18 42 Q24 42 22 36 Q28 38 28 30 Q34 34 36 28 Q40 36 38 44 Q36 50 30 52 Z"/><clipPath id="h1"><path d="M30 52 Q20 50 18 42 Q24 42 22 36 Q28 38 28 30 Q34 34 36 28 Q40 36 38 44 Q36 50 30 52 Z"/></clipPath><path class="hatch" clip-path="url(#h1)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M26.9 15.7L53.3 37.9M25.3 17.5L51.8 39.7M23.8 19.3L50.3 41.5M22.2 21.2L48.7 43.4M20.7 23L47.2 45.2M19.2 24.8L45.6 47.1M17.6 26.7L44.1 48.9M16.1 28.5L42.5 50.7M14.5 30.4L41 52.6M13 32.2L39.5 54.4M11.4 34L37.9 56.3M9.9 35.9L36.4 58.1M8.4 37.7L34.8 59.9M6.8 39.6L33.3 61.8M5.3 41.4L31.7 63.6"/>
 <path d="M31 50 L33 32" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
@@ -9,6 +10,7 @@
 <path d="M44 51 L44 54 M52 47 L53 50" style="fill:none;stroke-width:var(--et-stroke-fine, 1)"/>
 <ellipse cx="44" cy="61" rx="4" ry="5.2"/><path d="M39.5 56 Q44 51 48.5 56 L48 58.5 L40 58.5 Z"/><clipPath id="h3"><path d="M39.5 56 Q44 51 48.5 56 L48 58.5 L40 58.5 Z"/></clipPath><path class="hatch" clip-path="url(#h3)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M44 44.5L54.5 55M43 45.5L53.5 56M42 46.5L52.5 57M41 47.5L51.5 58M40 48.5L50.5 59M39.1 49.5L49.5 59.9M38.1 50.5L48.5 60.9M37.1 51.5L47.5 61.9M36.1 52.4L46.6 62.9M35.1 53.4L45.6 63.9M34.1 54.4L44.6 64.9"/>
 <ellipse cx="53" cy="57" rx="4" ry="5.2"/><path d="M48.5 52 Q53 47 57.5 52 L57 54.5 L49 54.5 Z"/><clipPath id="h4"><path d="M48.5 52 Q53 47 57.5 52 L57 54.5 L49 54.5 Z"/></clipPath><path class="hatch" clip-path="url(#h4)" style="fill:none;stroke-width:var(--et-stroke-hair, 0.6)" d="M63.5 51L53 61.5M62.5 50L52 60.5M61.5 49L51 59.5M60.5 48L50 58.5M59.5 47L49 57.5M58.5 46.1L48.1 56.5M57.5 45.1L47.1 55.5M56.5 44.1L46.1 54.5M55.6 43.1L45.1 53.6M54.6 42.1L44.1 52.6M53.6 41.1L43.1 51.6"/>
+</g>
 </symbol>
 <use href="#motif" width="80" height="80"/>
 </svg>
