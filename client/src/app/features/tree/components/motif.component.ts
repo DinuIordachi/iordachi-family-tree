@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MotifId, MotifPlacement } from '../engraving/types';
 
-/** Native size of each motif's artwork in SVG user units (spec §6 / plan Task 8). */
+/** Size of each motif in tree units (aspect ratios match each artwork's viewBox). */
 export const MOTIF_SIZES: Record<MotifId, { width: number; height: number }> = {
-  'stefan-cel-mare': { width: 180, height: 220 },
-  'molda-hound': { width: 200, height: 110 },
+  'stefan-cel-mare': { width: 151, height: 240 },
+  'molda-hound': { width: 166, height: 165 },
   'aurochs-shield': { width: 110, height: 130 },
-  'eagle-cross': { width: 220, height: 200 },
+  'eagle-cross': { width: 260, height: 211 },
   'river-moldova': { width: 600, height: 60 },
   grapevine: { width: 80, height: 80 },
   'perched-falcon': { width: 80, height: 80 },

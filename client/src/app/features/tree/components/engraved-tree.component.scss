@@ -45,7 +45,8 @@
 .et-root-grooves,
 .et-branch-bark {
   fill: none;
-  stroke: var(--et-ink);
+  /* softer ink: bark stays legible up close without the wood turning solid when zoomed out */
+  stroke: var(--et-ink-soft);
   stroke-width: var(--et-stroke-hair);
   stroke-linecap: round;
   pointer-events: none;
@@ -53,7 +54,7 @@
 
 .et-wood-shading {
   fill: none;
-  stroke: var(--et-ink);
+  stroke: var(--et-ink-soft);
   stroke-width: 0.55;
   pointer-events: none;
 }

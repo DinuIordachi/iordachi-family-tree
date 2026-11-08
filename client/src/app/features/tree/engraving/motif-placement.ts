@@ -31,14 +31,15 @@ export function placeMotifs(layout: TreeLayout, seed: number, bannerHalf = 85): 
   const { trunk, bounds } = layout;
   const groundY = trunk.base.y;
   const bx = trunk.base.x;
+  // Ștefan kneels left of the trunk; Molda sits between him and the trunk, her head under his outstretched hand.
   const fixed: MotifPlacement[] = [
-    { motif: 'stefan-cel-mare', center: { x: bx - 230, y: groundY - 70 }, scale: 1, mirrored: false },
-    { motif: 'molda-hound', center: { x: bx + 230, y: groundY - 30 }, scale: 1, mirrored: true },
+    { motif: 'stefan-cel-mare', center: { x: bx - 250, y: groundY - 112 }, scale: 1, mirrored: false },
+    { motif: 'molda-hound', center: { x: bx - 126, y: groundY - 78 }, scale: 1, mirrored: false },
     { motif: 'aurochs-shield', center: { x: bx, y: groundY - 120 }, scale: 0.8, mirrored: false },
-    { motif: 'eagle-cross', center: { x: bx, y: bounds.minY - 130 }, scale: 1, mirrored: false },
+    { motif: 'eagle-cross', center: { x: bx, y: bounds.minY - 150 }, scale: 1, mirrored: false },
     {
       motif: 'river-moldova',
-      center: { x: bx, y: groundY + 40 },
+      center: { x: bx, y: groundY - 30 },
       scale: (bounds.maxX - bounds.minX + 600) / 600,
       mirrored: false,
     },

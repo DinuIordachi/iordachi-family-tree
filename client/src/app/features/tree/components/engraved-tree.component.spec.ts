@@ -64,6 +64,48 @@ describe('EngravedTreeComponent', () => {
     expect(beside.length).toBeGreaterThan(10);
   });
 
+  it('opens a niche in the crown so the coat of arms is not lost in the leaves', async () => {
+    const { root } = await setup();
+    const [ex, ey] = root.querySelector('#coat-of-arms')!.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!.slice(1).map(Number);
+    const d = ['et-leaves-lit', 'et-leaves-shade'].map((c) => root.querySelector(`#tree-foliage path.${c}`)!.getAttribute('d')!).join('');
+    const inside = [...d.matchAll(/M(-?[\d.]+) (-?[\d.]+)/g)].filter((m) => ((Number(m[1]) - ex) / 115) ** 2 + ((Number(m[2]) - ey) / 90) ** 2 < 1);
+    expect(inside).toHaveLength(0);
+  });
+
+  it('re-fits when the canvas is resized, until the visitor zooms or pans', async () => {
+    let onResize: () => void = () => undefined;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          onResize = cb;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    try {
+      const { fixture, root } = await setup();
+      const svg = root.querySelector('svg.engraved-tree') as SVGSVGElement;
+      const viewport = () => root.querySelector('g.et-viewport')!.getAttribute('transform');
+      const before = viewport();
+      Object.defineProperty(svg, 'clientWidth', { configurable: true, value: 600 });
+      Object.defineProperty(svg, 'clientHeight', { configurable: true, value: 400 });
+      onResize();
+      const refitted = viewport();
+      expect(refitted).not.toBe(before);
+
+      const tree = fixture.debugElement.children[0].componentInstance as EngravedTreeComponent;
+      tree.zoomBy(1.25);
+      const zoomed = viewport();
+      Object.defineProperty(svg, 'clientWidth', { configurable: true, value: 900 });
+      onResize();
+      expect(viewport()).toBe(zoomed); // the visitor's own view is kept
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('groups the engraving into named layers', async () => {
     const { root } = await setup();
     for (const id of ['tree-roots', 'tree-trunk', 'tree-branches', 'tree-foliage', 'genealogical-connections', 'family-portraits', 'decorative-details', 'coat-of-arms', 'stephen-the-great', 'molda']) {

@@ -22,6 +22,11 @@ describe('motif artwork files', () => {
         expect(svg.match(/<symbol /g)).toHaveLength(1);
       });
 
+      it('puts its base paint on an inner group, not on <symbol> (dropped by Chrome for external <use>)', () => {
+        const svg = readFileSync(path, 'utf8');
+        expect(svg).not.toMatch(/<symbol [^>]*style=/);
+      });
+
       it('uses no hard-coded hex colours', () => {
         const svg = readFileSync(path, 'utf8');
         expect(svg).not.toMatch(/#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b(?![\w-])/);

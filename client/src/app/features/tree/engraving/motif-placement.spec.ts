@@ -31,14 +31,22 @@ describe('placeMotifs', () => {
     }
   });
 
-  it('puts Ștefan left and the hound right of the trunk, the eagle above the crown', () => {
+  it('groups Ștefan and Molda together at the trunk, his hand within reach of her head', () => {
     const p = placeMotifs(seedLayout, 1);
     const at = (id: string) => p.find((m) => m.motif === id)!;
-    expect(at('stefan-cel-mare').center).toEqual({ x: seedLayout.trunk.base.x - 230, y: -70 });
-    expect(at('molda-hound').center).toEqual({ x: seedLayout.trunk.base.x + 230, y: -30 });
-    expect(at('molda-hound').mirrored).toBe(true);
+    const bx = seedLayout.trunk.base.x;
+    const stefan = at('stefan-cel-mare');
+    const molda = at('molda-hound');
+    expect(stefan.center).toEqual({ x: bx - 250, y: -112 });
+    expect(molda.center).toEqual({ x: bx - 126, y: -78 });
+    expect(molda.mirrored).toBe(false);
+    // both left of the trunk, Molda between him and the trunk
+    expect(stefan.center.x).toBeLessThan(molda.center.x);
+    expect(molda.center.x).toBeLessThan(bx);
     expect(at('aurochs-shield').scale).toBe(0.8);
-    expect(at('eagle-cross').center.y).toBe(seedLayout.bounds.minY - 130);
+    expect(at('eagle-cross').center.y).toBe(seedLayout.bounds.minY - 150);
+    // the river sits on the horizon behind the figures, not in the soil
+    expect(at('river-moldova').center.y).toBe(-30);
     expect(at('river-moldova').scale).toBeCloseTo((seedLayout.bounds.maxX - seedLayout.bounds.minX + 600) / 600);
   });
 

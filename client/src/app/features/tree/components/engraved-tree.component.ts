@@ -82,6 +82,8 @@ export class EngravedTreeComponent {
   private readonly svgRef = viewChild.required<ElementRef<SVGSVGElement>>('svg');
   private readonly viewportRef = viewChild.required<ElementRef<SVGGElement>>('viewport');
   private zoomBehavior?: ZoomBehavior<SVGSVGElement, unknown>;
+  /** Once the visitor pans or zooms, resizes keep their view instead of re-fitting. */
+  private userMoved = false;
 
   protected readonly hoveredId = signal<string | null>(null);
   protected readonly growth = signal<'growing' | 'grown'>(prefersReducedMotion() ? 'grown' : 'growing');
@@ -148,7 +150,10 @@ export class EngravedTreeComponent {
       list.push({ kind: 'rect', x: k.x - this.cordHalf(), y: k.y - 12, w: this.cordHalf() * 2, h: 26 });
     }
     for (const m of this.motifs()) {
-      if (!FIXED_MOTIFS.includes(m.placement.motif)) {
+      if (m.placement.motif === 'eagle-cross') {
+        // a niche at the top of the crown for the coat of arms
+        list.push({ kind: 'ellipse', cx: m.placement.center.x, cy: m.placement.center.y, rx: 128, ry: 100 });
+      } else if (!FIXED_MOTIFS.includes(m.placement.motif)) {
         list.push({ kind: 'ellipse', cx: m.placement.center.x, cy: m.placement.center.y, rx: 46, ry: 46 });
       }
     }
@@ -217,12 +222,26 @@ export class EngravedTreeComponent {
             [width, height],
           ];
         })
-        .on('zoom', (event: { transform: ZoomTransform }) => {
+        .on('zoom', (event: { transform: ZoomTransform; sourceEvent: unknown }) => {
+          if (event.sourceEvent) {
+            this.userMoved = true;
+          }
           this.viewportRef().nativeElement.setAttribute('transform', event.transform.toString());
         });
       svg.call(this.zoomBehavior).on('dblclick.zoom', null);
       this.resetView();
       destroyRef.onDestroy(() => svg.on('.zoom', null));
+
+      // The first fit can run before layout settles (late styles, rotation, window resize): re-fit until the visitor moves.
+      if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => {
+          if (!this.userMoved) {
+            this.applyFit();
+          }
+        });
+        observer.observe(this.svgRef().nativeElement);
+        destroyRef.onDestroy(() => observer.disconnect());
+      }
 
       if (this.growth() === 'growing') {
         const total = GROW_MS + Math.max(0, this.layout().generationCount - 1) * STAGGER_MS;
@@ -234,11 +253,17 @@ export class EngravedTreeComponent {
 
   zoomBy(factor: number): void {
     if (this.zoomBehavior) {
+      this.userMoved = true;
       this.zoomBehavior.scaleBy(select(this.svgRef().nativeElement), factor);
     }
   }
 
   resetView(): void {
+    this.userMoved = false;
+    this.applyFit();
+  }
+
+  private applyFit(): void {
     if (this.zoomBehavior) {
       this.zoomBehavior.transform(select(this.svgRef().nativeElement), this.fitTransform());
     }
