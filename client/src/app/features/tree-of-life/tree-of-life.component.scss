@@ -55,35 +55,17 @@
 }
 
 // ---- Tree parts
-.tol-branch {
-  opacity: 0.86; // the guide's "multicolour with transparency" ornament
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: tol-grow 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  transition: opacity 200ms;
-}
-
-.tol-bond {
-  opacity: 0.9;
-  stroke-linecap: round;
-  transition: opacity 200ms;
-}
-
+// Lines and elements are drawn by the life-scene component (ink, plus a tint
+// copy seen through the overlap mask). Here: the members' labels, hit areas
+// and focus rings, which sit above all of it.
 .dim {
   opacity: 0.12 !important;
-}
-
-@keyframes tol-grow {
-  to {
-    stroke-dashoffset: 0;
-  }
 }
 
 .tol-member {
   cursor: pointer;
   outline: none;
-  opacity: 0;
-  animation: tol-bloom 500ms cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+  animation: tol-bloom 500ms ease-out backwards;
   transition: opacity 200ms;
 
   .tol-hit {
@@ -98,22 +80,9 @@
     transition: opacity 160ms;
   }
 
-  .tol-figure {
-    transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
-  }
-
-  &:hover .tol-figure,
-  &:focus-visible .tol-figure {
-    transform: scale(1.12);
-  }
-
   &:focus-visible .tol-ring,
   &.active .tol-ring {
     opacity: 1;
-  }
-
-  &.deceased .tol-figure {
-    opacity: 0.72;
   }
 }
 
@@ -153,10 +122,11 @@
 }
 
 // ---- Legend
+// Top right, clear of the girdle along the ground (the panel covers it when open).
 .tol-legend {
   position: absolute;
-  left: clamp(16px, 4vw, 56px);
-  bottom: clamp(16px, 4vh, 40px);
+  right: clamp(16px, 3vw, 40px);
+  top: clamp(20px, 5vh, 56px);
   z-index: 5;
   max-width: 300px;
   padding: 16px 18px;
@@ -296,11 +266,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tol-branch {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
-
   .tol-member {
     animation: none;
     opacity: 1;

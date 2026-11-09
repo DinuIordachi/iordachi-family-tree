@@ -11,7 +11,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { select } from 'd3-selection';
 import { ZoomBehavior, zoom, zoomIdentity } from 'd3-zoom';
@@ -20,6 +20,9 @@ import { FamilyMember } from '@app/core/models';
 import { FamilyTreeService } from '@app/core/services';
 import { GEOMETRY, LifeMotif, MOTIFS, MotifKind, PALETTE, layoutLife, lineageOf } from './life-layout';
 import { LifeMotifComponent } from './life-motif.component';
+import { GIRDLE_BASE_LENGTH, GIRDLE_BASE_START, GIRDLE_HEIGHT, GIRDLE_PATHS, GIRDLE_WIDTH } from './girdle';
+import { decorate } from './life-decorations';
+import { LifeSceneComponent } from './life-scene.component';
 import { LifePanelComponent } from './life-panel.component';
 
 type ViewState = 'loading' | 'error' | 'empty' | 'ready';
@@ -30,13 +33,16 @@ const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Jost:wght@300;400;70
 const MOTIF_MEANING: Record<MotifKind, string> = {
   basil: 'Basil — protection, constant love',
   glass: 'Wine glasses — celebration, conversation',
-  fruit: 'Fruit — orchards, the harvest',
+  pomegranate: 'Fruit — orchards, the harvest',
   connectivity: 'Connectivity — the connected age',
-  star: 'Flower — beauty and family',
-  chip: 'Energy — moving forward',
+  flower: 'Traditional flower — beauty and family',
+  energy: 'Transport and energy — moving forward',
   textile: 'Textile — craft from old traditions',
-  heart: 'Heart — devotion',
+  heart: 'Heart — love and devotion',
 };
+
+/** Girdle units from the middle of a base section to its basil flower. */
+const GIRDLE_STEM_SHIFT = 65.5;
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
@@ -47,7 +53,7 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
  */
 @Component({
   selector: 'app-tree-of-life',
-  imports: [LifeMotifComponent, LifePanelComponent],
+  imports: [LifeMotifComponent, LifePanelComponent, LifeSceneComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tree-of-life.component.html',
   styleUrl: './tree-of-life.component.scss',
@@ -65,8 +71,15 @@ export class TreeOfLifeComponent implements OnInit {
   readonly members = signal<FamilyMember[]>([]);
   readonly selected = signal<FamilyMember | null>(null);
   readonly hovered = signal<string | null>(null);
+  /** Members whose photo failed to load: their element fills the avatar disc. */
+  readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
+
+  photoFailed(id: string): void {
+    this.brokenPhotos.update((s) => new Set(s).add(id));
+  }
 
   readonly layout = computed(() => layoutLife(this.members()));
+  readonly decorations = computed(() => decorate(this.layout()));
   readonly g = GEOMETRY;
   readonly palette = PALETTE;
 
@@ -83,10 +96,64 @@ export class TreeOfLifeComponent implements OnInit {
     }),
   );
 
-  readonly girdleSpan = computed(() => {
-    const b = this.layout().bounds;
-    return { x: b.minX - 400, width: b.maxX - b.minX + 800 };
+  readonly girdlePaths = GIRDLE_PATHS;
+  readonly girdleBase = { start: GIRDLE_BASE_START, length: GIRDLE_BASE_LENGTH };
+  readonly girdleSize = { w: GIRDLE_WIDTH, h: GIRDLE_HEIGHT };
+
+  /**
+   * The girdle laid along the ground, wider than the crown: its bottom cap
+   * (the closing hook) at the left, as many base sections as the width needs,
+   * and its top cap (connectivity) at the right — the guide's fixed-length
+   * frieze, turned to lie horizontally. It is centred on the stem: the middle
+   * of its middle base section lies under the stem, whatever the crown's width.
+   */
+  readonly girdle = computed(() => {
+    const L = this.layout();
+    const s = GEOMETRY.girdleScale;
+    const reach = Math.max(-L.bounds.minX, L.bounds.maxX) + 400;
+    const half = Math.ceil(reach / s / GIRDLE_BASE_LENGTH);
+    const count = 2 * half + 1;
+    // Girdle units run from the top cap (right) toward the hook (left) once
+    // turned; this point of base section `half` — its basil flower — lies
+    // under the stem, so the stem stands on the rail right above a flower.
+    const focus = GIRDLE_BASE_START + half * GIRDLE_BASE_LENGTH + GIRDLE_BASE_LENGTH / 2 - GIRDLE_STEM_SHIFT;
+    return {
+      // rotate(90) lays the upright girdle down: its top goes right, its bottom left.
+      transform: `translate(${L.trunk.x + focus * s} ${L.girdleY}) scale(${s}) rotate(90)`,
+      bases: Array.from({ length: count }, (_, i) => i * GIRDLE_BASE_LENGTH),
+      bottomShift: (count - 1) * GIRDLE_BASE_LENGTH,
+    };
   });
+
+  /** Overlap mask and filter region: the whole drawing, with room to spare. */
+  readonly region = computed(() => {
+    const b = this.layout().bounds;
+    return { x: b.minX - 400, y: b.minY - 200, w: b.maxX - b.minX + 800, h: b.maxY - b.minY + 400 };
+  });
+
+  /** Where a member's two label lines go: above the element, or beside a single parent. */
+  labelPos(m: LifeMotif): { x: number; anchor: string; name: number; sub: number } {
+    if (m.label === 'above') return { x: 0, anchor: 'middle', name: -m.top - 22, sub: -m.top - 4 };
+    const x = m.half.w + 12;
+    return m.label === 'right'
+      ? { x, anchor: 'start', name: -3, sub: 13 }
+      : { x: -x, anchor: 'end', name: -3, sub: 13 };
+  }
+
+  /** The member's hit area: its element and its label. */
+  hitBox(m: LifeMotif): { x: number; y: number; w: number; h: number } {
+    const g = GEOMETRY;
+    if (m.label === 'above') {
+      const hw = Math.max(m.half.w, g.labelWidth / 2);
+      return { x: -hw, y: -m.top - g.labelBlock, w: 2 * hw, h: m.top + g.labelBlock + m.half.h };
+    }
+    const w = m.half.w * 2 + 12 + g.sideLabel;
+    return { x: m.label === 'right' ? -m.half.w : -m.half.w - 12 - g.sideLabel, y: -m.half.h, w, h: m.half.h * 2 };
+  }
+
+  ringRadius(m: LifeMotif): number {
+    return Math.max(m.half.w, m.half.h) + 10;
+  }
 
   ngOnInit(): void {
     this.loadFont();

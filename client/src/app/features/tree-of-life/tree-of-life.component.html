@@ -12,7 +12,7 @@
   @switch (state()) {
     @case ('loading') {
       <div class="tol-notice" role="status" aria-live="polite">
-        <svg viewBox="-50 -60 100 110" class="tol-loader" aria-hidden="true">
+        <svg viewBox="-46 -74 92 92" class="tol-loader" aria-hidden="true">
           <g lifeMotif kind="rose" />
         </svg>
         <p>Growing the tree…</p>
@@ -40,103 +40,123 @@
         (click)="selected.set(null)"
       >
         <defs>
-          <!-- Ornamental girdle: the base part repeats into an endless frieze. -->
-          <pattern id="tol-girdle" width="132" height="60" patternUnits="userSpaceOnUse" x="0" y="-30">
-            <g transform="translate(0 30)">
-              <rect x="10" y="-9" width="18" height="18" rx="4" transform="rotate(45 19 0)" [attr.fill]="palette.red" />
-              <path d="M44 -14 L54 -4 M44 14 L54 4" [attr.stroke]="palette.green" stroke-width="6" stroke-linecap="round" />
-              <circle cx="72" cy="0" r="9" [attr.fill]="palette.orange" />
-              <path d="M84 -14 L94 -4 M84 14 L94 4" [attr.stroke]="palette.forest" stroke-width="6" stroke-linecap="round" />
-              <g transform="translate(113 0) rotate(45)" [attr.fill]="palette.magenta">
-                <rect x="-11" y="-11" width="10" height="10" rx="3" />
-                <rect x="1" y="-11" width="10" height="10" rx="3" />
-                <rect x="-11" y="1" width="10" height="10" rx="3" />
-                <rect x="1" y="1" width="10" height="10" rx="3" />
+          <clipPath id="tol-avatar-clip" clipPathUnits="objectBoundingBox">
+            <circle cx="0.5" cy="0.5" r="0.5" />
+          </clipPath>
+          <!-- The girdle, drawn once; caps and base sections reuse it through clips. -->
+          <g id="tol-braul">
+            @for (p of girdlePaths; track $index) {
+              <path [attr.d]="p.d" [attr.fill]="p.fill" />
+            }
+          </g>
+          <clipPath id="tol-braul-top">
+            <rect x="-20" y="-20" [attr.width]="girdleSize.w + 40" [attr.height]="girdleBase.start + 20" />
+          </clipPath>
+          <clipPath id="tol-braul-base">
+            <rect x="-20" [attr.y]="girdleBase.start" [attr.width]="girdleSize.w + 40" [attr.height]="girdleBase.length" />
+          </clipPath>
+          <clipPath id="tol-braul-bottom">
+            <rect
+              x="-20"
+              [attr.y]="girdleBase.start + girdleBase.length"
+              [attr.width]="girdleSize.w + 40"
+              [attr.height]="girdleSize.h"
+            />
+          </clipPath>
+
+          <!--
+            The ornament's transparency. Every piece is drawn white at half
+            opacity: one piece leaves alpha 0.5, two or more leave 0.75+. The
+            filter keeps only the latter (and makes it opaque white), so the
+            mask is exactly where pieces overlap.
+          -->
+          @let R = region();
+          <filter
+            id="tol-overlap-count"
+            filterUnits="userSpaceOnUse"
+            [attr.x]="R.x"
+            [attr.y]="R.y"
+            [attr.width]="R.w"
+            [attr.height]="R.h"
+            color-interpolation-filters="sRGB"
+          >
+            <feComponentTransfer>
+              <feFuncR type="linear" slope="0" intercept="1" />
+              <feFuncG type="linear" slope="0" intercept="1" />
+              <feFuncB type="linear" slope="0" intercept="1" />
+              <feFuncA type="linear" slope="8" intercept="-5" />
+            </feComponentTransfer>
+          </filter>
+          <mask id="tol-overlap" maskUnits="userSpaceOnUse" [attr.x]="R.x" [attr.y]="R.y" [attr.width]="R.w" [attr.height]="R.h">
+            <g filter="url(#tol-overlap-count)">
+              <g opacity="0.5">
+                <ng-container *ngTemplateOutlet="girdleTpl" />
               </g>
+              <g lifeScene mode="mask" [layout]="L" [decorations]="decorations()" [hovered]="hovered()"></g>
             </g>
-          </pattern>
+          </mask>
         </defs>
 
-        <g #viewport>
-          <!-- Girdle along the ground; its central line is never cut. -->
-          <g class="tol-girdle" [attr.transform]="'translate(0 ' + L.girdleY + ')'">
-            <rect [attr.x]="girdleSpan().x" y="-30" [attr.width]="girdleSpan().width" height="60" fill="url(#tol-girdle)" />
-            <line
-              [attr.x1]="girdleSpan().x"
-              [attr.x2]="girdleSpan().x + girdleSpan().width"
-              y1="0"
-              y2="0"
-              [attr.stroke]="palette.blue"
-              stroke-width="6"
-              stroke-linecap="round"
-              opacity="0.9"
-            />
-          </g>
-
-          <!-- Central stem, from the roots to the rose. -->
-          <g class="tol-stem">
-            <line
-              [attr.x1]="L.trunk.x"
-              [attr.x2]="L.trunk.x"
-              [attr.y1]="L.trunk.bottom"
-              [attr.y2]="L.trunk.top"
-              [attr.stroke]="palette.green"
-              [attr.stroke-width]="16"
-              stroke-linecap="round"
-            />
-            @for (leaf of L.leaves; track $index) {
-              <path
-                [attr.d]="'M-20 ' + (leaf.y - 20) + ' L0 ' + leaf.y + ' L20 ' + (leaf.y - 20)"
-                fill="none"
-                [attr.stroke]="$index % 2 ? palette.forest : palette.green"
-                stroke-width="11"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                opacity="0.88"
-              />
+        <ng-template #girdleTpl>
+          <g [attr.transform]="girdle().transform">
+            <use href="#tol-braul" clip-path="url(#tol-braul-top)" />
+            @for (shift of girdle().bases; track shift) {
+              <g [attr.transform]="'translate(0 ' + shift + ')'">
+                <use href="#tol-braul" clip-path="url(#tol-braul-base)" />
+              </g>
             }
-            <g class="tol-rose" [attr.transform]="'translate(' + L.rose.x + ' ' + L.rose.y + ') scale(1.25)'">
-              <g lifeMotif kind="rose" />
+            <g [attr.transform]="'translate(0 ' + girdle().bottomShift + ')'">
+              <use href="#tol-braul" clip-path="url(#tol-braul-bottom)" />
             </g>
           </g>
+        </ng-template>
 
-          <!-- Branches. -->
-          <g class="tol-branches" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            @for (b of L.branches; track b.id) {
-              <path
-                class="tol-branch"
-                [attr.d]="b.d"
-                [attr.stroke]="b.color"
-                [attr.stroke-width]="12"
-                pathLength="1"
-                [style.animation-delay.ms]="b.gen * 380 + 200"
-                [class.dim]="!branchLit(b.parentIds, b.childId)"
-              />
-            }
-            @for (bond of L.bonds; track bond.id) {
-              <line
-                class="tol-bond"
-                [attr.x1]="bond.x1"
-                [attr.x2]="bond.x2"
-                [attr.y1]="bond.y"
-                [attr.y2]="bond.y"
-                [attr.stroke]="bond.color"
-                stroke-width="10"
-                [class.dim]="!isLit(bond.memberIds)"
-              />
-            }
+        <g #viewport>
+          <!-- The guide's ornamental girdle along the ground, centred on the stem. -->
+          <g class="tol-girdle" aria-hidden="true">
+            <ng-container *ngTemplateOutlet="girdleTpl" />
           </g>
 
-          <!-- Members: one folk element each. -->
+          <!-- Stem, chevrons, branches, bonds, sprigs and members' elements... -->
+          <g
+            lifeScene
+            aria-hidden="true"
+            [layout]="L"
+            [decorations]="decorations()"
+            [lit]="lit()"
+            [hovered]="hovered()"
+            [broken]="brokenPhotos()"
+            (photoError)="photoFailed($event)"
+          ></g>
+          <!-- ...and their overlaps, each in the tint of whatever lies on top. -->
+          <g
+            lifeScene
+            aria-hidden="true"
+            mode="tint"
+            mask="url(#tol-overlap)"
+            [layout]="L"
+            [decorations]="decorations()"
+            [lit]="lit()"
+            [hovered]="hovered()"
+            [broken]="brokenPhotos()"
+          ></g>
+
+          <!-- The rose crowns the stem; its bottom dot covers the stem's end. -->
+          <g class="tol-rose" aria-hidden="true" [attr.transform]="'translate(' + L.trunk.x + ' ' + L.trunk.top + ') scale(1.25)'">
+            <g lifeMotif kind="rose" />
+          </g>
+
+          <!-- Members: names, hit areas and focus rings over their elements. -->
           @for (m of L.motifs; track m.id) {
             @let t = label(m.member);
+            @let lp = labelPos(m);
+            @let hb = hitBox(m);
             <g
               class="tol-member"
               [attr.data-member-id]="m.id"
               [attr.transform]="'translate(' + m.x + ' ' + m.y + ')'"
               [class.dim]="!isLit([m.id])"
               [class.active]="selected()?.id === m.id"
-              [class.deceased]="m.deceased"
               [style.animation-delay.ms]="m.gen * 380 + 520"
               tabindex="0"
               role="button"
@@ -150,15 +170,12 @@
               (keydown.enter)="activate(m.member)"
               (keydown.space)="$event.preventDefault(); activate(m.member)"
             >
-              <circle class="tol-hit" r="44" cy="-14" />
-              <circle class="tol-ring" r="38" />
-              <g class="tol-figure">
-                <g lifeMotif [kind]="m.motif" [color]="m.color" [accent]="m.accent" />
-              </g>
-              <text class="tol-name" y="-58" text-anchor="middle">
-                {{ t.first }}@if (m.deceased) {<tspan class="tol-cross"> †</tspan>}
+              <rect class="tol-hit" [attr.x]="hb.x" [attr.y]="hb.y" [attr.width]="hb.w" [attr.height]="hb.h" rx="12" />
+              <circle class="tol-ring" [attr.r]="ringRadius(m)" />
+              <text class="tol-name" [attr.x]="lp.x" [attr.y]="lp.name" [attr.text-anchor]="lp.anchor">
+                {{ t.first }}@if (m.deceased && !m.photo) {<tspan class="tol-cross"> †</tspan>}
               </text>
-              <text class="tol-sub" y="-41" text-anchor="middle">{{ t.rest }}</text>
+              <text class="tol-sub" [attr.x]="lp.x" [attr.y]="lp.sub" [attr.text-anchor]="lp.anchor">{{ t.rest }}</text>
             </g>
           }
         </g>
@@ -169,7 +186,7 @@
         <ul>
           @for (row of legend(); track row.numeral) {
             <li>
-              <svg viewBox="-32 -32 64 64" aria-hidden="true"><g lifeMotif [kind]="row.kind" /></svg>
+              <svg viewBox="-32 -32 64 64" aria-hidden="true"><g lifeMotif size="icon" [kind]="row.kind" /></svg>
               <span><b>{{ row.numeral }}</b> {{ row.meaning }}</span>
             </li>
           }

@@ -1,5 +1,8 @@
 import { hierarchy, HierarchyPointNode, tree } from 'd3-hierarchy';
 import { FamilyMember } from '@app/core/models';
+import { GIRDLE_LINE, GIRDLE_WIDTH } from './girdle';
+import { distToSeg, pathSegs, polyD, Pt, samplePolyline, Seg } from './life-geometry';
+import { LINE, motifHalf } from './ornament-scale';
 
 /**
  * Pure layout for the /tree-of-life view.
@@ -12,45 +15,118 @@ import { FamilyMember } from '@app/core/models';
  * of the same tree — the guide allows only one Tree per support.
  */
 
-/** The eight brand colours (RGB values from the guide's colour palette page). */
+/**
+ * The ornament's line colours, exactly as they appear in the reference vectors
+ * (Moldova_ornament_with-transperency.svg, braul.svg, braul2.svg).
+ */
 export const PALETTE = {
-  orange: '#E65D31',
-  red: '#D5002F',
-  wine: '#940144',
-  magenta: '#B94676',
-  green: '#34871D',
-  forest: '#006C50',
-  blue: '#1B7396',
+  orange: '#f1492e',
+  red: '#e11631',
+  wine: '#951247',
+  magenta: '#b8377f',
+  green: '#418922',
+  forest: '#226f4c',
+  blue: '#277395',
+  ochre: '#cf850b',
+  peach: '#f6885e',
   black: '#000000',
 } as const;
 
-/** Colours branches cycle through; green is reserved for the central stem. */
+/**
+ * The ornament's "transparency": where a line or element lies over another,
+ * the overlap is painted in a lighter tint of whatever is on top. These are
+ * the reference's own tint fills (ochre has none there; its tint is derived
+ * on the same lightening).
+ */
+export const TINT: Record<string, string> = {
+  [PALETTE.green]: '#46ac3b',
+  [PALETTE.forest]: '#409767',
+  [PALETTE.blue]: '#3b8bad',
+  [PALETTE.magenta]: '#cb5a94',
+  [PALETTE.red]: '#f04157',
+  [PALETTE.orange]: '#f36435',
+  [PALETTE.wine]: '#b8377f',
+  [PALETTE.peach]: '#f89d78',
+  [PALETTE.ochre]: '#dd9c34',
+};
+export const tintOf = (c: string): string => TINT[c] ?? c;
+
+/** Colours branches cycle through; green is the stem's, forest is kept for in-law lines (last). */
 export const BRANCH_COLORS = [
   PALETTE.orange,
   PALETTE.red,
   PALETTE.magenta,
   PALETTE.blue,
+  PALETTE.ochre,
   PALETTE.wine,
+  PALETTE.peach,
   PALETTE.forest,
 ] as const;
 
-/** Folk elements of the symbol, assigned one per generation (oldest first). */
-export const MOTIFS = ['basil', 'glass', 'fruit', 'connectivity', 'star', 'chip', 'textile', 'heart'] as const;
+/** Ornament elements, assigned one per generation (oldest first). */
+export const MOTIFS = ['basil', 'glass', 'pomegranate', 'connectivity', 'flower', 'energy', 'textile', 'heart'] as const;
 export type MotifKind = (typeof MOTIFS)[number];
 
+/**
+ * Inner-detail colour for each element colour, after the ornament's own
+ * pairings (forest glass filled green, wine chip with a red dot, blue flower
+ * with an orange heart, ochre textile with a forest dot, magenta basil with
+ * peach squares, ...).
+ */
+export const ACCENT: Record<string, string> = {
+  [PALETTE.orange]: PALETTE.red,
+  [PALETTE.red]: PALETTE.wine,
+  [PALETTE.wine]: PALETTE.red,
+  [PALETTE.magenta]: PALETTE.peach,
+  [PALETTE.green]: PALETTE.forest,
+  [PALETTE.forest]: PALETTE.green,
+  [PALETTE.blue]: PALETTE.orange,
+  [PALETTE.ochre]: PALETTE.forest,
+  [PALETTE.peach]: PALETTE.orange,
+};
+
 export const GEOMETRY = {
-  tier: 270,
-  coupleSpacing: 128,
-  labelWidth: 112,
+  /** Minimum rise from one generation to the next; a gap grows with the lanes it needs. */
+  tier: 280,
+  /** One line weight for everything, the elements' own outlines included. */
+  stroke: LINE,
+  coupleSpacing: 180,
+  /** Room a label above an element needs across. */
+  labelWidth: 150,
+  /** Room a label beside an element needs (single parents, whose branch leaves from their top). */
+  sideLabel: 130,
   unitGap: 34,
   trunkClear: 92,
   blockGap: 120,
-  motifRadius: 28,
-  labelClear: 78,
-  lane: 20,
+  /** How far a line's end reaches inside the element it joins: the overlap reads as a lighter joint. */
+  joint: 6,
+  /** The connectivity arcs float just above the end of their line, as in the ornament. */
+  arcGap: 5,
+  /** How far a basil couple's bar rises (on the diagonal) above the flowers. */
+  basilLift: 60,
+  /** The girdle is drawn so its lines match the tree's line weight. */
+  girdleScale: LINE / GIRDLE_LINE,
+  /** Its upper rail, in girdle units from the band's top edge: where the stem ends. */
+  girdleRail: 40.9,
+  /** The two label lines above an element. */
+  labelBlock: 36,
+  /** Air between a label and the line run passing above it. */
+  labelGap: 21,
+  /** Centre-to-centre distance of parallel runs: 1.5 line widths of air between them. */
+  lane: 35,
   diagonal: 36,
-  chamfer: 18,
+  /** The turn up into a child is a full diagonal too, never a short bevel. */
+  chamfer: 36,
+  /** Length (along each axis) of a chevron arm on the stem. */
+  leafArm: 56,
+  /**
+   * Members with a photo keep it, as an agreed exception to the ornament:
+   * a round photo in a disc of their line colour, their folk element as a badge.
+   */
+  avatar: 31,
 } as const;
+
+export type LabelSide = 'above' | 'left' | 'right';
 
 export interface LifeMotif {
   id: string;
@@ -62,6 +138,16 @@ export interface LifeMotif {
   color: string;
   accent: string;
   deceased: boolean;
+  /** Drawn mirrored, so an asymmetric element faces the line joining it. */
+  mirror: boolean;
+  /** Shown as a photo avatar (see GEOMETRY.avatar) instead of the bare element. */
+  photo: boolean;
+  /** Half size of what is drawn: the element, or the avatar disc. */
+  half: { w: number; h: number };
+  /** Clearance above the centre taken by the element (and a raised bar): labels sit above it. */
+  top: number;
+  /** Labels go beside single parents, whose children's branch leaves from their top. */
+  label: LabelSide;
 }
 
 export interface LifeBranch {
@@ -75,6 +161,8 @@ export interface LifeBranch {
 
 export interface LifeBond {
   id: string;
+  /** The bar as drawn (straight, or rising through basil flowers' open slots). */
+  d: string;
   x1: number;
   x2: number;
   y: number;
@@ -83,12 +171,18 @@ export interface LifeBond {
   gen: number;
 }
 
+/** A chevron on the stem: two arms (forest left, green right), each ending in a terminal. */
+export interface LifeLeaf {
+  y: number;
+  lines: { d: string; color: string }[];
+}
+
 export interface LifeLayout {
   motifs: LifeMotif[];
   branches: LifeBranch[];
   bonds: LifeBond[];
   trunk: { x: number; top: number; bottom: number };
-  leaves: { y: number }[];
+  leaves: LifeLeaf[];
   rose: { x: number; y: number };
   girdleY: number;
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
@@ -113,6 +207,18 @@ const byBirth = (a: FamilyMember, b: FamilyMember): number => {
   if (da && !db) return -1;
   if (!da && db) return 1;
   return Number(a.id) - Number(b.id) || a.id.localeCompare(b.id);
+};
+
+const kindOf = (gen: number): MotifKind => MOTIFS[gen % MOTIFS.length];
+const hasPhoto = (m: FamilyMember): boolean => !!m.thumbnailUrl;
+/** Half size of a member's figure: their photo disc, or their generation's element. */
+const figureHalf = (m: FamilyMember, gen: number): { w: number; h: number } =>
+  hasPhoto(m) ? { w: GEOMETRY.avatar, h: GEOMETRY.avatar } : motifHalf(kindOf(gen));
+/** Where a line rising into a member's figure ends, below its centre (a joint just inside its rim). */
+const figureJoin = (m: FamilyMember, gen: number): number => {
+  const h = figureHalf(m, gen).h;
+  // The connectivity arcs float just above their line instead.
+  return !hasPhoto(m) && kindOf(gen) === 'connectivity' ? h + GEOMETRY.arcGap + GEOMETRY.stroke / 2 : h - GEOMETRY.joint;
 };
 
 export function layoutLife(members: FamilyMember[]): LifeLayout {
@@ -214,6 +320,17 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     blockRoots.push(next);
   }
 
+
+  // Unit widths, now that we know who has children: an element with its label
+  // above, or a single parent with the label beside it (their branch leaves upward).
+  for (const u of units) {
+    const hw = Math.max(...u.members.map((id) => figureHalf(byId.get(id)!, u.gen).w));
+    u.width =
+      u.members.length === 1 && childrenOf(u).length
+        ? 2 * (hw + 12 + G.sideLabel)
+        : (u.members.length - 1) * G.coupleSpacing + Math.max(G.labelWidth, 2 * hw + 16);
+  }
+
   // ---- 4. Horizontal placement.
   const separation = (a: HierarchyPointNode<Unit>, b: HierarchyPointNode<Unit>) =>
     (a.data.width + b.data.width) / 2 + G.unitGap;
@@ -295,9 +412,9 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
   }
 
   // ---- 5. Member order inside a unit: blood relative toward the stem,
-  // anyone whose own parents hang further out on the outer side.
-  const pos = new Map<string, { x: number; y: number }>();
-  const tierY = (g: number) => 0 - g * G.tier;
+  // anyone whose own parents hang further out on the outer side. (x only:
+  // heights depend on how many lanes each generation gap needs.)
+  const xOf = new Map<string, number>();
   for (const u of placed) {
     const outward = Math.sign(u.x) || 0;
     const inBlock = (id: string) => parentUnit(id)?.block === u.block;
@@ -310,68 +427,11 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
       outward === 0
         ? u.members
         : [...u.members].sort((a, b) => score(a) - score(b)).map((id, i, arr) => arr[outward > 0 ? i : arr.length - 1 - i]);
-    ordered.forEach((id, i) =>
-      pos.set(id, { x: u.x + (i - (ordered.length - 1) / 2) * G.coupleSpacing, y: tierY(u.gen) }),
-    );
+    ordered.forEach((id, i) => xOf.set(id, u.x + (i - (ordered.length - 1) / 2) * G.coupleSpacing));
   }
+  const isBasilCouple = (u: Unit) => u.members.length === 2 && kindOf(u.gen) === 'basil';
 
-  // ---- 6. Colours: each line from the founders keeps one branch colour.
-  const lineColor = new Map<string, string>();
-  const paint = (u: Unit, color: string) => {
-    u.members.forEach((id) => lineColor.set(id, color));
-    u.children.forEach((c) => paint(c, color));
-  };
-  rootUnit.members.forEach((id) => lineColor.set(id, PALETTE.green));
-  rootUnit.children.forEach((c, i) => paint(c, BRANCH_COLORS[i % (BRANCH_COLORS.length - 1)]));
-  blockRoots.slice(1).forEach((r) => paint(r, PALETTE.forest));
-  const colorOf = (id: string) => lineColor.get(id) ?? PALETTE.blue;
-
-  // ---- 7. Motifs.
-  const motifs: LifeMotif[] = [];
-  for (const u of placed) {
-    u.members.forEach((id) => {
-      const m = byId.get(id)!;
-      const p = pos.get(id)!;
-      // Blood relatives wear their line's colour, spouses a companion colour.
-      // Someone whose parents belong to another family wears that family's line.
-      const pu = parentUnit(id);
-      const married = pu && pu.block !== u.block;
-      const blood = !!pu || blockRoots.some((r) => r.members[0] === id);
-      const own = married ? colorOf(pu.members[0]) : colorOf(id);
-      const line = own === PALETTE.green ? PALETTE.red : own;
-      const idx = BRANCH_COLORS.indexOf(line as (typeof BRANCH_COLORS)[number]);
-      const companion = BRANCH_COLORS[(idx + 3) % BRANCH_COLORS.length];
-      motifs.push({
-        id,
-        member: m,
-        x: p.x,
-        y: p.y,
-        gen: u.gen,
-        motif: MOTIFS[u.gen % MOTIFS.length],
-        color: blood ? line : companion,
-        accent: PALETTE.green,
-        deceased: m.deceased,
-      });
-    });
-  }
-
-  // ---- 8. Marriage bonds.
-  const bonds: LifeBond[] = placed
-    .filter((u) => u.members.length > 1)
-    .map((u) => {
-      const xs = u.members.map((id) => pos.get(id)!.x);
-      return {
-        id: u.id,
-        x1: Math.min(...xs),
-        x2: Math.max(...xs),
-        y: tierY(u.gen),
-        color: u === rootUnit ? PALETTE.green : colorOf(u.members.find((id) => parentUnit(id)) ?? u.members[0]),
-        memberIds: u.members,
-        gen: u.gen,
-      };
-    });
-
-  // ---- 9. Branches with lane assignment per generation gap.
+  // ---- 6. Edges, with lane assignment per generation gap.
   interface Edge {
     childId: string;
     parent: Unit;
@@ -386,12 +446,12 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     const pu = parentUnit(m.id);
     if (!pu) continue;
     const parents = rel(m, 'parents').filter((p) => pu.members.includes(p));
-    const px = parents.map((p) => pos.get(p)!.x);
+    const px = parents.map((p) => xOf.get(p)!);
     edges.push({
       childId: m.id,
       parent: pu,
       xs: pu === rootUnit ? 0 : px.reduce((a, b) => a + b, 0) / px.length,
-      xc: pos.get(m.id)!.x,
+      xc: xOf.get(m.id)!,
       gen: pu.gen,
       fromStem: pu === rootUnit,
       lane: 0,
@@ -399,7 +459,8 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
   }
   const gaps = new Map<number, Edge[]>();
   edges.forEach((e) => gaps.set(e.gen, [...(gaps.get(e.gen) ?? []), e]));
-  for (const list of gaps.values()) {
+  const laneCount = new Map<number, number>();
+  for (const [g, list] of gaps) {
     const lanes: Edge[][] = [];
     list.sort((a, b) => Math.abs(b.xc - b.xs) - Math.abs(a.xc - a.xs));
     for (const e of list) {
@@ -408,7 +469,7 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
       let k = 0;
       for (; k < lanes.length; k++) {
         const clash = lanes[k].some((o) => {
-          const pad = o.xs === e.xs && Math.sign(o.xc - o.xs) !== Math.sign(e.xc - e.xs) ? -1 : 16;
+          const pad = o.xs === e.xs && Math.sign(o.xc - o.xs) !== Math.sign(e.xc - e.xs) ? -1 : 2 * G.stroke;
           return lo < Math.max(o.xs, o.xc) + pad && Math.min(o.xs, o.xc) < hi + pad;
         });
         if (!clash) break;
@@ -416,21 +477,147 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
       (lanes[k] ??= []).push(e);
       e.lane = k;
     }
+    laneCount.set(g, lanes.length);
+  }
+
+  // ---- 7. Heights. Each gap rises far enough for the parents' labels, its
+  // lanes (1.5 line widths apart), the turn up and the child's joint.
+  const maxGen = Math.max(...units.map((u) => u.gen));
+  const genMembers = (g: number) => units.filter((u) => u.gen === g).flatMap((u) => u.members.map((id) => byId.get(id)!));
+  const topOf = (g: number): number => {
+    const own = Math.max(...genMembers(g).map((m) => figureHalf(m, g).h)) + 8;
+    const lifted = units.some((u) => u.gen === g && isBasilCouple(u)) ? G.basilLift + G.stroke / 2 + 8 : 0;
+    return Math.max(own, lifted);
+  };
+  /** Where a line rising into an element of generation g ends, below its centre. */
+  const joinOf = (g: number): number => Math.max(...genMembers(g).map((m) => figureJoin(m, g)));
+  /** From a generation's centre line up to its first run of branches. */
+  const clearOf = (g: number): number => topOf(g) + G.labelBlock + G.labelGap;
+  const tierYs: number[] = [0];
+  for (let g = 0; g < maxGen; g++) {
+    const lanes = laneCount.get(g) ?? 1;
+    const rise = clearOf(g) + (lanes - 1) * G.lane + G.chamfer + 12 + joinOf(g + 1);
+    tierYs.push(tierYs[g] - Math.max(G.tier, Math.ceil(rise)));
+  }
+  const tierY = (g: number) => tierYs[g];
+
+  // ---- 8. Colours: each line from the founders keeps one branch colour.
+  const lineColor = new Map<string, string>();
+  const paint = (u: Unit, color: string) => {
+    u.members.forEach((id) => lineColor.set(id, color));
+    u.children.forEach((c) => paint(c, color));
+  };
+  rootUnit.members.forEach((id) => lineColor.set(id, PALETTE.green));
+  rootUnit.children.forEach((c, i) => paint(c, BRANCH_COLORS[i % (BRANCH_COLORS.length - 1)]));
+  blockRoots.slice(1).forEach((r) => paint(r, PALETTE.forest));
+  const colorOf = (id: string) => lineColor.get(id) ?? PALETTE.blue;
+
+  // ---- 9. Motifs.
+  const motifs: LifeMotif[] = [];
+  for (const u of placed) {
+    const single = u.members.length === 1 && childrenOf(u).length > 0;
+    u.members.forEach((id) => {
+      const m = byId.get(id)!;
+      const x = xOf.get(id)!;
+      // Blood relatives wear their line's colour, spouses a companion colour.
+      // Someone whose parents belong to another family wears that family's line.
+      const pu = parentUnit(id);
+      const married = pu && pu.block !== u.block;
+      const blood = !!pu || blockRoots.some((r) => r.members[0] === id);
+      const own = married ? colorOf(pu.members[0]) : colorOf(id);
+      const line = own === PALETTE.green ? PALETTE.red : own;
+      const idx = BRANCH_COLORS.indexOf(line as (typeof BRANCH_COLORS)[number]);
+      const companion = BRANCH_COLORS[(idx + 3) % BRANCH_COLORS.length];
+      const color = blood ? line : companion;
+      motifs.push({
+        id,
+        member: m,
+        x,
+        y: tierY(u.gen),
+        gen: u.gen,
+        motif: kindOf(u.gen),
+        color,
+        accent: ACCENT[color] ?? PALETTE.wine,
+        deceased: m.deceased,
+        mirror: false,
+        photo: hasPhoto(m),
+        half: figureHalf(m, u.gen),
+        top: topOf(u.gen),
+        label: single ? ((Math.sign(x) || 1) > 0 ? 'right' : 'left') : 'above',
+      });
+    });
+  }
+
+  // ---- 10. Marriage bonds.
+  // Basil has an open slot where its fourth petal would be; as in the ornament,
+  // the line enters there on the diagonal and ends at the flower's heart. So a
+  // basil couple's bar rises out of each flower's slot, runs across above them,
+  // and the right-hand flower is mirrored to open toward it. Other bars reach
+  // just inside each element, so their ends read as joints.
+  const lift = new Map<string, number>();
+  const bonds: LifeBond[] = placed
+    .filter((u) => u.members.length > 1)
+    .map((u) => {
+      const xs = u.members.map((id) => xOf.get(id)!);
+      const y = tierY(u.gen);
+      const x1 = Math.min(...xs);
+      const x2 = Math.max(...xs);
+      const insetOf = (x: number) => figureHalf(byId.get(u.members[xs.indexOf(x)])!, u.gen).w - G.joint;
+      let d: string;
+      if (isBasilCouple(u)) {
+        const k = G.basilLift;
+        lift.set(u.id, k);
+        d = `M${x1} ${y} L${x1 + k} ${y - k} H${x2 - k} L${x2} ${y}`;
+        const right = u.members.find((id) => xOf.get(id) === x2)!;
+        motifs.find((m) => m.id === right)!.mirror = true;
+      } else {
+        d = `M${x1 + insetOf(x1)} ${y} H${x2 - insetOf(x2)}`;
+      }
+      return {
+        id: u.id,
+        d,
+        x1: x1 + insetOf(x1),
+        x2: x2 - insetOf(x2),
+        y,
+        color: u === rootUnit ? PALETTE.green : colorOf(u.members.find((id) => parentUnit(id)) ?? u.members[0]),
+        memberIds: u.members,
+        gen: u.gen,
+      };
+    });
+
+  // ---- 11. Branches.
+  const runY = (e: Edge) => tierY(e.gen) - clearOf(e.gen) - e.lane * G.lane;
+  // Where each branch leaves its parents' vertical (a straight branch never turns).
+  const sproutY = (e: Edge) => {
+    const adx = Math.abs(e.xc - e.xs);
+    return adx < 1 ? -Infinity : runY(e) + Math.min(adx, G.diagonal);
+  };
+  // Siblings share one rising line: only the branch that leaves it highest
+  // carries the run up from the parents; the others sprout from it, so no
+  // stretch of line is drawn twice (overlaps are meant to read as joints).
+  const carriers = new Map<string, Edge>();
+  for (const e of edges) {
+    if (e.fromStem) continue;
+    const key = `${e.parent.id}@${e.xs}`;
+    const cur = carriers.get(key);
+    if (!cur || sproutY(e) < sproutY(cur)) carriers.set(key, e);
   }
   const branches: LifeBranch[] = edges.map((e) => {
-    const ys = tierY(e.gen);
-    const yc = tierY(e.gen + 1) + G.motifRadius;
-    const yh = ys - G.labelClear - e.lane * G.lane;
+    // Children leave from the bar, wherever it runs.
+    const ys = tierY(e.gen) - (lift.get(e.parent.id) ?? 0);
+    const yc = tierY(e.gen + 1) + figureJoin(byId.get(e.childId)!, e.gen + 1);
+    const yh = runY(e);
     const dx = e.xc - e.xs;
     const s = Math.sign(dx);
     const adx = Math.abs(dx);
+    const sprouts = e.fromStem || carriers.get(`${e.parent.id}@${e.xs}`) !== e;
     let d: string;
     if (adx < 1) {
       d = `M${e.xs} ${ys} V${yc}`;
     } else {
       const dd = Math.min(adx, G.diagonal);
       const c2 = Math.min(adx - dd, G.chamfer);
-      const start = e.fromStem ? `M${e.xs} ${yh + dd}` : `M${e.xs} ${ys} V${yh + dd}`;
+      const start = sprouts ? `M${e.xs} ${yh + dd}` : `M${e.xs} ${ys} V${yh + dd}`;
       d = `${start} L${e.xs + s * dd} ${yh} H${e.xc - s * c2} L${e.xc} ${yh - c2} V${yc}`;
     }
     return {
@@ -443,26 +630,74 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     };
   });
 
-  // ---- 10. Stem, leaves, rose, girdle, bounds.
-  const maxGen = Math.max(...units.map((u) => u.gen));
-  const roseY = tierY(maxGen) - G.tier * 0.7;
-  const leaves: { y: number }[] = [];
-  for (let g = 1; g <= maxGen; g++) leaves.push({ y: tierY(g) + 30 }, { y: tierY(g) - G.tier / 2 + 20 });
-  leaves.push({ y: tierY(maxGen) - G.tier * 0.32 });
-  const girdleY = G.tier * 0.42;
-  const xs = motifs.map((m) => m.x);
+  // ---- 12. Stem, rose, girdle.
+  const roseY = tierY(maxGen) - 200;
+  /** Top edge of the girdle band along the ground. */
+  const girdleY = Math.max(G.tier * 0.42, Math.max(...genMembers(0).map((m) => figureHalf(m, 0).h)) + 40);
+  const trunk = { x: 0, top: roseY + 30, bottom: girdleY + G.girdleRail * G.girdleScale };
+
+  // ---- 13. Chevrons on the stem, wherever it runs free. Each arm rises at
+  // 45° and ends in one of the ornament's terminals: a prong, a cross or a comb.
+  const obstacles: Seg[] = [...branches, ...bonds].flatMap((x) => pathSegs(x.d));
+  const boxes = motifs.map((m) => {
+    const hw = Math.max(m.half.w, m.label === 'above' ? G.labelWidth / 2 : 0) + 10;
+    return {
+      x1: m.x - hw - (m.label === 'left' ? G.sideLabel : 0),
+      x2: m.x + hw + (m.label === 'right' ? G.sideLabel : 0),
+      y1: m.y - m.top - G.labelBlock - 10,
+      y2: m.y + m.half.h + 10,
+    };
+  });
+  const A = G.leafArm;
+  const leafLines = (y: number, i: number): { line: Pt[]; color: string }[] => {
+    const out: { line: Pt[]; color: string }[] = [];
+    for (const s of [-1, 1]) {
+      const color = s < 0 ? PALETTE.forest : PALETTE.green;
+      const e: Pt = [s * A, y - A];
+      const kind = (['cross', 'comb', 'prong'] as const)[i % 3];
+      if (kind === 'prong') out.push({ line: [[0, y], e, [e[0], e[1] - 28]], color });
+      else if (kind === 'cross') {
+        out.push({ line: [[0, y], e, [e[0], e[1] - 36]], color });
+        out.push({ line: [[e[0] - 16, e[1] - 22], [e[0] + 16, e[1] - 22]], color });
+      } else {
+        out.push({ line: [[0, y], e], color });
+        out.push({ line: [[(s * A) / 2, y - A / 2], [(s * A) / 2, y - A / 2 - 24]], color });
+        out.push({ line: [e, [e[0], e[1] - 24]], color });
+      }
+    }
+    return out;
+  };
+  const leafFits = (lines: { line: Pt[] }[]) =>
+    lines
+      .flatMap((l) => samplePolyline(l.line))
+      .every(
+        (p) =>
+          obstacles.every((sg) => distToSeg(p, sg) >= G.stroke + 10) &&
+          boxes.every((b) => p[0] < b.x1 || p[0] > b.x2 || p[1] < b.y1 || p[1] > b.y2),
+      );
+  const leaves: LifeLeaf[] = [];
+  let lastY = Infinity;
+  for (let y = Math.round(girdleY - 24); y - A - 40 > trunk.top + 60; y -= 8) {
+    if (lastY - y < 112) continue;
+    const lines = leafLines(y, leaves.length);
+    if (!leafFits(lines)) continue;
+    leaves.push({ y, lines: lines.map((l) => ({ d: polyD(l.line), color: l.color })) });
+    lastY = y;
+  }
+
   const bounds = {
-    minX: Math.min(...xs, -200) - G.labelWidth,
-    maxX: Math.max(...xs, 200) + G.labelWidth,
+    minX: Math.min(...boxes.map((b) => b.x1), -200) - 20,
+    maxX: Math.max(...boxes.map((b) => b.x2), 200) + 20,
     minY: roseY - 80,
-    maxY: girdleY + 50,
+    maxY: girdleY + GIRDLE_WIDTH * G.girdleScale + 20,
   };
 
   return {
     motifs,
     branches,
     bonds,
-    trunk: { x: 0, top: roseY + 30, bottom: girdleY },
+    // The stem stands on the girdle's upper rail.
+    trunk,
     leaves,
     rose: { x: 0, y: roseY },
     girdleY,
