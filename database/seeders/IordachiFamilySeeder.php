@@ -52,10 +52,28 @@ class IordachiFamilySeeder extends Seeder
         $this->marry($ionRapcea, $this->person('Valentina', 'Rapcea', 'F', '1958-10-30', bio: 'Soția lui Ion Rapcea. Numele de fată mare necunoscut.'));
         $this->marry($liudmila, $this->person('Valeriu', 'Potînga', 'M', deceased: true, bio: 'Soțul Liudmilei Potînga. Decedat.'));
         $this->marry($galinaRapcea, $this->person('Ion', 'Rabdau', 'M', deceased: true, bio: 'Soțul Galinei Rabdau. Decedat.'));
-        $this->marry($dumitruUnchi, $this->person('Elena', 'Iordachi', 'F', bio: 'Soția lui Dumitru Iordachi. Numele de fată mare necunoscut.'));
-        $this->marry($simion, $this->person('Lidia', 'Iordachi', 'F', bio: 'Soția lui Simion Iordachi. Numele de fată mare necunoscut.'));
+        $elena = $this->person('Elena', 'Iordachi', 'F', bio: 'Soția lui Dumitru Iordachi. Numele de fată mare necunoscut.');
+        $this->marry($dumitruUnchi, $elena);
+        $lidia = $this->person('Lidia', 'Iordachi', 'F', bio: 'Soția lui Simion Iordachi. Numele de fată mare necunoscut.');
+        $this->marry($simion, $lidia);
         $this->marry($maria, $this->person('Vova', 'Boistean', 'M', bio: 'Soțul Mariei Boistean.'));
         $this->marry($galina, $this->person('Mihail', 'Pituscan', 'M', bio: 'Soțul Galinei Pituscan.'));
+
+        // Dumitru and Elena's children
+        foreach ([
+            $this->person('Tatiana', 'Iordachi', 'F', '1983-12-31'),
+            $this->person('Dumitru', 'Iordachi', 'M', '1985-08-31'),
+        ] as $child) {
+            $child->parents()->sync([$dumitruUnchi->id, $elena->id]);
+        }
+
+        // Simion and Lidia's children
+        foreach ([
+            $this->person('Iulian', 'Iordachi', 'M', '1984-01-25'),
+            $this->person('Rodica', 'Iordachi', 'F', '1984-01-26', bio: 'Scutaru după căsătorie.'),
+        ] as $child) {
+            $child->parents()->sync([$simion->id, $lidia->id]);
+        }
 
         // Vasile and Alexandra's sons
         $ion = $this->person('Ion', 'Iordachi', 'M', '1990-09-22', bio: 'Fratele lui Dumitru.');

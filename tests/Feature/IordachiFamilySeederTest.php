@@ -25,8 +25,8 @@ class IordachiFamilySeederTest extends TestCase
     {
         $this->seed(IordachiFamilySeeder::class);
 
-        $this->assertSame(25, FamilyMember::query()->count());
-        $this->assertSame('2001-11-03', FamilyMember::query()->where('first_name', 'Dumitru')->whereNotNull('birthdate')->sole()->birthdate->toDateString());
+        $this->assertSame(29, FamilyMember::query()->count());
+        $this->assertSame(1, FamilyMember::query()->where('first_name', 'Dumitru')->whereDate('birthdate', '2001-11-03')->count());
         $this->assertSame('1990-09-22', FamilyMember::query()->where('first_name', 'Ion')->where('last_name', 'Iordachi')->whereNotNull('birthdate')->sole()->birthdate->toDateString());
         $this->assertSame('1969-02-12', $this->member('Alexandra')->birthdate->toDateString());
         $this->assertSame('1966-08-01', $this->member('Vasile')->birthdate->toDateString());
@@ -112,6 +112,24 @@ class IordachiFamilySeederTest extends TestCase
         $rabdau = collect($json)->first(fn ($m) => $m['data']['first name'] === 'Ion' && ($m['data']['last name'] ?? null) === 'Rabdau');
         $this->assertTrue($rabdau['deceased']);
         $this->assertNull($rabdau['diedAt']);
+    }
+
+    public function test_the_cousins_children_of_dumitru_and_elena_and_of_simion_and_lidia(): void
+    {
+        $this->seed(IordachiFamilySeeder::class);
+
+        $uncle = FamilyMember::query()->where('first_name', 'Dumitru')->whereNull('birthdate')->sole();
+        $this->assertSame(['Dumitru Iordachi', 'Tatiana Iordachi'], $this->names($uncle->children));
+        $this->assertSame(['Dumitru Iordachi', 'Elena Iordachi'], $this->names($this->member('Tatiana')->parents));
+        $this->assertSame('1983-12-31', $this->member('Tatiana')->birthdate->toDateString());
+        $this->assertSame(1, FamilyMember::query()->where('first_name', 'Dumitru')->whereDate('birthdate', '1985-08-31')->count());
+
+        $this->assertSame(['Iulian Iordachi', 'Rodica Iordachi'], $this->names($this->member('Simion')->children));
+        $this->assertSame(['Lidia Iordachi', 'Simion Iordachi'], $this->names($this->member('Rodica')->parents));
+        $this->assertSame('1984-01-25', $this->member('Iulian')->birthdate->toDateString());
+        $this->assertSame('1984-01-26', $this->member('Rodica')->birthdate->toDateString());
+        $this->assertStringContainsString('Scutaru', $this->member('Rodica')->biography);
+        $this->assertSame('F', $this->member('Rodica')->gender);
     }
 
     public function test_uncle_dumitru_is_recorded_as_deceased_in_2024(): void
