@@ -1,12 +1,16 @@
-<p-confirmdialog />
+@if (!embedded()) {
+  <p-confirmdialog />
+}
 
-<div class="member-edit">
+<div class="member-edit" [class.is-embedded]="embedded()">
   <!-- Sticky action bar -->
   <header class="member-edit__bar">
     <div class="flex items-center gap-3">
-      <p-button icon="pi pi-arrow-left" [text]="true" [rounded]="true"
-                routerLink="/family-members"
-                aria-label="Back to family members" />
+      @if (!embedded()) {
+        <p-button icon="pi pi-arrow-left" [text]="true" [rounded]="true"
+                  routerLink="/family-members"
+                  aria-label="Back to family members" />
+      }
       <div>
         <h1 class="text-xl font-semibold text-color m-0">
           {{ isCreate() ? 'Add Family Member' : 'Edit Family Member' }}
@@ -38,6 +42,14 @@
     </div>
   } @else {
     <form [formGroup]="form" (ngSubmit)="save()" class="member-edit__grid">
+      <input #avatarFileInput type="file" hidden
+             [accept]="avatarAccept"
+             (change)="onAvatarSelected($event)" />
+      <app-avatar-crop-dialog [file]="pendingAvatarFile()"
+                              [saving]="uploadingAvatar()"
+                              (cropped)="onAvatarCropped($event)"
+                              (cancelled)="pendingAvatarFile.set(null)" />
+
       <!-- Hero / identity card (edit mode only — in create the hero would be empty) -->
       @if (member(); as m) {
       <section class="member-edit__hero card" [class.is-deceased]="m.deceased">
@@ -64,14 +76,6 @@
               }
             </span>
           </button>
-
-          <input #avatarFileInput type="file" hidden
-                 [accept]="avatarAccept"
-                 (change)="onAvatarSelected($event)" />
-          <app-avatar-crop-dialog [file]="pendingAvatarFile()"
-                                  [saving]="uploadingAvatar()"
-                                  (cropped)="onAvatarCropped($event)"
-                                  (cancelled)="pendingAvatarFile.set(null)" />
 
           @if (m.deceased) {
             <span class="deceased-stamp member-edit__hero-stamp" aria-label="Deceased">&dagger;</span>
@@ -115,6 +119,40 @@
                         [text]="true" severity="secondary" size="small"
                         [disabled]="uploadingAvatar()"
                         (onClick)="removeAvatar()" />
+            </div>
+          }
+        </div>
+      </section>
+      } @else {
+      <!-- Create mode: photo is held locally and uploaded once the member exists -->
+      <section class="member-edit__hero member-edit__hero--create card">
+        <div class="member-edit__hero-avatar">
+          <button type="button"
+                  class="member-edit__hero-avatar-trigger"
+                  [attr.aria-label]="newAvatarPreview() ? 'Change photo' : 'Choose photo'"
+                  (click)="avatarFileInput.click()">
+            @if (newAvatarPreview(); as preview) {
+              <p-avatar [image]="preview" shape="circle" size="xlarge" />
+            } @else {
+              <p-avatar icon="pi pi-user" shape="circle" size="xlarge"
+                        styleClass="member-edit__avatar-fallback" />
+            }
+            <span class="member-edit__hero-avatar-overlay" aria-hidden="true">
+              <i class="pi pi-camera"></i>
+              <span class="text-xs">{{ newAvatarPreview() ? 'Change' : 'Upload' }}</span>
+            </span>
+          </button>
+        </div>
+        <div class="member-edit__hero-meta">
+          <h2 class="text-lg font-semibold text-color m-0">Photo</h2>
+          <p class="text-muted-color text-sm m-0 mt-1">
+            Optional. Pick a portrait and position it in the oval; it's saved with the new member.
+          </p>
+          @if (newAvatarPreview()) {
+            <div class="mt-3">
+              <p-button label="Remove photo" icon="pi pi-times"
+                        [text]="true" severity="secondary" size="small"
+                        (onClick)="clearNewAvatar()" />
             </div>
           }
         </div>
@@ -322,6 +360,12 @@
                            placeholder="Add a child" [filter]="true" filterBy="label"
                            appendTo="body" display="chip" [showHeader]="true"
                            styleClass="member-edit__picker" />
+            @if (member() && !embedded()) {
+              <p-button label="New child" icon="pi pi-user-plus"
+                        severity="secondary" [outlined]="true"
+                        styleClass="member-edit__new-child"
+                        (onClick)="openChildDrawer()" />
+            }
           </div>
           @if (optionsByIds(form.get('childIds')?.value ?? []); as children) {
             @if (children.length > 0) {
@@ -365,6 +409,21 @@
     </form>
   }
 </div>
+
+@if (member(); as m) {
+  <p-drawer [visible]="childDrawerOpen()"
+            (visibleChange)="childDrawerOpen.set($event)"
+            position="right"
+            [header]="'New child of ' + fullName(m)"
+            styleClass="member-edit__child-drawer">
+    @if (childDrawerOpen()) {
+      <app-family-member-edit [embedded]="true"
+                              [presetParentIds]="newChildParentIds()"
+                              (created)="onChildCreated($event)"
+                              (cancelled)="childDrawerOpen.set(false)" />
+    }
+  </p-drawer>
+}
 
 <!-- Reusable relation-card template -->
 <ng-template #relationCard let-item>

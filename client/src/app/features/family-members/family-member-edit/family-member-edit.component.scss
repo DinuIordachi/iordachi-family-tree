@@ -413,3 +413,22 @@
     text-align: left;
   }
 }
+
+/* Embedded in the "new child" drawer: the drawer is the scroll container, so
+ * the action bar sticks to its top and the page chrome goes away. */
+.member-edit.is-embedded {
+  max-width: none;
+  padding-bottom: 0;
+
+  .member-edit__bar {
+    top: 0;
+  }
+
+  .member-edit__hero {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+:host ::ng-deep .member-edit__child-drawer {
+  width: min(48rem, 100vw);
+}

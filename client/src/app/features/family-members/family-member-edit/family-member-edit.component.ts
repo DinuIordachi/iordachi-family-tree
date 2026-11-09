@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule, DatePipe } from '@angular/common';
 import {
@@ -18,6 +27,7 @@ import { Avatar } from 'primeng/avatar';
 import { Divider } from 'primeng/divider';
 import { Message } from 'primeng/message';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Drawer } from 'primeng/drawer';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FamilyTreeService } from '@app/core/services';
 import { FamilyMember, FamilyMemberPayload } from '@app/core/models';
@@ -52,6 +62,7 @@ interface MemberOption {
     Divider,
     Message,
     ConfirmDialog,
+    Drawer,
     AvatarCropDialogComponent,
   ],
   templateUrl: './family-member-edit.component.html',
@@ -64,6 +75,21 @@ export class FamilyMemberEditComponent implements OnInit {
   private readonly familyTreeService = inject(FamilyTreeService);
   private readonly confirm = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * Embedded = rendered inside another page (the "new child" drawer) instead of
+   * as a routed page: always create mode, ignores the route, and emits
+   * `created` / `cancelled` instead of navigating.
+   */
+  readonly embedded = input(false);
+  /** Parents to preselect in embedded create mode, slotted into mother/father by gender. */
+  readonly presetParentIds = input<number[]>([]);
+  readonly created = output<FamilyMember>();
+  readonly cancelled = output<void>();
+
+  /** Drawer for creating a child of this member and their first spouse. */
+  readonly childDrawerOpen = signal(false);
 
   /**
    * 'create' when navigated from /family-members/new (no id param),
@@ -77,6 +103,9 @@ export class FamilyMemberEditComponent implements OnInit {
   readonly uploadingAvatar = signal(false);
   /** Image picked by the admin, waiting to be positioned in the crop dialog. */
   readonly pendingAvatarFile = signal<File | null>(null);
+  /** Create mode: cropped portrait held locally until the member exists, then uploaded. */
+  readonly newAvatarFile = signal<File | null>(null);
+  readonly newAvatarPreview = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
   readonly today = new Date();
@@ -125,8 +154,22 @@ export class FamilyMemberEditComponent implements OnInit {
    */
   readonly siblings = signal<FamilyMember[]>([]);
 
+  /** The member plus their first spouse — the parents preselected for a new child. */
+  readonly newChildParentIds = computed<number[]>(() => {
+    const current = this.member();
+    if (!current) {
+      return [];
+    }
+    const spouseId = current.rels.spouses[0];
+    return spouseId ? [Number(current.id), Number(spouseId)] : [Number(current.id)];
+  });
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.setNewAvatar(null));
+  }
+
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
+    const id = this.embedded() ? null : this.route.snapshot.paramMap.get('id');
 
     /* `new` route lands here without an id. Skip member loading entirely
      * and just fetch the tree to populate relation pickers + sibling computation. */
@@ -135,6 +178,8 @@ export class FamilyMemberEditComponent implements OnInit {
       this.familyTreeService.list().subscribe({
         next: (tree) => {
           this.tree.set(tree);
+          this.applyPresetParents(this.presetParentIds(), tree);
+          this.recomputeSiblings();
           this.loading.set(false);
           this.form.valueChanges.subscribe(() => this.recomputeSiblings());
         },
@@ -186,6 +231,44 @@ export class FamilyMemberEditComponent implements OnInit {
     });
   }
 
+  /**
+   * Slot preset parents into the mother/father pickers by gender; a parent
+   * without a gender takes whichever slot is still free. The new member also
+   * inherits the father's last name as an editable default.
+   */
+  private applyPresetParents(ids: number[], tree: FamilyMember[]): void {
+    if (ids.length === 0) {
+      return;
+    }
+    const treeById = new Map(tree.map((m) => [m.id, m]));
+    let motherId: number | null = null;
+    let fatherId: number | null = null;
+    const ungendered: number[] = [];
+    for (const id of ids) {
+      const gender = treeById.get(String(id))?.data.gender;
+      if (gender === 'F' && motherId == null) {
+        motherId = id;
+      } else if (gender === 'M' && fatherId == null) {
+        fatherId = id;
+      } else if (!gender) {
+        ungendered.push(id);
+      }
+    }
+    for (const id of ungendered) {
+      if (fatherId == null) {
+        fatherId = id;
+      } else if (motherId == null) {
+        motherId = id;
+      }
+    }
+    const surnameSource = treeById.get(String(fatherId ?? motherId));
+    this.form.patchValue({
+      motherId,
+      fatherId,
+      lastName: surnameSource?.data['last name'] ?? '',
+    });
+  }
+
   private findParentId(
     member: FamilyMember,
     treeById: Map<string, FamilyMember>,
@@ -209,10 +292,6 @@ export class FamilyMemberEditComponent implements OnInit {
 
   private recomputeSiblings(): void {
     const current = this.member();
-    if (!current) {
-      this.siblings.set([]);
-      return;
-    }
     const motherId = this.form.get('motherId')?.value as number | null;
     const fatherId = this.form.get('fatherId')?.value as number | null;
     const parentIds = new Set(
@@ -223,7 +302,7 @@ export class FamilyMemberEditComponent implements OnInit {
       return;
     }
     const siblings = this.tree().filter(
-      (m) => m.id !== current.id && m.rels.parents.some((p) => parentIds.has(p)),
+      (m) => m.id !== current?.id && m.rels.parents.some((p) => parentIds.has(p)),
     );
     this.siblings.set(siblings);
   }
@@ -336,10 +415,18 @@ export class FamilyMemberEditComponent implements OnInit {
   }
 
   goToMember(id: number): void {
+    /* Inside the drawer, leaving the page would throw away the new member. */
+    if (this.embedded()) {
+      return;
+    }
     this.router.navigate(['/family-members', id, 'edit']);
   }
 
   cancel(): void {
+    if (this.embedded()) {
+      this.cancelled.emit();
+      return;
+    }
     this.router.navigate(['/family-members']);
   }
 
@@ -378,15 +465,20 @@ export class FamilyMemberEditComponent implements OnInit {
 
     if (this.isCreate()) {
       try {
-        const created = await firstValueFrom(
+        let created = await firstValueFrom(
           this.familyTreeService.store(payload as FamilyMemberPayload),
         );
+        created = await this.uploadNewAvatar(created);
         this.messages.add({
           severity: 'success',
           summary: 'Member added',
           detail: `${this.fullName(created)} was added to the tree.`,
           life: 3000,
         });
+        if (this.embedded()) {
+          this.created.emit(created);
+          return;
+        }
         /* Land the user on the new member's edit page so they can upload an
          * avatar / media now that an id exists. */
         await this.router.navigate(['/family-members', created.id, 'edit']);
@@ -434,6 +526,89 @@ export class FamilyMemberEditComponent implements OnInit {
     }
   }
 
+  /**
+   * Upload the photo picked during creation. A failed upload keeps the member
+   * (it already exists) and tells the admin to retry from the edit page.
+   */
+  private async uploadNewAvatar(created: FamilyMember): Promise<FamilyMember> {
+    const file = this.newAvatarFile();
+    if (!file) {
+      return created;
+    }
+    try {
+      const updated = await firstValueFrom(
+        this.familyTreeService.uploadThumbnail(created.id, file),
+      );
+      this.setNewAvatar(null);
+      return updated;
+    } catch {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Photo not saved',
+        detail: `${this.fullName(created)} was added, but the photo upload failed. Try again from their page.`,
+        life: 6000,
+      });
+      return created;
+    }
+  }
+
+  /** Swap the locally held create-mode photo, releasing the old preview URL. */
+  private setNewAvatar(file: File | null): void {
+    const previous = this.newAvatarPreview();
+    if (previous) {
+      URL.revokeObjectURL(previous);
+    }
+    this.newAvatarFile.set(file);
+    this.newAvatarPreview.set(file ? URL.createObjectURL(file) : null);
+  }
+
+  clearNewAvatar(): void {
+    this.setNewAvatar(null);
+  }
+
+  openChildDrawer(): void {
+    this.childDrawerOpen.set(true);
+  }
+
+  /**
+   * A child was created in the drawer: close it and reload this member so the
+   * new child shows up. Only the children added on the server are merged into
+   * the picker, so unsaved edits to the form survive.
+   */
+  async onChildCreated(child: FamilyMember): Promise<void> {
+    this.childDrawerOpen.set(false);
+    const member = this.member();
+    if (!member) {
+      return;
+    }
+    try {
+      const { member: fresh, tree } = await firstValueFrom(
+        forkJoin({
+          member: this.familyTreeService.show(member.id),
+          tree: this.familyTreeService.list(),
+        }),
+      );
+      const before = new Set(member.rels.children);
+      const added = fresh.rels.children.filter((id) => !before.has(id)).map(Number);
+      if (!added.includes(Number(child.id))) {
+        added.push(Number(child.id));
+      }
+      this.tree.set(tree);
+      this.member.set(fresh);
+      const ctrl = this.form.get('childIds')!;
+      const current = (ctrl.value as number[]) ?? [];
+      ctrl.setValue([...current, ...added.filter((id) => !current.includes(id))]);
+      this.recomputeSiblings();
+    } catch {
+      this.messages.add({
+        severity: 'warn',
+        summary: 'Could not refresh',
+        detail: 'The child was added; reload the page to see them.',
+        life: 5000,
+      });
+    }
+  }
+
   confirmDelete(): void {
     const member = this.member();
     if (!member) {
@@ -464,8 +639,7 @@ export class FamilyMemberEditComponent implements OnInit {
       return;
     }
 
-    const member = this.member();
-    if (!member) {
+    if (!this.isCreate() && !this.member()) {
       return;
     }
 
@@ -484,6 +658,13 @@ export class FamilyMemberEditComponent implements OnInit {
 
   /** Crop dialog confirmed — upload the oval-framed portrait as the thumbnail. */
   onAvatarCropped(file: File): void {
+    /* No id yet in create mode — keep the portrait until the member is saved. */
+    if (this.isCreate()) {
+      this.setNewAvatar(file);
+      this.pendingAvatarFile.set(null);
+      return;
+    }
+
     const member = this.member();
     if (!member) {
       return;
