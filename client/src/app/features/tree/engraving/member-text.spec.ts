@@ -11,6 +11,8 @@ describe('lifespan', () => {
   it('is empty for an unparseable birthday', () =>
     expect(lifespan(member('1', {}, { birthday: 'garbage' }))).toBe(''));
   it('is empty without a birthday', () => expect(lifespan(member('1', {}, {}))).toBe(''));
+  it('still shows the year of death when the birth date is unknown', () =>
+    expect(lifespan(member('1', {}, { diedAt: '2024-01-01T00:00:00+00:00' }))).toBe('† 2024'));
   it('reads years from the date string, whatever the viewer time zone', () =>
     expect(lifespan(member('1', {}, { birthday: '1925-01-01', diedAt: '1998-01-01T00:00:00+00:00' }))).toBe(
       '1925 – 1998',

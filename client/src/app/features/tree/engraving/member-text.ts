@@ -19,13 +19,13 @@ export function fullName(m: FamilyMember): string {
   return last ? `${first} ${last}` : first;
 }
 
-/** "1925 – 1998" for the deceased, "1955 –" for the living, "" when unknown. */
+/** "1925 – 1998" for the deceased, "1955 –" for the living, "† 2024" when only the death year is known, "" when unknown. */
 export function lifespan(m: FamilyMember): string {
   const born = year(m.data.birthday);
-  if (born === null) {
-    return '';
-  }
   const died = year(m.diedAt);
+  if (born === null) {
+    return died === null ? '' : `† ${died}`;
+  }
   return died === null ? `${born} –` : `${born} – ${died}`;
 }
 
