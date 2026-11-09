@@ -32,6 +32,45 @@ export interface SoilOptions {
   depth: number;
 }
 
+/** How much wider than the first limb the trunk is at its top. */
+const TRUNK_TOP_RATIO = 1.3;
+/** A limb swells by this much where it leaves its parent (the branch collar)… */
+const COLLAR = 0.55;
+/** …over about this fraction of its length. */
+const COLLAR_LENGTH = 0.07;
+/** Width at the trunk base of the root that runs down to a founder couple (the trunk base is ~92 wide). */
+const TAPROOT_WIDTH = 48;
+/** Roots start this far inside the trunk base, so the trunk's fill hides where they begin. */
+const ROOT_TUCK = 10;
+/** Higher = the limb loses its thickness sooner after the collar. */
+const TAPER = 1.6;
+
+/**
+ * Half-widths along a limb: a flared collar where it leaves its parent, then a taper that loses most of
+ * its thickness early (like real wood) and ends at exactly half the tip width.
+ */
+export function limbHalfWidths(start: number, tip: number, samples: number): number[] {
+  return Array.from({ length: samples + 1 }, (_, i) => {
+    const t = i / samples;
+    const body = tip + (start - tip) * Math.pow(1 - t, TAPER);
+    return (body * (1 + COLLAR * Math.exp(-t / COLLAR_LENGTH) * (1 - t))) / 2;
+  });
+}
+
+/** A root from the trunk base down to a founder couple: it dives, then eases sideways — never climbs. */
+export function rootCentreline(seg: BranchSegment, samples = 24): Point[] {
+  const dx = seg.to.x - seg.from.x;
+  const dy = Math.max(0, seg.to.y - seg.from.y);
+  const start = { x: seg.from.x, y: seg.from.y - ROOT_TUCK };
+  return sampleCubic(
+    start,
+    { x: seg.from.x + dx * 0.1, y: seg.from.y + dy * 0.45 },
+    { x: seg.to.x - dx * 0.25, y: seg.to.y - dy * 0.2 },
+    seg.to,
+    samples,
+  );
+}
+
 /** Light from the upper left: the right-hand side (+frac) of wood is the shadow side. */
 function barkGrooves(centre: Point[], half: number[], rnd: () => number, lines: number): string {
   let out = '';
@@ -78,7 +117,8 @@ export function engravedTrunk(trunk: TreeLayout['trunk'], seed: number, baseWidt
   const samples = 44;
   const sway = noise1D(rnd, 6);
   const bumps = noise1D(rnd, 18);
-  const topHalf = branchWidths(0).start / 2;
+  // as wide at the top as the main limb's collar, so the leader grows out of it without a step
+  const topHalf = (branchWidths(0).start * TRUNK_TOP_RATIO) / 2;
   const baseHalf = baseWidth / 2;
   const centre: Point[] = [];
   const half: number[] = [];
@@ -109,30 +149,62 @@ export function engravedTrunk(trunk: TreeLayout['trunk'], seed: number, baseWidt
   };
 }
 
-/** Organic branch along the genealogical link, with bark and a few twigs reaching into the foliage. */
-export function engravedBranch(seg: BranchSegment, endWidth?: number): EngravedBranch {
+/**
+ * Centreline of a branch grown like a real limb: it leaves the fork climbing, wanders with seeded kinks,
+ * and only steers firmly toward its person near the end (where any remaining offset is eased out).
+ */
+export function branchCentreline(seg: BranchSegment, samples = 24): Point[] {
   const rnd = seededRandom(hashSeed(seg.id));
-  const j = () => (rnd() * 2 - 1) * 12;
   const dx = seg.to.x - seg.from.x;
   const dy = seg.to.y - seg.from.y;
-  const c1 = { x: seg.from.x + j(), y: seg.from.y + 0.4 * dy + j() };
-  const c2 = { x: seg.to.x + j(), y: seg.to.y - 0.3 * dy + j() };
-  const samples = 24;
-  const raw = sampleCubic(seg.from, c1, c2, seg.to, samples);
-  const n = normals(raw);
-  const wobble = noise1D(rnd, 8);
-  const centre = raw.map((p, i) => {
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-6) {
+    return Array.from({ length: samples + 1 }, () => ({ ...seg.from }));
+  }
+  // first heading: toward the person, but pulled up toward the sky — limbs climb before they spread
+  const ux = dx / length;
+  const uy = dy / length;
+  let hx = ux * 0.45;
+  let hy = uy * 0.45 - 0.55;
+  let heading = Math.atan2(hy, hx);
+  const wander = noise1D(rnd, 6);
+  const step = (length * 1.12) / samples;
+  const pts: Point[] = [{ ...seg.from }];
+  let p = { ...seg.from };
+  for (let i = 1; i <= samples; i++) {
     const t = i / samples;
-    const w = wobble(t) * 3 * Math.sin(Math.PI * t);
-    return { x: p.x + n[i].x * w, y: p.y + n[i].y * w };
+    const desired = Math.atan2(seg.to.y - p.y, seg.to.x - p.x);
+    const delta = Math.atan2(Math.sin(desired - heading), Math.cos(desired - heading));
+    heading += delta * (0.1 + 0.8 * t * t) + wander(t) * 0.22 * (1 - t);
+    p = { x: p.x + Math.cos(heading) * step, y: p.y + Math.sin(heading) * step };
+    pts.push(p);
+  }
+  // ease the remaining offset out over the outer part of the limb so it lands exactly on the person
+  const end = pts[samples];
+  const ex = seg.to.x - end.x;
+  const ey = seg.to.y - end.y;
+  return pts.map((q, i) => {
+    const w = Math.pow(i / samples, 2.2);
+    return { x: q.x + ex * w, y: q.y + ey * w };
   });
-  const { start, end } = branchWidths(seg.generation);
-  const tip = endWidth ?? end;
-  const half = centre.map((_, i) => (start + (tip - start) * (i / samples)) / 2);
+}
+
+/** Organic branch along the genealogical link, with bark and a few twigs reaching into the foliage. */
+export function engravedBranch(seg: BranchSegment, endWidth?: number): EngravedBranch {
+  const rnd = seededRandom(hashSeed(seg.id) ^ 0x5bd1e995);
+  const dx = seg.to.x - seg.from.x;
+  const dy = seg.to.y - seg.from.y;
+  const samples = 24;
+  const isRoot = seg.parentHouseholdId === null;
+  const centre = isRoot ? rootCentreline(seg, samples) : branchCentreline(seg, samples);
+  const widths = branchWidths(seg.generation, seg.weight);
+  const start = isRoot ? TAPROOT_WIDTH : widths.start;
+  const tip = endWidth ?? widths.end;
+  const half = limbHalfWidths(start, tip, samples);
 
   let twigs = '';
   const length = Math.hypot(dx, dy);
-  const count = length < 1 ? 0 : 2 + Math.floor(length / 70);
+  const count = length < 1 || isRoot ? 0 : 2 + Math.floor(length / 70);
   for (let k = 0; k < count; k++) {
     const i = Math.min(samples - 1, Math.round(samples * (0.35 + rnd() * 0.55)));
     const p = centre[i];
@@ -144,10 +216,14 @@ export function engravedBranch(seg: BranchSegment, endWidth?: number): EngravedB
     twigs += twig(p, angle, len, w0, rnd, 2);
   }
 
+  // bark begins once the limb has cleared its parent's wood (about one limb-width out from where it leaves)
+  const out = Math.max(1, centre.findIndex((p) => Math.hypot(p.x - seg.from.x, p.y - seg.from.y) > start));
+  const barkCentre = out > 0 && out < samples - 1 ? centre.slice(out) : centre;
+  const barkHalf = barkCentre === centre ? half : half.slice(out);
   return {
     body: ribbonOutline(centre, half),
-    grooves: barkGrooves(centre, half, rnd, Math.max(2, Math.min(6, Math.round(start / 5)))),
-    shading: sideShading(centre, half, rnd, 1),
+    grooves: barkGrooves(barkCentre, barkHalf, rnd, Math.max(2, Math.min(6, Math.round(start / 5)))),
+    shading: sideShading(barkCentre, barkHalf, rnd, 1),
     twigs,
   };
 }
@@ -191,7 +267,7 @@ export function rootSystem(base: Point, opts: SoilOptions, seed: number): RootSy
       a += (rnd() - 0.5) * 0.28 + 0.02 * Math.cos(a); // wander, with a slight pull downward
       const prev = pts[pts.length - 1];
       const next = { x: prev.x + Math.cos(a) * step, y: prev.y + Math.sin(a) * step };
-      if (!inside(next) || next.y < base.y - 6) {
+      if (!inside(next) || next.y < base.y - ROOT_TUCK - 6) {
         break;
       }
       pts.push(next);
@@ -233,7 +309,7 @@ export function rootSystem(base: Point, opts: SoilOptions, seed: number): RootSy
   }
   mains.forEach(([a, w, len], k) => {
     const sx = base.x + (k < 2 ? (k === 0 ? -30 : 30) : (k - 2 - (deep - 1) / 2) * 11);
-    grow({ x: sx, y: base.y + 2 }, a, w, len, 3);
+    grow({ x: sx, y: base.y - ROOT_TUCK }, a, w, len, 3);
   });
   return out;
 }

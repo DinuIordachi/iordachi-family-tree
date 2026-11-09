@@ -54,8 +54,8 @@ describe('placeMotifs', () => {
 
   it('caps scattered ornaments at 8', () => expect(scattered(placeMotifs(bigTree(), 1))).toHaveLength(8));
 
-  it('flanks a lone founder with the minimum two ornaments', () =>
-    expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(2));
+  it('places no crown ornaments when the only person is a founder in the roots', () =>
+    expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(0));
 
   it('places none when there are no members at all', () =>
     expect(scattered(placeMotifs(layoutTree(buildHouseholds([])), 1))).toHaveLength(0));
@@ -84,6 +84,16 @@ describe('placeMotifs', () => {
           const overlapX = Math.abs(o.center.x - m.center.x) < 40 + 85;
           const overlapY = o.center.y + 40 > m.center.y + 44 && o.center.y - 40 < m.center.y + 94;
           expect(overlapX && overlapY, `${o.motif} over banner of ${m.id}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('keeps ornaments in the crown, never down among the roots', () => {
+    for (const layout of [seedLayout, bigTree()]) {
+      for (let seed = 1; seed <= 6; seed++) {
+        for (const o of scattered(placeMotifs(layout, seed))) {
+          expect(o.center.y + 40, o.motif).toBeLessThanOrEqual(layout.trunk.base.y - 20);
         }
       }
     }

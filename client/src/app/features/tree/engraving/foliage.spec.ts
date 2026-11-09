@@ -45,6 +45,12 @@ describe('generateFoliage', () => {
     expect(lowest).toBeLessThan(layout.trunk.top.y + 70);
   });
 
+  it('stops just below the lowest generation above ground, clear of the figures at the trunk base', () => {
+    const lowestRow = Math.max(...layout.members.filter((m) => m.center.y < layout.trunk.base.y).map((m) => m.center.y));
+    const lowest = Math.max(...[...anchors(f.lit), ...anchors(f.shade)].map((p) => p.y));
+    expect(lowest).toBeLessThan(lowestRow + 110);
+  });
+
   it('caps the leaf count for very large families', () => {
     const kids = Array.from({ length: 40 }, (_, i) => String(i + 2));
     const big = layoutTree(buildHouseholds([member('1', { children: kids }), ...kids.map((k) => member(k, { parents: ['1'] }))]));

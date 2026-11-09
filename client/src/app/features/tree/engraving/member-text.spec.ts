@@ -11,6 +11,10 @@ describe('lifespan', () => {
   it('is empty for an unparseable birthday', () =>
     expect(lifespan(member('1', {}, { birthday: 'garbage' }))).toBe(''));
   it('is empty without a birthday', () => expect(lifespan(member('1', {}, {}))).toBe(''));
+  it('marks a member known to be deceased without any dates', () =>
+    expect(lifespan({ ...member('1'), deceased: true })).toBe('†'));
+  it('keeps the birth year for a deceased member with an unknown death date', () =>
+    expect(lifespan({ ...member('1', {}, { birthday: '1950-02-01' }), deceased: true })).toBe('1950 – †'));
   it('still shows the year of death when the birth date is unknown', () =>
     expect(lifespan(member('1', {}, { diedAt: '2024-01-01T00:00:00+00:00' }))).toBe('† 2024'));
   it('reads years from the date string, whatever the viewer time zone', () =>
@@ -43,6 +47,8 @@ describe('memberAriaLabel', () => {
     expect(memberAriaLabel(member('1', {}, { 'first name': 'Ion', 'last name': 'Iordachi', birthday: '1955-01-08' }))).toBe(
       'Ion Iordachi, born 1955',
     ));
+  it('says deceased when the date of death is unknown', () =>
+    expect(memberAriaLabel({ ...member('1', {}, { 'first name': 'Ion', 'last name': 'Rabdau' }), deceased: true })).toBe('Ion Rabdau, deceased'));
   it('omits unknown dates', () =>
     expect(memberAriaLabel(member('1', {}, { 'first name': 'Ion', 'last name': 'Iordachi' }))).toBe('Ion Iordachi'));
 });

@@ -57,13 +57,15 @@ function canopyLobes(layout: TreeLayout, rnd: () => number): Lobe[] {
     lobes.push({ x: (b.from.x + b.to.x) / 2, y: (b.from.y + b.to.y) / 2, r: 78 + rnd() * 20 });
   }
   // rows: extend each generation a little beyond its outermost people
-  const rows = new Map<number, number[]>();
+  const rows = new Map<number, Point[]>();
   for (const m of layout.members) {
-    rows.set(m.center.y, [...(rows.get(m.center.y) ?? []), m.center.x]);
+    rows.set(m.generation, [...(rows.get(m.generation) ?? []), m.center]);
   }
-  for (const [y, xs] of rows) {
-    lobes.push({ x: Math.min(...xs) - 70, y: y - 20, r: 80 + rnd() * 20 });
-    lobes.push({ x: Math.max(...xs) + 70, y: y - 20, r: 80 + rnd() * 20 });
+  for (const row of rows.values()) {
+    const left = row.reduce((a, b) => (b.x < a.x ? b : a));
+    const right = row.reduce((a, b) => (b.x > a.x ? b : a));
+    lobes.push({ x: left.x - 70, y: left.y - 20, r: 80 + rnd() * 20 });
+    lobes.push({ x: right.x + 70, y: right.y - 20, r: 80 + rnd() * 20 });
   }
   // scallops around every mass give the cumulus silhouette of an old oak
   const satellites: Lobe[] = [];
@@ -93,7 +95,14 @@ export function generateFoliage(layout: TreeLayout, opts: FoliageOptions): Folia
   const maxX = Math.max(...lobes.map((l) => l.x + l.r));
   const minY = Math.min(...lobes.map((l) => l.y - l.r));
   // keep the trunk visible: the canopy's underside ends a little below the founders, with a ragged edge
-  const floorY = layout.trunk.top.y + 40;
+  // the underside follows the dome: just below whoever hangs lowest near each x
+  const aboveGround = layout.members.filter((m) => m.center.y < layout.trunk.base.y).map((m) => m.center);
+  const fallbackFloor = aboveGround.length ? Math.max(...aboveGround.map((c) => c.y)) + 80 : layout.trunk.top.y + 40;
+  const floorAt = (x: number) => {
+    const near = aboveGround.filter((c) => Math.abs(c.x - x) < 260).map((c) => c.y);
+    return near.length ? Math.max(...near) + 80 : Math.min(...aboveGround.map((c) => c.y), fallbackFloor) + 40;
+  };
+  const floorY = fallbackFloor;
   const maxY = Math.min(floorY, Math.max(...lobes.map((l) => l.y + l.r)));
   const area = (maxX - minX) * (maxY - minY) * 0.72;
   const spacing = Math.max(MIN_SPACING, Math.sqrt(area / maxLeaves));
@@ -108,7 +117,7 @@ export function generateFoliage(layout: TreeLayout, opts: FoliageOptions): Folia
   for (let y = minY; y < maxY; y += spacing) {
     for (let x = minX; x < maxX; x += spacing) {
       const p = { x: x + rnd() * spacing, y: y + rnd() * spacing };
-      const ragged = floorY - 18 + rnd() * 26;
+      const ragged = floorAt(p.x) - 18 + rnd() * 26;
       if (p.y > ragged) {
         continue;
       }

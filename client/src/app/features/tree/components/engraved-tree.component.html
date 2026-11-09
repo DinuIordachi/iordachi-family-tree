@@ -3,6 +3,7 @@
   class="engraved-tree"
   [class.is-growing]="growth() === 'growing'"
   [class.is-grown]="growth() === 'grown'"
+  [class.is-viewing-back]="viewing() === 'back'"
   role="group"
   aria-label="Iordachi family tree"
 >
@@ -12,6 +13,62 @@
   <rect class="et-paper" width="100%" height="100%" filter="url(#et-paper-grain)" />
 
   <g #viewport class="et-viewport" (focusin)="onFocusIn($event)">
+    @if (back(); as b) {
+      <!-- The neighbouring family tree, further back in the forest: smaller, fainter, crowns mixing with the main one. -->
+      <g id="tree-back" class="et-forest-back" [attr.transform]="b.transform" [attr.aria-label]="'Family tree behind: ' + b.layout.members.length + ' people'">
+        <path class="et-root-fine" [attr.d]="b.roots.fine" />
+        <g aria-hidden="true">
+          <path class="et-leaves-shade" [attr.d]="b.foliage.shade" />
+          <path class="et-leaves-hatch" [attr.d]="b.foliage.hatch" />
+          <path class="et-leaves-lit" [attr.d]="b.foliage.lit" />
+        </g>
+        @for (branch of b.branches; track branch.id) {
+          <path class="et-twigs" [attr.d]="branch.twigs" />
+        }
+        <g aria-hidden="true">
+          <clipPath id="et-back-above-ground">
+            <rect x="-100000" y="-100000" width="200000" [attr.height]="100000 + b.layout.trunk.base.y" />
+          </clipPath>
+          <path class="et-wood-ink et-wood-ink-roots" [attr.d]="b.roots.bodies" />
+          @for (t of b.trunks; track $index) {
+            <path class="et-wood-ink et-wood-ink-trunk" clip-path="url(#et-back-above-ground)" [attr.d]="t.body" />
+          }
+          @for (branch of b.branches; track branch.id) {
+            <path class="et-wood-ink" [attr.d]="branch.d" />
+          }
+        </g>
+        <path class="et-roots" [attr.d]="b.roots.bodies" />
+        <path class="et-root-grooves" [attr.d]="b.roots.grooves" />
+        @for (t of b.trunks; track $index) {
+          <path class="et-trunk" [attr.d]="t.body" />
+          <path class="et-wood-grooves" [attr.d]="t.grooves" />
+          <path class="et-wood-shading" [attr.d]="t.shading" />
+        }
+        @for (branch of b.branches; track branch.id) {
+          <path class="et-branch" [attr.d]="branch.d" />
+          <path class="et-branch-bark" [attr.d]="branch.bark" />
+        }
+        @for (knot of b.knots; track $index) {
+          <g class="et-knot" [attr.transform]="'translate(' + knot.x + ' ' + knot.y + ')'" aria-hidden="true">
+            <path class="et-knot-cord" [attr.d]="'M' + -cordHalf() + ' 0 Q0 7 ' + cordHalf() + ' 0'" />
+            <path class="et-knot-bow" d="M0 0 C-10 -11 -19 -4 -14 4 C-10 10 -4 5 0 0 Z M0 0 C10 -11 19 -4 14 4 C10 10 4 5 0 0 Z" />
+            <circle class="et-knot-bow" r="2.6" />
+          </g>
+        }
+        @for (p of b.placed; track p.id) {
+          <g
+            etMedallion
+            [attr.transform]="'translate(' + p.center.x + ' ' + p.center.y + ')'"
+            [member]="p.member"
+            [selected]="selectedId() === p.id"
+            [bannerMaxWidth]="personGap() - 40"
+            (activate)="onActivate($event, 'back')"
+          ></g>
+        }
+      </g>
+    }
+
+    <g id="tree-main" class="et-forest-main">
     <!-- Ground: soil cutaway with the root system, the river beyond the trunk. -->
     <g id="tree-roots">
       <path class="et-soil" [attr.d]="soilD()" />
@@ -22,8 +79,6 @@
           <g etMotif [placement]="m.placement" [style.--et-gen]="m.generation"></g>
         }
       }
-      <path class="et-roots" [attr.d]="roots().bodies" />
-      <path class="et-root-grooves" [attr.d]="roots().grooves" />
       <path class="et-root-fine" [attr.d]="roots().fine" />
     </g>
 
@@ -33,17 +88,42 @@
       <path class="et-leaves-lit" [attr.d]="foliage().lit" />
     </g>
 
-    <g id="tree-trunk">
-      <path class="et-trunk" [attr.d]="trunk().body" />
-      <path class="et-wood-grooves et-trunk-detail" [attr.d]="trunk().grooves" />
-      <path class="et-wood-shading et-trunk-detail" [attr.d]="trunk().shading" />
-      <path class="et-wood-knots et-trunk-detail" [attr.d]="trunk().knots" />
-    </g>
-
-    <g id="tree-branches">
+    <!-- Twigs, then every wood outline in one layer, then the paper fills over them: where limbs meet the
+         trunk the overlapping outlines are covered, leaving one merged silhouette with smooth junctions. -->
+    <g id="tree-twigs" aria-hidden="true">
       @for (branch of branches(); track branch.id) {
         <path class="et-twigs" [attr.d]="branch.twigs" [style.--et-gen]="branch.generation" />
       }
+    </g>
+    <g id="tree-wood-ink" aria-hidden="true">
+      <!-- the trunk is inked only above ground: below it, its foot runs on as the roots -->
+      <clipPath id="et-above-ground">
+        <rect x="-100000" y="-100000" width="200000" [attr.height]="100000 + ground().y" />
+      </clipPath>
+      <path class="et-wood-ink et-wood-ink-roots" [attr.d]="roots().bodies" />
+      @for (t of trunks(); track $index) {
+        <path class="et-wood-ink et-wood-ink-trunk" clip-path="url(#et-above-ground)" [attr.d]="t.body" />
+      }
+      @for (branch of branches(); track branch.id) {
+        <path class="et-wood-ink" [attr.d]="branch.d" [style.--et-gen]="branch.generation" />
+      }
+    </g>
+
+    <g id="tree-roots" aria-hidden="true">
+      <path class="et-roots" [attr.d]="roots().bodies" />
+      <path class="et-root-grooves" [attr.d]="roots().grooves" />
+    </g>
+
+    <g id="tree-trunk">
+      @for (t of trunks(); track $index) {
+        <path class="et-trunk" [attr.d]="t.body" />
+        <path class="et-wood-grooves et-trunk-detail" [attr.d]="t.grooves" />
+        <path class="et-wood-shading et-trunk-detail" [attr.d]="t.shading" />
+        <path class="et-wood-knots et-trunk-detail" [attr.d]="t.knots" />
+      }
+    </g>
+
+    <g id="tree-branches">
       <g id="genealogical-connections">
         @for (branch of branches(); track branch.id) {
           <path
@@ -84,7 +164,7 @@
         [member]="p.member"
         [selected]="selectedId() === p.id"
         [bannerMaxWidth]="personGap() - 40"
-        (activate)="memberActivate.emit($event)"
+        (activate)="onActivate($event, 'main')"
         (hoverChange)="onHover(p.id, $event)"
       ></g>
     }
@@ -116,5 +196,10 @@
         }
       </g>
     }
+    </g>
   </g>
 </svg>
+
+@if (viewing() === 'back') {
+  <button type="button" class="et-forest-return" (click)="returnToMain()">← Back to the {{ mainFamily() }} tree</button>
+}

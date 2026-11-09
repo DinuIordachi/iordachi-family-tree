@@ -36,8 +36,25 @@ describe('EngravedTreeComponent', () => {
   it('joins forks smoothly: a branch with children ends at its children’s start width', async () => {
     const { root } = await setup();
     const d = (id: string) => root.querySelector(`path.et-branch[data-branch-id="${id}"]`)!.getAttribute('d')!;
-    expect(d('1+2>3+4')).toContain('A10 10 '); // 3+4 has children → ends at branchWidths(2).start = 20
-    expect(d('3+4>7')).toContain('A3.5 3.5 '); // 7 is a leaf → ends at 20 × 0.35 = 7
+    expect(d('1+2>3+4')).toContain('A10 10 '); // ends at its thickest onward limb, 3+4>5+6 = 20
+    expect(d('3+4>7')).toContain('A1.6 1.6 '); // 7 is a leaf carrying one person → starts at 13, ends at 13 × 0.25
+  });
+
+  it('inks all wood outlines in one layer under the paper fills, so limbs merge smoothly into the trunk', async () => {
+    const { root } = await setup();
+    const ink = root.querySelector('#tree-wood-ink')!;
+    expect(ink.querySelectorAll('path.et-wood-ink')).toHaveLength(8); // the roots, 1 trunk + 6 branches
+    const fills = root.querySelector('#genealogical-connections')!;
+    expect(ink.compareDocumentPosition(fills) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(root.querySelector('#tree-trunk')!.compareDocumentPosition(ink) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  });
+
+  it('fills the roots with paper after inking them, so they merge into the trunk base', async () => {
+    const { root } = await setup();
+    const roots = root.querySelector('#tree-roots path.et-roots')!;
+    expect(roots.getAttribute('d')).toMatch(/^M/);
+    expect(root.querySelector('#tree-wood-ink')!.compareDocumentPosition(roots) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(roots.compareDocumentPosition(root.querySelector('#tree-trunk')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('engraves bark grooves and twigs on every branch', async () => {
@@ -104,6 +121,87 @@ describe('EngravedTreeComponent', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  describe('with a second family behind the main tree', () => {
+    // paternal 1+2 → 3 (married to 6, child 7), 10 ; maternal 4+5 → 6, 12
+    const families = [
+      member('1', { spouses: ['2'], children: ['3', '10'] }, { 'last name': 'Iordachi' }),
+      member('2', { spouses: ['1'], children: ['3', '10'] }),
+      member('3', { parents: ['1', '2'], spouses: ['6'], children: ['7'] }),
+      member('10', { parents: ['1', '2'] }),
+      member('4', { spouses: ['5'], children: ['6', '12'] }),
+      member('5', { spouses: ['4'], children: ['6', '12'] }),
+      member('6', { parents: ['4', '5'], spouses: ['3'], children: ['7'] }, { 'first name': 'Alexandra' }),
+      member('12', { parents: ['4', '5'] }),
+      member('7', { parents: ['3', '6'] }),
+    ];
+    const main = (root: HTMLElement) => root.querySelector('#tree-main')!;
+    const back = (root: HTMLElement) => root.querySelector('#tree-back')!;
+
+    it('keeps one main tree and stands her family tree behind it, smaller', async () => {
+      const { root } = await setup(families);
+      expect(main(root).querySelectorAll('g[etMedallion]')).toHaveLength(6);
+      expect([...main(root).querySelectorAll('g[etMedallion]')].map((g) => g.getAttribute('data-member-id')).sort()).toEqual(['1', '10', '2', '3', '6', '7'].sort());
+      expect([...back(root).querySelectorAll('g[etMedallion]')].map((g) => g.getAttribute('data-member-id')).sort()).toEqual(['12', '4', '5', '6']);
+      expect(back(root).compareDocumentPosition(main(root)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // drawn behind
+      expect(back(root).getAttribute('transform')).toMatch(/scale\(0\.68\)/);
+    });
+
+    it('dives into her tree when she is clicked in the main tree, and comes back', async () => {
+      const { fixture, root } = await setup(families);
+      const svg = root.querySelector('svg.engraved-tree')!;
+      expect(svg.classList).not.toContain('is-viewing-back');
+      main(root).querySelector('g[etMedallion][data-member-id="6"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.whenStable();
+      expect(svg.classList).toContain('is-viewing-back');
+      expect(fixture.componentInstance.activated.map((m) => m.id)).toEqual(['6']);
+      const backButton = root.querySelector('button.et-forest-return') as HTMLButtonElement;
+      expect(backButton.textContent).toContain('Iordachi');
+      backButton.click();
+      await fixture.whenStable();
+      expect(svg.classList).not.toContain('is-viewing-back');
+      expect(root.querySelector('button.et-forest-return')).toBeNull();
+    });
+
+    it('returns to the main tree with Escape', async () => {
+      const { fixture, root } = await setup(families);
+      main(root).querySelector('g[etMedallion][data-member-id="6"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.whenStable();
+      root.querySelector('et-engraved-tree, svg')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+      expect(root.querySelector('svg.engraved-tree')!.classList).not.toContain('is-viewing-back');
+    });
+
+    it('does not dive for anyone else', async () => {
+      const { fixture, root } = await setup(families);
+      main(root).querySelector('g[etMedallion][data-member-id="3"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.whenStable();
+      expect(root.querySelector('svg.engraved-tree')!.classList).not.toContain('is-viewing-back');
+    });
+  });
+
+  it('fits the view into the space left of the open detail drawer', async () => {
+    const fixture = TestBed.createComponent(EngravedTreeComponent);
+    fixture.componentRef.setInput('members', SEED_MEMBERS);
+    await fixture.whenStable();
+    const vp = () => fixture.nativeElement.querySelector('g.et-viewport').getAttribute('transform') as string;
+    const centreX = () => {
+      const [, tx] = vp().match(/translate\(([-\d.]+),/)!.map(Number);
+      return tx; // the content box is centred on x = 0 here, so tx is where its centre lands
+    };
+    const open = centreX();
+    fixture.componentRef.setInput('selectedId', '3');
+    await fixture.whenStable();
+    fixture.componentInstance.resetView();
+    expect(centreX()).toBeLessThan(open - 150); // shifted left by about half the 416px drawer
+  });
+
+  it('has no background tree for a single family', async () => {
+    const { root } = await setup();
+    expect(root.querySelector('#tree-back')).toBeNull();
+    expect(root.querySelector('#tree-main')).not.toBeNull();
   });
 
   it('groups the engraving into named layers', async () => {

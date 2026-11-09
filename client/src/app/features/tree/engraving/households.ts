@@ -35,7 +35,7 @@ export function buildHouseholds(members: FamilyMember[]): HouseholdForest {
     const id = sorted.join('+');
     const blood = (m: string) => (knownParents(byId.get(m)!).length > 0 ? 0 : 1);
     const memberIds = [...sorted].sort((a, b) => blood(a) - blood(b) || byNumericId(a, b));
-    households.set(id, { id, memberIds, parentHouseholdId: null, childHouseholdIds: [] });
+    households.set(id, { id, memberIds, parentHouseholdId: null, childHouseholdIds: [], graftParentHouseholdIds: [], graftChildHouseholdIds: [] });
     sorted.forEach((m) => householdOf.set(m, id));
   }
 
@@ -49,6 +49,18 @@ export function buildHouseholds(members: FamilyMember[]): HouseholdForest {
     if (parentHousehold !== h.id) {
       h.parentHouseholdId = parentHousehold;
       households.get(parentHousehold)!.childHouseholdIds.push(h.id);
+    }
+    // the other spouses' parents form a second ancestor line grafted onto this couple
+    for (const m of h.memberIds) {
+      const parents = knownParents(byId.get(m)!);
+      if (m === anchor || !parents.length) {
+        continue;
+      }
+      const graft = householdOf.get(parents[0])!;
+      if (graft !== h.id && graft !== h.parentHouseholdId && !h.graftParentHouseholdIds.includes(graft)) {
+        h.graftParentHouseholdIds.push(graft);
+        households.get(graft)!.graftChildHouseholdIds.push(h.id);
+      }
     }
   }
 
@@ -75,7 +87,8 @@ export function buildHouseholds(members: FamilyMember[]): HouseholdForest {
       : parentless.filter((h) => h.childHouseholdIds.length > 0).map((h) => h.id);
   rootIds.sort((a, b) => byNumericId(firstId(households.get(a)!), firstId(households.get(b)!)));
 
-  // 5. Walk from roots; anything unreached (isolated, cyclic) is unplaced and detached.
+  // 5. Walk from roots; anything unreached (isolated, cyclic) is unplaced and detached —
+  //    except a parentless, childless couple grafted onto a reached couple (a spouse's parents).
   const reached = new Set<string>();
   const stack = [...rootIds];
   while (stack.length) {
@@ -86,6 +99,11 @@ export function buildHouseholds(members: FamilyMember[]): HouseholdForest {
     reached.add(id);
     stack.push(...households.get(id)!.childHouseholdIds);
   }
+  const graftRootIds = parentless
+    .filter((h) => !reached.has(h.id) && h.childHouseholdIds.length === 0 && h.graftChildHouseholdIds.some((c) => reached.has(c)))
+    .map((h) => h.id)
+    .sort((a, b) => byNumericId(firstId(households.get(a)!), firstId(households.get(b)!)));
+  graftRootIds.forEach((id) => reached.add(id));
   const unplacedMemberIds: string[] = [];
   for (const h of [...households.values()]) {
     if (!reached.has(h.id)) {
@@ -95,8 +113,10 @@ export function buildHouseholds(members: FamilyMember[]): HouseholdForest {
   }
   for (const h of households.values()) {
     h.childHouseholdIds = h.childHouseholdIds.filter((c) => households.has(c));
+    h.graftParentHouseholdIds = h.graftParentHouseholdIds.filter((g) => households.has(g));
+    h.graftChildHouseholdIds = h.graftChildHouseholdIds.filter((c) => households.has(c));
   }
   unplacedMemberIds.sort(byNumericId);
 
-  return { households, rootIds, unplacedMemberIds };
+  return { households, rootIds, graftRootIds, unplacedMemberIds };
 }

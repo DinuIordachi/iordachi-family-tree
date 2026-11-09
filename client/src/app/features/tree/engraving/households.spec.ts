@@ -74,3 +74,32 @@ describe('buildHouseholds', () => {
     expect(f.unplacedMemberIds).toEqual([]);
   });
 });
+
+describe('buildHouseholds — second ancestor line', () => {
+  // paternal 1+2 → 3 ; maternal 4+5 → 6 ; 3 and 6 married with child 7
+  const families = [
+    member('1', { spouses: ['2'], children: ['3'] }),
+    member('2', { spouses: ['1'], children: ['3'] }),
+    member('3', { parents: ['1', '2'], spouses: ['6'], children: ['7'] }),
+    member('4', { spouses: ['5'], children: ['6'] }),
+    member('5', { spouses: ['4'], children: ['6'] }),
+    member('6', { parents: ['4', '5'], spouses: ['3'], children: ['7'] }),
+    member('7', { parents: ['3', '6'] }),
+  ];
+
+  it("grafts the spouse's parents onto the couple instead of parking them in Alii", () => {
+    const f = buildHouseholds(families);
+    expect(f.rootIds).toEqual(['1+2']);
+    expect(f.graftRootIds).toEqual(['4+5']);
+    expect(f.households.get('3+6')!.parentHouseholdId).toBe('1+2');
+    expect(f.households.get('3+6')!.graftParentHouseholdIds).toEqual(['4+5']);
+    expect(f.households.get('4+5')!.graftChildHouseholdIds).toEqual(['3+6']);
+    expect(f.unplacedMemberIds).toEqual([]);
+  });
+
+  it('has no grafts for an ordinary tree', () => {
+    const f = buildHouseholds(seed);
+    expect(f.graftRootIds).toEqual([]);
+    expect([...f.households.values()].every((h) => h.graftParentHouseholdIds.length === 0)).toBe(true);
+  });
+});

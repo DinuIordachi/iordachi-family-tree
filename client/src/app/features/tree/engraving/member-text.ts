@@ -24,7 +24,10 @@ export function lifespan(m: FamilyMember): string {
   const born = year(m.data.birthday);
   const died = year(m.diedAt);
   if (born === null) {
-    return died === null ? '' : `† ${died}`;
+    return died !== null ? `† ${died}` : m.deceased ? '†' : '';
+  }
+  if (died === null && m.deceased) {
+    return `${born} – †`;
   }
   return died === null ? `${born} –` : `${born} – ${died}`;
 }
@@ -39,6 +42,8 @@ export function memberAriaLabel(m: FamilyMember): string {
   }
   if (died !== null) {
     parts.push(`died ${died}`);
+  } else if (m.deceased) {
+    parts.push('deceased');
   }
   return parts.join(', ');
 }

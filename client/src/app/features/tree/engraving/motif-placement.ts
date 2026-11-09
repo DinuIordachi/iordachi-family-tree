@@ -32,10 +32,12 @@ export function placeMotifs(layout: TreeLayout, seed: number, bannerHalf = 85): 
   const groundY = trunk.base.y;
   const bx = trunk.base.x;
   // Ștefan kneels left of the trunk; Molda sits between him and the trunk, her head under his outstretched hand.
+  const group = bx - 188;
+  const shieldX = bx;
   const fixed: MotifPlacement[] = [
-    { motif: 'stefan-cel-mare', center: { x: bx - 250, y: groundY - 112 }, scale: 1, mirrored: false },
-    { motif: 'molda-hound', center: { x: bx - 126, y: groundY - 78 }, scale: 1, mirrored: false },
-    { motif: 'aurochs-shield', center: { x: bx, y: groundY - 120 }, scale: 0.8, mirrored: false },
+    { motif: 'stefan-cel-mare', center: { x: group - 62, y: groundY - 112 }, scale: 1, mirrored: false },
+    { motif: 'molda-hound', center: { x: group + 62, y: groundY - 78 }, scale: 1, mirrored: false },
+    { motif: 'aurochs-shield', center: { x: shieldX, y: groundY - 120 }, scale: 0.8, mirrored: false },
     { motif: 'eagle-cross', center: { x: bx, y: bounds.minY - 150 }, scale: 1, mirrored: false },
     {
       motif: 'river-moldova',
@@ -72,6 +74,11 @@ export function placeMotifs(layout: TreeLayout, seed: number, bannerHalf = 85): 
       candidates.push({ x: m.center.x + side * (bannerHalf + ORNAMENT_HALF + 12), y: m.center.y + 20 });
     }
   }
+
+  // the founders sit among the roots: ornaments belong in the crown, clear of the ground line
+  const aboveGround = candidates.filter((c) => c.y + ORNAMENT_HALF <= groundY - 20);
+  candidates.length = 0;
+  candidates.push(...aboveGround);
 
   const order = shuffle(SCATTER_MOTIFS, rnd);
   const scattered: MotifPlacement[] = [];

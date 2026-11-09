@@ -20,3 +20,21 @@ describe('lineageBranchIds', () => {
     expect(lineageBranchIds('404', layout)).toEqual([]);
   });
 });
+
+describe('lineageBranchIds with a grafted ancestor line', () => {
+  it('follows the main line down to the trunk, not the grafted one', () => {
+    const l = layoutTree(
+      buildHouseholds([
+        member('1', { spouses: ['2'], children: ['3'] }),
+        member('2', { spouses: ['1'], children: ['3'] }),
+        member('3', { parents: ['1', '2'], spouses: ['6'], children: ['7'] }),
+        member('4', { spouses: ['5'], children: ['6'] }),
+        member('5', { spouses: ['4'], children: ['6'] }),
+        member('6', { parents: ['4', '5'], spouses: ['3'], children: ['7'] }),
+        member('7', { parents: ['3', '6'] }),
+      ]),
+    );
+    expect(lineageBranchIds('7', l)).toEqual(['3+6>7', '1+2>3+6', 'trunk>1+2']);
+    expect(lineageBranchIds('4', l)).toEqual(['trunk>4+5']);
+  });
+});

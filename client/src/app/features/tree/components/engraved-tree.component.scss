@@ -1,7 +1,55 @@
 :host {
   display: block;
+  position: relative;
   width: 100%;
   height: 100%;
+}
+
+/* ===== The forest: the main tree in front, the neighbouring family tree further back ===== */
+.et-forest-back,
+.et-forest-main {
+  transition: opacity 700ms var(--et-ease);
+}
+
+.et-forest-back {
+  opacity: 0.42;
+}
+
+.engraved-tree.is-viewing-back {
+  .et-forest-back {
+    opacity: 1;
+  }
+
+  .et-forest-main {
+    opacity: 0.16;
+    pointer-events: none;
+  }
+}
+
+.et-forest-return {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--et-ink);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--et-gilt) 55%, white), var(--et-gilt) 55%, var(--et-sepia));
+  color: var(--et-ink);
+  font-family: var(--et-font-display);
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+
+  &:focus-visible {
+    outline: 3px solid var(--et-focus);
+    outline-offset: 2px;
+  }
+}
+
+:host-context(.app-dark) .et-forest-return {
+  color: var(--et-paper);
 }
 
 .engraved-tree {
@@ -28,17 +76,26 @@
 }
 
 /* ===== Engraved wood: paper-filled bodies, inked contours, bark lines ===== */
+/* Outlines are drawn doubled underneath and the paper fills cover their inner half, so only the outer
+   edge of the merged wood silhouette stays inked. */
+.et-wood-ink {
+  fill: none;
+  stroke: var(--et-ink);
+  stroke-width: calc(2 * var(--et-stroke-fine));
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.et-wood-ink-trunk,
+.et-wood-ink-roots {
+  stroke-width: calc(2 * var(--et-stroke-main));
+}
+
 .et-roots,
 .et-trunk,
 .et-branch {
   fill: var(--et-paper);
-  stroke: var(--et-ink);
-  stroke-width: var(--et-stroke-fine);
-  stroke-linejoin: round;
-}
-
-.et-trunk {
-  stroke-width: var(--et-stroke-main);
+  stroke: none;
 }
 
 .et-wood-grooves,
@@ -205,11 +262,14 @@
   .et-root-grooves,
   .et-root-fine,
   .et-trunk,
+  .et-wood-ink-trunk,
+  .et-wood-ink-roots,
   .et-trunk-detail {
     animation: et-grow-up 400ms var(--et-ease) both;
   }
 
   .et-branch,
+  .et-wood-ink:not(.et-wood-ink-trunk),
   .et-branch-bark,
   .et-twigs {
     animation: et-grow-up 300ms var(--et-ease) both;

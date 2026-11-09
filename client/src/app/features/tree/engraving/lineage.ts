@@ -6,7 +6,7 @@ export function lineageBranchIds(memberId: string, layout: TreeLayout): string[]
   if (!placed) {
     return [];
   }
-  const byChild = new Map(layout.branches.map((b) => [b.childHouseholdId, b]));
+  const byChild = new Map(layout.branches.filter((b) => !b.graft).map((b) => [b.childHouseholdId, b]));
   const ids: string[] = [];
   let branch = byChild.get(placed.householdId);
   while (branch) {

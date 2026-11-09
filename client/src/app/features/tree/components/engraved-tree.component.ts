@@ -3,6 +3,8 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  HostListener,
+  Injector,
   afterNextRender,
   computed,
   inject,
@@ -13,9 +15,11 @@ import {
 } from '@angular/core';
 import { FamilyMember } from '@app/core/models';
 import { select } from 'd3-selection';
+import 'd3-transition';
 import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
 import { branchWidths } from '../engraving/branch-geometry';
 import { Clearing, generateFoliage } from '../engraving/foliage';
+import { splitForest } from '../engraving/forest';
 import { buildHouseholds } from '../engraving/households';
 import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
 import { lineageBranchIds } from '../engraving/lineage';
@@ -66,6 +70,63 @@ function motifGeneration(p: MotifPlacement, layout: TreeLayout): number {
   return Math.max(0, Math.min(Math.max(0, layout.generationCount - 1), g));
 }
 
+/** How much smaller the neighbouring family tree stands, further back in the forest. */
+const BACK_SCALE = 0.68;
+/** How much higher its ground sits on the horizon (further away). */
+const BACK_HORIZON = 70;
+const DIVE_MS = 900;
+/** Width of the parchment detail drawer (26rem), which overlaps the right of the canvas. */
+const DRAWER_WIDTH = 416;
+
+type Placed = TreeLayout['members'][number] & { member: FamilyMember };
+
+/** One knot between each pair of neighbouring spouses. */
+function knotsOf(layout: TreeLayout): Point[] {
+  const knots: Point[] = [];
+  const members = layout.members;
+  for (let i = 1; i < members.length; i++) {
+    const [a, b] = [members[i - 1], members[i]];
+    if (a.householdId === b.householdId) {
+      knots.push({ x: (a.center.x + b.center.x) / 2, y: a.center.y });
+    }
+  }
+  return knots;
+}
+
+/** Engraved branches; a branch that forks again ends at its children's start width. */
+function branchesOf(layout: TreeLayout) {
+  // a limb that forks again tapers only to the thickest limb it carries on
+  const onward = new Map<string, number>();
+  for (const b of layout.branches) {
+    if (b.parentHouseholdId !== null) {
+      const w = branchWidths(b.generation, b.weight).start;
+      onward.set(b.parentHouseholdId, Math.max(onward.get(b.parentHouseholdId) ?? 0, w));
+    }
+  }
+  return layout.branches.map((b) => {
+    const wood = engravedBranch(b, onward.get(b.childHouseholdId));
+    return { id: b.id, generation: b.generation, d: wood.body, bark: wood.grooves + wood.shading, twigs: wood.twigs };
+  });
+}
+
+/** Medallions, banners and couple cords are kept clear of leaves so they stay legible. */
+function personClearings(placed: Placed[], knots: Point[], personGap: number, cordHalf: number): Clearing[] {
+  const list: Clearing[] = [];
+  for (const p of placed) {
+    const { x, y } = p.center;
+    const ribbonHalf = Math.min(bannerSpan(fullName(p.member)), personGap - 8) / 2 + 3;
+    list.push({ kind: 'ellipse', cx: x, cy: y, rx: 54, ry: 62 });
+    list.push({ kind: 'rect', x: x - ribbonHalf, y: y + 44, w: ribbonHalf * 2, h: 28 });
+    if (lifespan(p.member)) {
+      list.push({ kind: 'rect', x: x - 36, y: y + 72, w: 72, h: 22 });
+    }
+  }
+  for (const k of knots) {
+    list.push({ kind: 'rect', x: k.x - cordHalf, y: k.y - 12, w: cordHalf * 2, h: 26 });
+  }
+  return list;
+}
+
 /** The engraved SVG family tree: trunk, branches, medallions and Moldovan motifs, with pan/zoom. */
 @Component({
   selector: 'et-engraved-tree',
@@ -78,10 +139,13 @@ export class EngravedTreeComponent {
   readonly members = input.required<FamilyMember[]>();
   readonly selectedId = input<string | null>(null);
   readonly memberActivate = output<FamilyMember>();
+  /** Which tree the camera shows: the main one, or the neighbouring family tree behind it. */
+  readonly viewing = signal<'main' | 'back'>('main');
 
   private readonly svgRef = viewChild.required<ElementRef<SVGSVGElement>>('svg');
   private readonly viewportRef = viewChild.required<ElementRef<SVGGElement>>('viewport');
   private zoomBehavior?: ZoomBehavior<SVGSVGElement, unknown>;
+  private readonly injector = inject(Injector);
   /** Once the visitor pans or zooms, resizes keep their view instead of re-fitting. */
   private userMoved = false;
 
@@ -92,8 +156,9 @@ export class EngravedTreeComponent {
     const widest = Math.max(0, ...this.members().map((m) => bannerSpan(fullName(m)) + 10));
     return Math.min(MAX_PERSON_GAP, Math.max(DEFAULT_LAYOUT_OPTIONS.personGap, widest));
   });
+  private readonly split = computed(() => splitForest(this.members()));
   protected readonly layout = computed(() =>
-    layoutTree(buildHouseholds(this.members()), { personGap: this.personGap() }),
+    layoutTree(buildHouseholds(this.split().main), { personGap: this.personGap() }),
   );
   protected readonly motifs = computed(() => {
     const layout = this.layout();
@@ -107,20 +172,24 @@ export class EngravedTreeComponent {
   protected readonly placedMembers = computed(() =>
     this.layout().members.map((p) => ({ ...p, member: this.byId().get(p.id)! })),
   );
-  protected readonly branches = computed(() => {
-    const forks = new Set(this.layout().branches.map((b) => b.parentHouseholdId));
-    return this.layout().branches.map((b) => {
-      const wood = engravedBranch(b, forks.has(b.childHouseholdId) ? branchWidths(b.generation + 1).start : undefined);
-      return { id: b.id, generation: b.generation, d: wood.body, bark: wood.grooves + wood.shading, twigs: wood.twigs };
-    });
-  });
-  protected readonly trunk = computed(() => engravedTrunk(this.layout().trunk, hashSeed('trunk')));
+  protected readonly branches = computed(() => branchesOf(this.layout()));
+  protected readonly trunks = computed(() =>
+    this.layout().trunks.map((t, i) => engravedTrunk(t, hashSeed('trunk', String(i)))),
+  );
   private readonly soil = computed(() => {
     const { bounds, trunk } = this.layout();
     const spreadX = Math.max(330, (bounds.maxX - bounds.minX) / 2 + 60);
     return { base: trunk.base, opts: { spreadX, depth: SOIL_DEPTH } };
   });
-  protected readonly roots = computed(() => rootSystem(this.soil().base, this.soil().opts, hashSeed('roots')));
+  /** One root system under each trunk, spreading through the shared soil cutaway. */
+  protected readonly roots = computed(() => {
+    const parts = this.layout().trunks.map((t, i) => rootSystem(t.base, this.soil().opts, hashSeed('roots', String(i))));
+    return {
+      bodies: parts.map((r) => r.bodies).join(''),
+      grooves: parts.map((r) => r.grooves).join(''),
+      fine: parts.map((r) => r.fine).join(''),
+    };
+  });
   protected readonly soilD = computed(() => soilHatching(this.soil().base, this.soil().opts, hashSeed('soil')));
   /** Tufts of grass along the ground line. */
   protected readonly grassD = computed(() => {
@@ -135,20 +204,7 @@ export class EngravedTreeComponent {
   });
   /** Medallions, banners, couple cords and ornaments are kept clear of leaves so they stay legible. */
   private readonly clearings = computed<Clearing[]>(() => {
-    const list: Clearing[] = [];
-    for (const p of this.placedMembers()) {
-      const { x, y } = p.center;
-      // hug the ribbon itself (band + swallow tails) and the short years line beneath it
-      const ribbonHalf = Math.min(bannerSpan(fullName(p.member)), this.personGap() - 8) / 2 + 3;
-      list.push({ kind: 'ellipse', cx: x, cy: y, rx: 54, ry: 62 });
-      list.push({ kind: 'rect', x: x - ribbonHalf, y: y + 44, w: ribbonHalf * 2, h: 28 });
-      if (lifespan(p.member)) {
-        list.push({ kind: 'rect', x: x - 36, y: y + 72, w: 72, h: 22 });
-      }
-    }
-    for (const k of this.knots()) {
-      list.push({ kind: 'rect', x: k.x - this.cordHalf(), y: k.y - 12, w: this.cordHalf() * 2, h: 26 });
-    }
+    const list = personClearings(this.placedMembers(), this.knots(), this.personGap(), this.cordHalf());
     for (const m of this.motifs()) {
       if (m.placement.motif === 'eagle-cross') {
         // a niche at the top of the crown for the coat of arms
@@ -170,16 +226,53 @@ export class EngravedTreeComponent {
     this.layout().unplacedMemberIds.map((id) => ({ id, member: this.byId().get(id)!, name: fullName(this.byId().get(id)!) })),
   );
   /** One knot between each pair of neighbouring spouses, with a cord from rim to rim. */
-  protected readonly knots = computed(() => {
-    const knots: Point[] = [];
-    const members = this.layout().members;
-    for (let i = 1; i < members.length; i++) {
-      const [a, b] = [members[i - 1], members[i]];
-      if (a.householdId === b.householdId) {
-        knots.push({ x: (a.center.x + b.center.x) / 2, y: a.center.y });
-      }
+  protected readonly knots = computed(() => knotsOf(this.layout()));
+  /** The main tree's family name, from its founders (for the "back to" control). */
+  protected readonly mainFamily = computed(() => {
+    const founder = this.layout().members.find((m) => m.generation === 0);
+    return (founder && this.byId().get(founder.id)?.data['last name']) || '';
+  });
+
+  /**
+   * The spouse's family as its own tree standing behind the main one: smaller, higher on the horizon,
+   * toward her side, so the two crowns overlap and mix like neighbouring trees in a forest.
+   */
+  protected readonly back = computed(() => {
+    const split = this.split().back;
+    if (!split) {
+      return null;
     }
-    return knots;
+    const layout = layoutTree(buildHouseholds(split.members), { personGap: this.personGap() });
+    const placed: Placed[] = layout.members.map((p) => ({ ...p, member: this.byId().get(p.id)! }));
+    const knots = knotsOf(layout);
+    const main = this.layout();
+    // its trunk stands near the outer edge of the main crown, so half its crown mixes with the main one
+    const targetX = main.bounds.maxX - 40;
+    const tx = targetX - BACK_SCALE * layout.trunk.base.x;
+    const ty = main.trunk.base.y - BACK_HORIZON - BACK_SCALE * layout.trunk.base.y;
+    const { bounds } = layout;
+    const spreadX = Math.max(260, (bounds.maxX - bounds.minX) / 2 + 40);
+    return {
+      layout,
+      placed,
+      knots,
+      focusId: split.focusMemberId,
+      branches: branchesOf(layout),
+      trunks: layout.trunks.map((t, i) => engravedTrunk(t, hashSeed('back-trunk', String(i)))),
+      roots: rootSystem(layout.trunk.base, { spreadX, depth: SOIL_DEPTH * 0.8 }, hashSeed('back-roots')),
+      foliage: generateFoliage(layout, {
+        seed: hashSeed('back-foliage'),
+        clearings: personClearings(placed, knots, this.personGap(), this.cordHalf()),
+        maxLeaves: 6000,
+      }),
+      transform: `translate(${tx} ${ty}) scale(${BACK_SCALE})`,
+      box: {
+        minX: tx + BACK_SCALE * (bounds.minX - 110),
+        maxX: tx + BACK_SCALE * (bounds.maxX + 110),
+        minY: ty + BACK_SCALE * (bounds.minY - 150),
+        maxY: ty + BACK_SCALE * (layout.trunk.base.y + SOIL_DEPTH),
+      },
+    };
   });
   protected readonly cordHalf = computed(() => Math.max(0, this.personGap() / 2 - MEDALLION_REACH));
 
@@ -199,13 +292,17 @@ export class EngravedTreeComponent {
     y: this.layout().trunk.base.y - 40 - this.unplaced().length * ALII_LINE,
   }));
 
-  /** World-space box that must fit the viewport. */
+  /** World-space box that must fit the viewport: the main tree (with the one behind it peeking out), or the one behind. */
   private readonly contentBox = computed(() => {
+    const back = this.back();
+    if (this.viewing() === 'back' && back) {
+      return back.box;
+    }
     const { bounds, trunk } = this.layout();
     const minX = Math.min(bounds.minX - 110, trunk.base.x - 340);
     const hasAlii = this.unplaced().length > 0;
-    const maxX = Math.max(bounds.maxX + 110, trunk.base.x + 340, hasAlii ? this.aliiAt().x + 220 : -Infinity);
-    const minY = Math.min(this.titleAt().y - 50, hasAlii ? this.aliiAt().y - 50 : Infinity);
+    const maxX = Math.max(bounds.maxX + 110, trunk.base.x + 340, hasAlii ? this.aliiAt().x + 220 : -Infinity, back ? back.box.maxX : -Infinity);
+    const minY = Math.min(this.titleAt().y - 50, hasAlii ? this.aliiAt().y - 50 : Infinity, back ? back.box.minY : Infinity);
     return { minX, maxX, minY, maxY: trunk.base.y + SOIL_DEPTH + 20 };
   });
 
@@ -263,9 +360,35 @@ export class EngravedTreeComponent {
     this.applyFit();
   }
 
-  private applyFit(): void {
-    if (this.zoomBehavior) {
-      this.zoomBehavior.transform(select(this.svgRef().nativeElement), this.fitTransform());
+  private applyFit(animate = false): void {
+    if (!this.zoomBehavior) {
+      return;
+    }
+    const svg = select(this.svgRef().nativeElement);
+    if (animate && !prefersReducedMotion()) {
+      svg.transition().duration(DIVE_MS).call(this.zoomBehavior.transform, this.fitTransform());
+    } else {
+      this.zoomBehavior.transform(svg, this.fitTransform());
+    }
+  }
+
+  /** A member was activated in one of the trees; clicking the spouse in the main tree dives into her family's tree. */
+  protected onActivate(member: FamilyMember, scene: 'main' | 'back'): void {
+    this.memberActivate.emit(member);
+    const back = this.back();
+    if (scene === 'main' && back && member.id === back.focusId && this.viewing() === 'main') {
+      this.viewing.set('back');
+      this.userMoved = false;
+      // move the camera once the selection (and its drawer) has rendered, so the fit leaves room for it
+      afterNextRender(() => this.applyFit(true), { injector: this.injector });
+    }
+  }
+
+  returnToMain(): void {
+    if (this.viewing() === 'back') {
+      this.viewing.set('main');
+      this.userMoved = false;
+      this.applyFit(true);
     }
   }
 
@@ -287,6 +410,11 @@ export class EngravedTreeComponent {
     if (!visible) {
       this.zoomBehavior.translateTo(select(svg), placed.center.x, placed.center.y);
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.returnToMain();
   }
 
   protected onAliiKeydown(event: KeyboardEvent, member: FamilyMember): void {
@@ -313,7 +441,10 @@ export class EngravedTreeComponent {
   }
 
   private fitTransform(): ZoomTransform {
-    const { width, height } = this.viewportSize();
+    const viewport = this.viewportSize();
+    const height = viewport.height;
+    // while the detail drawer is open (a person is selected), fit into the space left of it
+    const width = this.selectedId() ? Math.max(viewport.width * 0.4, viewport.width - DRAWER_WIDTH) : viewport.width;
     const box = this.contentBox();
     const k = Math.min(
       SCALE_EXTENT[1],
