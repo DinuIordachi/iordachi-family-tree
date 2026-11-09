@@ -50,14 +50,37 @@ class IordachiFamilySeeder extends Seeder
             $child->parents()->sync([$iacov->id, $eufrosenia->id]);
         }
         $this->marry($ionRapcea, $this->person('Valentina', 'Rapcea', 'F', '1958-10-30', bio: 'Soția lui Ion Rapcea. Numele de fată mare necunoscut.'));
-        $this->marry($liudmila, $this->person('Valeriu', 'Potînga', 'M', deceased: true, bio: 'Soțul Liudmilei Potînga. Decedat.'));
-        $this->marry($galinaRapcea, $this->person('Ion', 'Rabdau', 'M', deceased: true, bio: 'Soțul Galinei Rabdau. Decedat.'));
+        $valeriu = $this->person('Valeriu', 'Potînga', 'M', deceased: true, bio: 'Soțul Liudmilei Potînga. Decedat.');
+        $this->marry($liudmila, $valeriu);
+        $ionRabdau = $this->person('Ion', 'Rabdau', 'M', deceased: true, bio: 'Soțul Galinei Rabdau. Decedat.');
+        $this->marry($galinaRapcea, $ionRabdau);
         $elena = $this->person('Elena', 'Iordachi', 'F', bio: 'Soția lui Dumitru Iordachi. Numele de fată mare necunoscut.');
         $this->marry($dumitruUnchi, $elena);
         $lidia = $this->person('Lidia', 'Iordachi', 'F', bio: 'Soția lui Simion Iordachi. Numele de fată mare necunoscut.');
         $this->marry($simion, $lidia);
-        $this->marry($maria, $this->person('Vova', 'Boistean', 'M', bio: 'Soțul Mariei Boistean.'));
-        $this->marry($galina, $this->person('Mihail', 'Pituscan', 'M', bio: 'Soțul Galinei Pituscan.'));
+        $vova = $this->person('Vova', 'Boistean', 'M', bio: 'Soțul Mariei Boistean.');
+        $this->marry($maria, $vova);
+        $mihail = $this->person('Mihail', 'Pituscan', 'M', bio: 'Soțul Galinei Pituscan.');
+        $this->marry($galina, $mihail);
+
+        // Maria and Vova's daughter
+        $this->person('Svetlana', 'Guivan', 'F')->parents()->sync([$maria->id, $vova->id]);
+
+        // Galina and Mihail's son
+        $this->person('Igor', 'Pituscan', 'M')->parents()->sync([$galina->id, $mihail->id]);
+
+        // Liudmila and Valeriu's child
+        $this->person('Iacob', 'Potînga', 'M', '1989-07-10')->parents()->sync([$liudmila->id, $valeriu->id]);
+
+        // Galina and Ion Rabdau's children, and Iacob's family
+        $eleonora = $this->person('Eleonora', 'Răbdău', 'F');
+        $iacobRabdau = $this->person('Iacob', 'Răbdău', 'M', '1984-01-27');
+        foreach ([$eleonora, $iacobRabdau] as $child) {
+            $child->parents()->sync([$galinaRapcea->id, $ionRabdau->id]);
+        }
+        $tatianaRabdau = $this->person('Tatiana', 'Răbdău', 'F', '1985-01-19', bio: 'Familia de fata mare necunoscut');
+        $this->marry($iacobRabdau, $tatianaRabdau);
+        $this->person('Ionut', 'Răbdău', 'M', '2010-05-10')->parents()->sync([$iacobRabdau->id, $tatianaRabdau->id]);
 
         // Dumitru and Elena's children
         foreach ([
@@ -81,6 +104,9 @@ class IordachiFamilySeeder extends Seeder
         foreach ([$ion, $dumitru] as $child) {
             $child->parents()->sync([$vasile->id, $alexandra->id]);
         }
+
+        // Dumitru's wife
+        $this->marry($dumitru, $this->person('Adriana', 'Iordachi', 'F', '2001-12-13'));
 
         // Ion's family
         $victoria = $this->person('Victoria', 'Iordachi', 'F', bio: 'Numele de fată mare: Pituscanu. Căsătorită cu Ion Iordachi din 10 mai 2025.');

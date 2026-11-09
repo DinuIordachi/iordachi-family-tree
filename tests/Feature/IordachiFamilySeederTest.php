@@ -25,7 +25,7 @@ class IordachiFamilySeederTest extends TestCase
     {
         $this->seed(IordachiFamilySeeder::class);
 
-        $this->assertSame(29, FamilyMember::query()->count());
+        $this->assertSame(37, FamilyMember::query()->count());
         $this->assertSame(1, FamilyMember::query()->where('first_name', 'Dumitru')->whereDate('birthdate', '2001-11-03')->count());
         $this->assertSame('1990-09-22', FamilyMember::query()->where('first_name', 'Ion')->where('last_name', 'Iordachi')->whereNotNull('birthdate')->sole()->birthdate->toDateString());
         $this->assertSame('1969-02-12', $this->member('Alexandra')->birthdate->toDateString());
@@ -139,5 +139,24 @@ class IordachiFamilySeederTest extends TestCase
         $uncle = FamilyMember::query()->where('first_name', 'Dumitru')->whereNull('birthdate')->sole();
         $this->assertTrue($uncle->isDeceased());
         $this->assertSame(2024, $uncle->died_at->year);
+    }
+
+    public function test_it_seeds_the_members_added_later_with_their_families(): void
+    {
+        $this->seed(IordachiFamilySeeder::class);
+        $parents = fn (string $first, string $last) => $this->names($this->member($first, $last)->parents);
+        $spouses = fn (FamilyMember $m) => $this->names($m->spouses);
+
+        $dumitru2001 = FamilyMember::query()->where('first_name', 'Dumitru')->whereDate('birthdate', '2001-11-03')->sole();
+        $this->assertSame(['Adriana Iordachi'], $spouses($dumitru2001));
+        $this->assertSame('2001-12-13', $this->member('Adriana')->birthdate->toDateString());
+
+        $this->assertSame(['Maria Boistean', 'Vova Boistean'], $parents('Svetlana', 'Guivan'));
+        $this->assertSame(['Galina Pituscan', 'Mihail Pituscan'], $parents('Igor', 'Pituscan'));
+        $this->assertSame(['Liudmila Potînga', 'Valeriu Potînga'], $parents('Iacob', 'Potînga'));
+        $this->assertSame(['Galina Rabdau', 'Ion Rabdau'], $parents('Eleonora', 'Răbdău'));
+        $this->assertSame(['Galina Rabdau', 'Ion Rabdau'], $parents('Iacob', 'Răbdău'));
+        $this->assertSame(['Tatiana Răbdău'], $spouses($this->member('Iacob', 'Răbdău')));
+        $this->assertSame(['Iacob Răbdău', 'Tatiana Răbdău'], $parents('Ionut', 'Răbdău'));
     }
 }
