@@ -61,7 +61,7 @@ const LEAVES = laurelLeaves();
         [attr.x]="-rx" [attr.y]="-ry" [attr.width]="rx * 2" [attr.height]="ry * 2"
         preserveAspectRatio="xMidYMid slice"
         clip-path="url(#et-medallion-clip)"
-        filter="url(#et-sepia-photo)"
+        [attr.filter]="member().deceased ? 'url(#et-sepia-photo)' : null"
         (error)="photoFailed.set(true)"
       />
     } @else {

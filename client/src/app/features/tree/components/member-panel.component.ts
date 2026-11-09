@@ -21,7 +21,7 @@ import { fullName, lifespan } from '../engraving/member-text';
       ariaCloseLabel="Close"
     >
       @if (member(); as m) {
-        <article class="et-panel">
+        <article class="et-panel" [class.is-deceased]="m.deceased">
           <img class="et-panel-portrait" [src]="portrait()" [alt]="'Portrait of ' + name()" (error)="onPortraitError($event)" />
           <h2 class="et-panel-name">{{ name() }}</h2>
           @if (years()) {
@@ -85,7 +85,6 @@ import { fullName, lifespan } from '../engraving/member-text';
       border: 2px solid var(--et-ink);
       outline: 6px double var(--et-gilt);
       outline-offset: 3px;
-      filter: sepia(0.85) contrast(1.05);
       background: var(--et-paper-shade);
       margin-bottom: 0.75rem;
     }
@@ -147,6 +146,12 @@ import { fullName, lifespan } from '../engraving/member-text';
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+    /* only the departed are remembered in sepia; the living keep their own colours */
+    .et-panel.is-deceased .et-panel-portrait {
+      filter: sepia(0.85) contrast(1.05);
+    }
+    .et-panel.is-deceased .et-panel-media img {
       filter: sepia(0.7);
     }
     .et-panel-media:focus-visible {

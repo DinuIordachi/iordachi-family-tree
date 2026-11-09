@@ -75,11 +75,17 @@ describe('MedallionComponent', () => {
     expect(host.classList).toContain('is-selected');
   });
 
-  it('shows a clipped, sepia-toned thumbnail', async () => {
+  it('shows a living member\'s clipped thumbnail in its own colours', async () => {
     const { host } = await setup({ ...member('3'), thumbnailUrl: 'http://x/p.jpg' });
     const img = host.querySelector('image')!;
     expect(img.getAttribute('href')).toBe('http://x/p.jpg');
     expect(img.getAttribute('clip-path')).toBe('url(#et-medallion-clip)');
+    expect(img.hasAttribute('filter')).toBe(false);
+  });
+
+  it('tones a deceased member\'s thumbnail in sepia', async () => {
+    const { host } = await setup({ ...member('3', {}, { diedAt: '1998-11-03T00:00:00Z' }), thumbnailUrl: 'http://x/p.jpg' });
+    expect(host.querySelector('image')!.getAttribute('filter')).toBe('url(#et-sepia-photo)');
   });
 
   it('falls back to the silhouette when the thumbnail fails', async () => {

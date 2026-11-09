@@ -54,6 +54,18 @@ describe('MemberPanelComponent', () => {
     fixture.destroy();
   });
 
+  it('tones the photos in sepia only for a deceased member', async () => {
+    const fixture = await setup();
+    fixture.componentInstance.m.set(vasile);
+    await fixture.whenStable();
+    expect(document.querySelector('.et-panel')!.classList).toContain('is-deceased');
+
+    fixture.componentInstance.m.set({ ...vasile, diedAt: null, deceased: false });
+    await fixture.whenStable();
+    expect(document.querySelector('.et-panel')!.classList).not.toContain('is-deceased');
+    fixture.destroy();
+  });
+
   it('stays non-modal so the tree remains usable while it is open', async () => {
     const fixture = await setup();
     fixture.componentInstance.m.set(vasile);
