@@ -75,6 +75,7 @@ class FamilyMember extends Model implements HasMedia
         'last_name',
         'birthdate',
         'died_at',
+        'is_deceased',
         'gender',
         'biography',
     ];
@@ -82,6 +83,7 @@ class FamilyMember extends Model implements HasMedia
     protected $casts = [
         'birthdate' => 'date',
         'died_at' => 'datetime',
+        'is_deceased' => 'boolean',
         'deleted_at' => 'datetime',
     ];
 
@@ -91,7 +93,7 @@ class FamilyMember extends Model implements HasMedia
      */
     public function isDeceased(): bool
     {
-        return $this->died_at !== null;
+        return $this->died_at !== null || (bool) $this->is_deceased;
     }
 
     public function registerMediaCollections(): void

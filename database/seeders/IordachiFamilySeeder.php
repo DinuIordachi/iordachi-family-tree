@@ -10,17 +10,16 @@ use Illuminate\Database\Seeder;
  * Unknown dates stay empty; maiden names and marriage dates live in the biography,
  * since the model has no dedicated columns for them.
  *
- * Vasile's parents are not known yet: two placeholder ancestors stand in for them so
- * Vasile and his siblings branch from one generation. Rename them and fill in their
- * dates when the ancestors are known — the links stay as they are.
+ * Grandparents: Ion and Zinaida Iordachi (Vasile's parents), Iacov and Eufrosenia Rapcea
+ * (Alexandra's parents). Their dates are not known yet.
  */
 class IordachiFamilySeeder extends Seeder
 {
     public function run(): void
     {
-        // Placeholder ancestors (Vasile's parents)
-        $bunicul = $this->person('Tatăl lui Vasile', 'Iordachi', 'M', bio: 'Date necunoscute — de completat.');
-        $bunica = $this->person('Mama lui Vasile', 'Iordachi', 'F', bio: 'Date necunoscute — de completat.');
+        // Vasile's parents
+        $bunicul = $this->person('Ion', 'Iordachi', 'M', bio: 'Tatăl lui Vasile Iordachi.');
+        $bunica = $this->person('Zinaida', 'Iordachi', 'F', bio: 'Mama lui Vasile Iordachi. Numele de fată mare: Popescu.');
         $this->marry($bunicul, $bunica);
 
         // Vasile and his siblings
@@ -34,8 +33,25 @@ class IordachiFamilySeeder extends Seeder
         }
 
         // Their spouses
-        $alexandra = $this->person('Alexandra', 'Iordachi', 'F', '1969-02-12', bio: 'Mama.');
+        $alexandra = $this->person('Alexandra', 'Iordachi', 'F', '1969-02-12', bio: 'Mama. Numele de fată mare: Rapcea.');
         $this->marry($vasile, $alexandra);
+
+        // Alexandra's parents
+        $iacov = $this->person('Iacov', 'Rapcea', 'M', bio: 'Tatăl Alexandrei Iordachi.');
+        $eufrosenia = $this->person('Eufrosenia', 'Rapcea', 'F', bio: 'Mama Alexandrei Iordachi. Numele de fată mare necunoscut.');
+        $this->marry($iacov, $eufrosenia);
+        $alexandra->parents()->sync([$iacov->id, $eufrosenia->id]);
+
+        // Alexandra's brothers and sisters, with their spouses
+        $ionRapcea = $this->person('Ion', 'Rapcea', 'M', '1957-06-15', bio: 'Fratele Alexandrei Iordachi.');
+        $liudmila = $this->person('Liudmila', 'Potînga', 'F', '1959-09-27', bio: 'Sora Alexandrei Iordachi. Născută Rapcea (Potînga după căsătorie).');
+        $galinaRapcea = $this->person('Galina', 'Rabdau', 'F', '1964-03-21', bio: 'Sora Alexandrei Iordachi. Născută Rapcea (Rabdau după căsătorie).');
+        foreach ([$ionRapcea, $liudmila, $galinaRapcea] as $child) {
+            $child->parents()->sync([$iacov->id, $eufrosenia->id]);
+        }
+        $this->marry($ionRapcea, $this->person('Valentina', 'Rapcea', 'F', '1958-10-30', bio: 'Soția lui Ion Rapcea. Numele de fată mare necunoscut.'));
+        $this->marry($liudmila, $this->person('Valeriu', 'Potînga', 'M', deceased: true, bio: 'Soțul Liudmilei Potînga. Decedat.'));
+        $this->marry($galinaRapcea, $this->person('Ion', 'Rabdau', 'M', deceased: true, bio: 'Soțul Galinei Rabdau. Decedat.'));
         $this->marry($dumitruUnchi, $this->person('Elena', 'Iordachi', 'F', bio: 'Soția lui Dumitru Iordachi. Numele de fată mare necunoscut.'));
         $this->marry($simion, $this->person('Lidia', 'Iordachi', 'F', bio: 'Soția lui Simion Iordachi. Numele de fată mare necunoscut.'));
         $this->marry($maria, $this->person('Vova', 'Boistean', 'M', bio: 'Soțul Mariei Boistean.'));
@@ -65,6 +81,7 @@ class IordachiFamilySeeder extends Seeder
         ?string $birthdate = null,
         ?string $diedAt = null,
         ?string $bio = null,
+        bool $deceased = false,
     ): FamilyMember {
         return FamilyMember::create([
             'first_name' => $first,
@@ -72,6 +89,7 @@ class IordachiFamilySeeder extends Seeder
             'gender' => $gender,
             'birthdate' => $birthdate,
             'died_at' => $diedAt,
+            'is_deceased' => $deceased,
             'biography' => $bio,
         ]);
     }
