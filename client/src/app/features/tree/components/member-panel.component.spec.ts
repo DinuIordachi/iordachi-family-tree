@@ -54,6 +54,16 @@ describe('MemberPanelComponent', () => {
     fixture.destroy();
   });
 
+  it('stays non-modal so the tree remains usable while it is open', async () => {
+    const fixture = await setup();
+    fixture.componentInstance.m.set(vasile);
+    await fixture.whenStable();
+    expect(document.querySelector('.et-parchment')).not.toBeNull();
+    expect(document.querySelector('.p-drawer-mask.p-overlay-mask-enter-active, .p-overlay-mask')).toBeNull();
+    expect(document.body.classList).not.toContain('p-overflow-hidden');
+    fixture.destroy();
+  });
+
   it('falls back to the engraved silhouette without a thumbnail', async () => {
     const fixture = await setup();
     fixture.componentInstance.m.set({ ...vasile, thumbnailUrl: null });

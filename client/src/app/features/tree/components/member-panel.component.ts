@@ -16,7 +16,8 @@ import { fullName, lifespan } from '../engraving/member-text';
       position="right"
       styleClass="engraved-tree et-parchment"
       [closeOnEscape]="true"
-      [blockScroll]="true"
+      [modal]="false"
+      [blockScroll]="false"
       ariaCloseLabel="Close"
     >
       @if (member(); as m) {
@@ -68,6 +69,8 @@ import { fullName, lifespan } from '../engraving/member-text';
       outline: 2px solid var(--et-focus);
     }
     .et-panel {
+      /* room for the portrait's double gilt frame, which is drawn outside the image box */
+      padding-top: 1rem;
       display: flex;
       flex-direction: column;
       align-items: center;

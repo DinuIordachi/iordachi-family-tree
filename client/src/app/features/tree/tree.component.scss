@@ -141,6 +141,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  transition: right 250ms ease;
+
+  /* the detail drawer is non-modal: keep the controls usable beside it */
+  &.beside-drawer {
+    right: calc(min(26rem, 100vw) + 1rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

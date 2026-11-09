@@ -36,7 +36,7 @@
         </div>
       }
 
-      <div class="et-controls" role="group" aria-label="Tree view controls">
+      <div class="et-controls" [class.beside-drawer]="!!selected()" role="group" aria-label="Tree view controls">
         <button type="button" class="et-brass" aria-label="Zoom in" (click)="zoomIn()">+</button>
         <button type="button" class="et-brass" aria-label="Zoom out" (click)="zoomOut()">−</button>
         <button type="button" class="et-brass" aria-label="Reset view" (click)="resetView()">⟲</button>

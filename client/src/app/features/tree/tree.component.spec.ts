@@ -62,6 +62,16 @@ describe('TreeComponent', () => {
     fixture.destroy();
   });
 
+  it('moves the zoom controls clear of the open drawer', async () => {
+    const { fixture, root } = setup([of(SEED_MEMBERS)]);
+    await fixture.whenStable();
+    expect(root.querySelector('.et-controls')!.classList).not.toContain('beside-drawer');
+    (root.querySelector('g[etMedallion][data-member-id="3"]') as SVGGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await fixture.whenStable();
+    expect(root.querySelector('.et-controls')!.classList).toContain('beside-drawer');
+    fixture.destroy();
+  });
+
   it('has labelled zoom controls', async () => {
     const { fixture, root } = setup([of(SEED_MEMBERS)]);
     await fixture.whenStable();
