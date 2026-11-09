@@ -22,14 +22,35 @@ interface Node {
 }
 
 /**
+ * Among three or more siblings, move the one with strictly the largest branch to the middle, so the
+ * main line rises straight above its parents; the others keep their birth order around it.
+ */
+function centreMainBranch(ids: string[], descendants: (id: string) => number): string[] {
+  if (ids.length < 3) {
+    return ids;
+  }
+  const sizes = ids.map(descendants);
+  const max = Math.max(...sizes);
+  if (sizes.filter((n) => n === max).length > 1) {
+    return ids;
+  }
+  const main = ids[sizes.indexOf(max)];
+  const rest = ids.filter((id) => id !== main);
+  const middle = Math.floor(ids.length / 2);
+  return [...rest.slice(0, middle), main, ...rest.slice(middle)];
+}
+
+/**
  * Positions households with a tidy-tree layout, then flips it so the
  * founders sit on the trunk and each younger generation is higher.
  */
 export function layoutTree(forest: HouseholdForest, opts: Partial<LayoutOptions> = {}): TreeLayout {
   const o = { ...DEFAULT_LAYOUT_OPTIONS, ...opts };
+  const descendants = (id: string): number =>
+    forest.households.get(id)!.childHouseholdIds.reduce((n, c) => n + 1 + descendants(c), 0);
   const toNode = (id: string): Node => {
     const h = forest.households.get(id)!;
-    return { id, size: h.memberIds.length, children: h.childHouseholdIds.map(toNode) };
+    return { id, size: h.memberIds.length, children: centreMainBranch(h.childHouseholdIds, descendants).map(toNode) };
   };
   const root = hierarchy<Node>({ id: '', size: 0, children: forest.rootIds.map(toNode) });
   tree<Node>()

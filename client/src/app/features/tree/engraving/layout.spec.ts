@@ -97,6 +97,28 @@ describe('layoutTree', () => {
     expect(l.generationCount).toBe(0);
   });
 
+  it('centres the sibling with the largest branch, keeping the others in birth order', () => {
+    // founders 1+2; children 3 (eldest, has a family) then 4, 5, 6, 7 (no descendants)
+    const kids = ['3', '4', '5', '6', '7'];
+    const l = layoutTree(
+      buildHouseholds([
+        member('1', { spouses: ['2'], children: kids }),
+        member('2', { spouses: ['1'], children: kids }),
+        member('3', { parents: ['1', '2'], children: ['8'] }, { birthday: '1960-01-01' }),
+        ...['4', '5', '6', '7'].map((k) => member(k, { parents: ['1', '2'] })),
+        member('8', { parents: ['3'] }),
+      ]),
+    );
+    const order = [...kids].sort((a, b) => center(l, a).x - center(l, b).x);
+    expect(order).toEqual(['4', '5', '3', '6', '7']);
+    expect(center(l, '3').x).toBeCloseTo(l.trunk.base.x);
+  });
+
+  it('keeps plain birth order when no sibling branch is larger', () => {
+    const l = layoutTree(buildHouseholds(seed));
+    expect(center(l, '5').x).toBeLessThan(center(l, '7').x); // 5+6 (has children) vs 7 — two siblings, nothing to centre
+  });
+
   it('respects option overrides', () => {
     const l = layoutTree(buildHouseholds(seed), { generationSpacing: 100 });
     expect(center(l, '1').y - center(l, '3').y).toBe(100);
