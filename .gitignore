@@ -25,3 +25,5 @@ Thumbs.db
 /client/node_modules
 /client/.angular
 /client/dist
+/public/spa
+/.htpasswd
