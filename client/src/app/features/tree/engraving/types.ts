@@ -47,6 +47,8 @@ export interface BranchSegment {
   graft?: boolean;
   /** People this limb carries: the child household and everyone descending from it (sets its thickness). */
   weight?: number;
+  /** How far the limb climbs straight up before spreading, to clear the portraits it grows out of. */
+  rise?: number;
 }
 
 export interface TreeLayout {

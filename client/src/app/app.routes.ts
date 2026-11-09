@@ -16,6 +16,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/tree/tree.component').then(m => m.TreeComponent)
   },
   {
+    path: 'tree-of-life',
+    loadComponent: () =>
+      import('./features/tree-of-life/tree-of-life.component').then(m => m.TreeOfLifeComponent)
+  },
+  {
     path: '',
     component: AppLayout,
     canActivate: [authGuard],

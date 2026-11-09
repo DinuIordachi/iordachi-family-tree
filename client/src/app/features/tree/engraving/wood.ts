@@ -149,43 +149,81 @@ export function engravedTrunk(trunk: TreeLayout['trunk'], seed: number, baseWidt
   };
 }
 
+/** A limb comes up into its person from at least this far below, under the name banner (which ends at +94). */
+const APPROACH_BELOW = 140;
+/** …and never closer than this (clear of the banner), even if the limb must dip a little to get there. */
+const APPROACH_MIN = 110;
+
+/** Longest curve handle on a limb span: long enough to arch, too short to loop. */
+const MAX_HANDLE = 120;
+
+const unit = (x: number, y: number): Point => {
+  const l = Math.hypot(x, y) || 1;
+  return { x: x / l, y: y / l };
+};
+
 /**
- * Centreline of a branch grown like a real limb: it leaves the fork climbing, wanders with seeded kinks,
- * and only steers firmly toward its person near the end (where any remaining offset is eased out).
+ * Centreline of a branch grown like a real limb. It leaves the fork climbing (or first rises straight up out
+ * of the household it grows from), sweeps out below its person's row, then turns upward and comes up into
+ * the person from below, hidden behind the name banner, so it never runs across a portrait. Seeded kinks
+ * along the way keep it from reading as a drafted curve.
  */
 export function branchCentreline(seg: BranchSegment, samples = 24): Point[] {
   const rnd = seededRandom(hashSeed(seg.id));
-  const dx = seg.to.x - seg.from.x;
-  const dy = seg.to.y - seg.from.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 1e-6) {
-    return Array.from({ length: samples + 1 }, () => ({ ...seg.from }));
+  const { from, to } = seg;
+  const dx = to.x - from.x;
+  if (Math.hypot(dx, to.y - from.y) < 1e-6) {
+    return Array.from({ length: samples + 1 }, () => ({ ...from }));
   }
-  // first heading: toward the person, but pulled up toward the sky — limbs climb before they spread
-  const ux = dx / length;
-  const uy = dy / length;
-  let hx = ux * 0.45;
-  let hy = uy * 0.45 - 0.55;
-  let heading = Math.atan2(hy, hx);
-  const wander = noise1D(rnd, 6);
-  const step = (length * 1.12) / samples;
-  const pts: Point[] = [{ ...seg.from }];
-  let p = { ...seg.from };
-  for (let i = 1; i <= samples; i++) {
+  const side = Math.sign(dx) || 1;
+  const up: Point = { x: 0, y: -1 };
+
+  // waypoints: [fork, (clear of the household), below the person, person]
+  const pts: Point[] = [from];
+  if (seg.rise) {
+    pts.push({ x: from.x, y: from.y - seg.rise });
+  }
+  const last = pts[pts.length - 1];
+  const belowY = Math.max(to.y + APPROACH_MIN, Math.min(to.y + APPROACH_BELOW, last.y - 20));
+  const below = { x: to.x - side * Math.min(14, Math.abs(dx) * 0.2), y: belowY };
+  pts.push(below, to);
+
+  // headings: climbing out of the fork, sweeping outward-and-up below the person, straight up into them
+  const toBelow = unit(below.x - last.x, below.y - last.y);
+  const tangents: Point[] = [seg.rise ? up : unit(toBelow.x * 0.6, toBelow.y * 0.6 - 0.8)];
+  if (seg.rise) {
+    tangents.push(unit(toBelow.x, toBelow.y - 0.3));
+  }
+  tangents.push(unit(side, -0.25), up);
+
+  // share the samples between the spans by length
+  const spans = pts.slice(1).map((p, i) => Math.hypot(p.x - pts[i].x, p.y - pts[i].y));
+  const total = spans.reduce((a, b) => a + b, 0) || 1;
+  const counts = spans.map((l) => Math.max(1, Math.round((l / total) * samples)));
+  while (counts.reduce((a, b) => a + b, 0) > samples) counts[counts.indexOf(Math.max(...counts))]--;
+  while (counts.reduce((a, b) => a + b, 0) < samples) counts[counts.indexOf(Math.max(...counts))]++;
+
+  const line: Point[] = [{ ...from }];
+  spans.forEach((len, i) => {
+    const a = pts[i];
+    const b = pts[i + 1];
+    // short handles keep long limbs from swinging past their waypoints into an S
+    const h = Math.min(len / 3, MAX_HANDLE);
+    const c1 = { x: a.x + tangents[i].x * h, y: a.y + tangents[i].y * h };
+    const c2 = { x: b.x - tangents[i + 1].x * h, y: b.y - tangents[i + 1].y * h };
+    line.push(...sampleCubic(a, c1, c2, b, counts[i]).slice(1));
+  });
+
+  // seeded kinks across the limb, fading out at both ends (and kept small on short limbs)
+  const wander = noise1D(rnd, 9);
+  const amp = Math.min(11, total * 0.022);
+  const n = normals(line);
+  return line.map((p, i) => {
     const t = i / samples;
-    const desired = Math.atan2(seg.to.y - p.y, seg.to.x - p.x);
-    const delta = Math.atan2(Math.sin(desired - heading), Math.cos(desired - heading));
-    heading += delta * (0.1 + 0.8 * t * t) + wander(t) * 0.22 * (1 - t);
-    p = { x: p.x + Math.cos(heading) * step, y: p.y + Math.sin(heading) * step };
-    pts.push(p);
-  }
-  // ease the remaining offset out over the outer part of the limb so it lands exactly on the person
-  const end = pts[samples];
-  const ex = seg.to.x - end.x;
-  const ey = seg.to.y - end.y;
-  return pts.map((q, i) => {
-    const w = Math.pow(i / samples, 2.2);
-    return { x: q.x + ex * w, y: q.y + ey * w };
+    // calm near the person, so the kinks never nudge the limb into the portrait or banner
+    const settle = Math.min(1, Math.hypot(p.x - to.x, p.y - to.y) / 250);
+    const k = wander(t) * amp * Math.sin(Math.PI * t) * settle;
+    return { x: p.x + n[i].x * k, y: p.y + n[i].y * k };
   });
 }
 

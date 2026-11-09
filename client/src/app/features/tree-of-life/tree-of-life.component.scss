@@ -1,0 +1,312 @@
+// "Meet, Moldova" language: black ground, Circe Light/Bold (Jost stands in
+// when Circe is not installed), light text on black, never a white field.
+:host {
+  --tol-bg: #0b0b0b;
+  --tol-text: #f2f2f2;
+  --tol-muted: #8c8c8c;
+  --tol-font: 'Circe', 'Jost', 'Century Gothic', system-ui, sans-serif;
+  display: block;
+}
+
+.tol {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--tol-bg);
+  color: var(--tol-text);
+  font-family: var(--tol-font);
+  font-weight: 300;
+}
+
+.tol-head {
+  position: absolute;
+  top: clamp(20px, 5vh, 56px);
+  left: clamp(16px, 4vw, 56px);
+  z-index: 5;
+  pointer-events: none;
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4.2vw, 3.6rem);
+    font-weight: 300;
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+  }
+
+  p {
+    margin: 14px 0 0;
+    color: var(--tol-muted);
+    font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+  }
+}
+
+.tol-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ---- Tree parts
+.tol-branch {
+  opacity: 0.86; // the guide's "multicolour with transparency" ornament
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tol-grow 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transition: opacity 200ms;
+}
+
+.tol-bond {
+  opacity: 0.9;
+  stroke-linecap: round;
+  transition: opacity 200ms;
+}
+
+.dim {
+  opacity: 0.12 !important;
+}
+
+@keyframes tol-grow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.tol-member {
+  cursor: pointer;
+  outline: none;
+  opacity: 0;
+  animation: tol-bloom 500ms cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+  transition: opacity 200ms;
+
+  .tol-hit {
+    fill: transparent;
+  }
+
+  .tol-ring {
+    fill: none;
+    stroke: var(--tol-text);
+    stroke-width: 2;
+    opacity: 0;
+    transition: opacity 160ms;
+  }
+
+  .tol-figure {
+    transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  }
+
+  &:hover .tol-figure,
+  &:focus-visible .tol-figure {
+    transform: scale(1.12);
+  }
+
+  &:focus-visible .tol-ring,
+  &.active .tol-ring {
+    opacity: 1;
+  }
+
+  &.deceased .tol-figure {
+    opacity: 0.72;
+  }
+}
+
+@keyframes tol-bloom {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tol-name,
+.tol-sub {
+  font-family: var(--tol-font);
+  paint-order: stroke;
+  stroke: var(--tol-bg);
+  stroke-width: 6px;
+  stroke-linejoin: round;
+}
+
+.tol-name {
+  fill: var(--tol-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tol-cross {
+  fill: var(--tol-muted);
+  font-weight: 300;
+}
+
+.tol-sub {
+  fill: var(--tol-muted);
+  font-size: 12.5px;
+  font-weight: 300;
+}
+
+// ---- Legend
+.tol-legend {
+  position: absolute;
+  left: clamp(16px, 4vw, 56px);
+  bottom: clamp(16px, 4vh, 40px);
+  z-index: 5;
+  max-width: 300px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgb(0 0 0 / 0.72);
+  backdrop-filter: blur(6px);
+
+  .tol-legend-title {
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tol-muted);
+  }
+
+  ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.88rem;
+    color: #d6d6d6;
+  }
+
+  svg {
+    flex: none;
+    width: 26px;
+    height: 26px;
+  }
+
+  b {
+    display: inline-block;
+    min-width: 2.2em;
+    font-weight: 700;
+    color: var(--tol-text);
+  }
+}
+
+// ---- Controls
+.tol-controls {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  bottom: clamp(16px, 4vh, 40px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: right 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  .has-panel & {
+    right: calc(min(400px, 100vw) + 20px);
+  }
+}
+
+.tol-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #2a2a2a;
+  border-radius: 50%;
+  background: #000;
+  color: var(--tol-text);
+  font: 300 1.5rem/1 var(--tol-font);
+  cursor: pointer;
+  transition:
+    background 150ms,
+    border-color 150ms;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: #34871d;
+    background: #34871d;
+    outline: none;
+  }
+}
+
+.tol-btn-text {
+  width: auto;
+  height: auto;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+
+// ---- Notices
+.tol-notice {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--tol-muted);
+
+  .tol-notice-title {
+    color: var(--tol-text);
+    font-size: 1.4rem;
+  }
+}
+
+.tol-loader {
+  width: 96px;
+  height: 104px;
+  animation: tol-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tol-pulse {
+  50% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 700px) {
+  .tol-legend {
+    display: none;
+  }
+
+  .has-panel .tol-controls {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tol-branch {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .tol-member {
+    animation: none;
+    opacity: 1;
+  }
+
+  .tol-loader {
+    animation: none;
+  }
+}

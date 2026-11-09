@@ -31,6 +31,8 @@ export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
 /** Where along the parent's leader a side limb leaves it: [outermost, innermost] fraction of the leader. */
 const TRUNK_ATTACH: [number, number] = [-0.6, 0.3];
 const LIMB_ATTACH: [number, number] = [0.35, 0.6];
+/** A limb growing out of a household climbs this far before spreading: above the portraits (42) and laurel. */
+const CLEAR_RISE = 58;
 
 interface Node {
   id: string;
@@ -167,14 +169,17 @@ export function layoutTree(forest: HouseholdForest, opts: Partial<LayoutOptions>
   }
   for (const node of root.descendants().slice(1)) {
     const parentId = node.depth === 1 ? null : node.parent!.data.id;
+    const start = parentId === null ? trunk.base : from.get(node.data.id)!;
+    const outOfHousehold = parentId !== null && start === centers.get(parentId);
     branches.push({
       id: `${parentId ?? 'trunk'}>${node.data.id}`,
       parentHouseholdId: parentId,
       childHouseholdId: node.data.id,
-      from: parentId === null ? trunk.base : from.get(node.data.id)!,
+      from: start,
       to: centers.get(node.data.id)!,
       generation: node.depth - 1,
       weight: weight(node.data.id),
+      ...(outOfHousehold ? { rise: CLEAR_RISE } : {}),
     });
   }
 

@@ -121,6 +121,27 @@ describe('branchCentreline', () => {
     expect(changes).toBeGreaterThanOrEqual(2);
   });
 
+  it('comes up into its person from below, so it never runs across the portrait or the name banner', () => {
+    // a banner hangs 44…94 below the portrait centre and is at most ~85 wide on each side
+    // so inside that band, the limb may only be in the narrow column straight under the portrait
+    const acrossPortraitOrBanner = pts.filter(
+      (p) => p.y > wide.to.y - 50 && p.y < wide.to.y + 100 && Math.abs(p.x - wide.to.x) > 34 && Math.abs(p.x - wide.to.x) < 90,
+    );
+    expect(acrossPortraitOrBanner).toEqual([]);
+    const last = pts.slice(-4);
+    expect(Math.abs(last[3].x - last[0].x)).toBeLessThan(Math.abs(last[3].y - last[0].y));
+  });
+
+  it('rises clear of its parents\' portraits before spreading, when it grows out of a household', () => {
+    const child: BranchSegment = { ...seg, id: '4+17>28', from: { x: 0, y: -400 }, to: { x: -85, y: -590 }, rise: 55 };
+    const c = branchCentreline(child);
+    for (const p of c.filter((q) => q.y > -400 - 50)) {
+      expect(Math.abs(p.x)).toBeLessThan(12);
+    }
+    expect(c[c.length - 1].x).toBeCloseTo(-85, 1);
+    expect(c[c.length - 1].y).toBeCloseTo(-590, 1);
+  });
+
   it('keeps an upright branch upright', () => {
     const up: BranchSegment = { ...seg, id: 'up', from: { x: 0, y: -220 }, to: { x: 10, y: -410 } };
     const xs = branchCentreline(up).map((p) => p.x);

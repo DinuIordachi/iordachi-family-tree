@@ -202,6 +202,12 @@ describe('layoutTree — leader and side limbs', () => {
     expect(branch('21').weight).toBe(1);
   });
 
+  it('limbs growing out of a household first rise clear of its portraits; limbs off the trunk or the main line do not', () => {
+    expect(branch('30').rise).toBeGreaterThan(48); // 30 grows out of 20 (a portrait 42 tall plus its laurel)
+    expect(branch('3+4').rise).toBeUndefined();
+    expect(branch('21').rise).toBeUndefined();
+  });
+
   it('a younger sibling leaves the main line above its parents, not from between them', () => {
     const b = branch('21');
     expect(b.from.y).toBeLessThan(hx('5+6').center.y - 60);
