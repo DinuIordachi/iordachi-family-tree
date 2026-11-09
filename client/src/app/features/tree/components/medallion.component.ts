@@ -2,9 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, outp
 import { FamilyMember } from '@app/core/models';
 import { fullName, lifespan, memberAriaLabel } from '../engraving/member-text';
 import { BannerComponent } from './banner.component';
+import { PORTRAIT_RX, PORTRAIT_RY } from '@app/shared/components/avatar-crop/avatar-crop-geometry';
 
-const RX = 34;
-const RY = 42;
+const RX = PORTRAIT_RX;
+const RY = PORTRAIT_RY;
 const LEAVES_PER_SIDE = 9;
 
 /** Laurel leaves along both sides of the oval, 6 units outside the rim. */

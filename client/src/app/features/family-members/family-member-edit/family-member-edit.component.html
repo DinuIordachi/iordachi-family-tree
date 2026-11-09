@@ -68,6 +68,10 @@
           <input #avatarFileInput type="file" hidden
                  [accept]="avatarAccept"
                  (change)="onAvatarSelected($event)" />
+          <app-avatar-crop-dialog [file]="pendingAvatarFile()"
+                                  [saving]="uploadingAvatar()"
+                                  (cropped)="onAvatarCropped($event)"
+                                  (cancelled)="pendingAvatarFile.set(null)" />
 
           @if (m.deceased) {
             <span class="deceased-stamp member-edit__hero-stamp" aria-label="Deceased">&dagger;</span>

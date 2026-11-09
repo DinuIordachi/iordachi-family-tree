@@ -21,7 +21,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FamilyTreeService } from '@app/core/services';
 import { FamilyMember, FamilyMemberPayload } from '@app/core/models';
-import { AppTag, AppTagSeverity } from '@app/shared/components';
+import { AppTag, AppTagSeverity, AvatarCropDialogComponent } from '@app/shared/components';
 
 interface MemberOption {
   id: number;
@@ -52,6 +52,7 @@ interface MemberOption {
     Divider,
     Message,
     ConfirmDialog,
+    AvatarCropDialogComponent,
   ],
   templateUrl: './family-member-edit.component.html',
   styleUrl: './family-member-edit.component.scss',
@@ -74,6 +75,8 @@ export class FamilyMemberEditComponent implements OnInit {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly uploadingAvatar = signal(false);
+  /** Image picked by the admin, waiting to be positioned in the crop dialog. */
+  readonly pendingAvatarFile = signal<File | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
   readonly today = new Date();
@@ -448,8 +451,8 @@ export class FamilyMemberEditComponent implements OnInit {
   }
 
   /**
-   * File picker change handler — uploads the selected image as the
-   * member's thumbnail (i.e. the avatar shown on cards everywhere).
+   * File picker change handler — opens the crop dialog so the admin can
+   * frame the image inside the tree's oval before it becomes the thumbnail.
    */
   onAvatarSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -476,11 +479,22 @@ export class FamilyMemberEditComponent implements OnInit {
       return;
     }
 
+    this.pendingAvatarFile.set(file);
+  }
+
+  /** Crop dialog confirmed — upload the oval-framed portrait as the thumbnail. */
+  onAvatarCropped(file: File): void {
+    const member = this.member();
+    if (!member) {
+      return;
+    }
+
     this.uploadingAvatar.set(true);
     this.familyTreeService.uploadThumbnail(member.id, file).subscribe({
       next: (updated) => {
         this.applyMemberUpdate(updated);
         this.uploadingAvatar.set(false);
+        this.pendingAvatarFile.set(null);
         this.messages.add({
           severity: 'success',
           summary: 'Avatar updated',
