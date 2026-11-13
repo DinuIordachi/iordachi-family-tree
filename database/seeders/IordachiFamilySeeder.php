@@ -63,8 +63,18 @@ class IordachiFamilySeeder extends Seeder
         $mihail = $this->person('Mihail', 'Pituscan', 'M', bio: 'Soțul Galinei Pituscan.');
         $this->marry($galina, $mihail);
 
-        // Maria and Vova's daughter
+        // Maria and Vova's children, and Alexandr's family
         $this->person('Svetlana', 'Guivan', 'F')->parents()->sync([$maria->id, $vova->id]);
+        $alexandr = $this->person('Alexandr', 'Boistean', 'M');
+        $alexandr->parents()->sync([$maria->id, $vova->id]);
+        $alina = $this->person('Alina', 'Boistean', 'F');
+        $this->marry($alexandr, $alina);
+        foreach ([
+            $this->person('Andrei', 'Boistean', 'M'),
+            $this->person('Liuba', 'Boistean', 'F'),
+        ] as $child) {
+            $child->parents()->sync([$alexandr->id, $alina->id]);
+        }
 
         // Galina and Mihail's son
         $this->person('Igor', 'Pituscan', 'M')->parents()->sync([$galina->id, $mihail->id]);
@@ -72,15 +82,19 @@ class IordachiFamilySeeder extends Seeder
         // Liudmila and Valeriu's child
         $this->person('Iacob', 'Potînga', 'M', '1989-07-10')->parents()->sync([$liudmila->id, $valeriu->id]);
 
-        // Galina and Ion Rabdau's children, and Iacob's family
+        // Galina and Ion Rabdau's children, with Iacob's and Natalia's families
         $eleonora = $this->person('Eleonora', 'Răbdău', 'F');
         $iacobRabdau = $this->person('Iacob', 'Răbdău', 'M', '1984-01-27');
-        foreach ([$eleonora, $iacobRabdau] as $child) {
+        $natalia = $this->person('Natalia', 'Mandru', 'F', '1984-12-27', bio: 'Familia de fata mare Rabdau');
+        foreach ([$eleonora, $iacobRabdau, $natalia] as $child) {
             $child->parents()->sync([$galinaRapcea->id, $ionRabdau->id]);
         }
         $tatianaRabdau = $this->person('Tatiana', 'Răbdău', 'F', '1985-01-19', bio: 'Familia de fata mare necunoscut');
         $this->marry($iacobRabdau, $tatianaRabdau);
         $this->person('Ionut', 'Răbdău', 'M', '2010-05-10')->parents()->sync([$iacobRabdau->id, $tatianaRabdau->id]);
+        $ionMandru = $this->person('Ion', 'Mandru', 'M', '1988-11-14');
+        $this->marry($natalia, $ionMandru);
+        $this->person('Elena', 'Mandru', 'F', '2005-03-31')->parents()->sync([$natalia->id, $ionMandru->id]);
 
         // Dumitru and Elena's children
         foreach ([
@@ -93,7 +107,7 @@ class IordachiFamilySeeder extends Seeder
         // Simion and Lidia's children
         foreach ([
             $this->person('Iulian', 'Iordachi', 'M', '1984-01-25'),
-            $this->person('Rodica', 'Iordachi', 'F', '1984-01-26', bio: 'Scutaru după căsătorie.'),
+            $this->person('Rodica', 'Iordachi', 'F', '1984-01-26', bio: 'Scutaru dupa casatorie'),
         ] as $child) {
             $child->parents()->sync([$simion->id, $lidia->id]);
         }

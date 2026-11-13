@@ -25,7 +25,7 @@ class IordachiFamilySeederTest extends TestCase
     {
         $this->seed(IordachiFamilySeeder::class);
 
-        $this->assertSame(37, FamilyMember::query()->count());
+        $this->assertSame(44, FamilyMember::query()->count());
         $this->assertSame(1, FamilyMember::query()->where('first_name', 'Dumitru')->whereDate('birthdate', '2001-11-03')->count());
         $this->assertSame('1990-09-22', FamilyMember::query()->where('first_name', 'Ion')->where('last_name', 'Iordachi')->whereNotNull('birthdate')->sole()->birthdate->toDateString());
         $this->assertSame('1969-02-12', $this->member('Alexandra')->birthdate->toDateString());
@@ -158,5 +158,22 @@ class IordachiFamilySeederTest extends TestCase
         $this->assertSame(['Galina Rabdau', 'Ion Rabdau'], $parents('Iacob', 'Răbdău'));
         $this->assertSame(['Tatiana Răbdău'], $spouses($this->member('Iacob', 'Răbdău')));
         $this->assertSame(['Iacob Răbdău', 'Tatiana Răbdău'], $parents('Ionut', 'Răbdău'));
+    }
+
+    public function test_it_seeds_the_mandru_and_boistean_families(): void
+    {
+        $this->seed(IordachiFamilySeeder::class);
+
+        $natalia = $this->member('Natalia', 'Mandru');
+        $this->assertSame('1984-12-27', $natalia->birthdate->toDateString());
+        $this->assertSame(['Galina Rabdau', 'Ion Rabdau'], $this->names($natalia->parents));
+        $this->assertSame(['Ion Mandru'], $this->names($natalia->spouses));
+        $this->assertSame(['Elena Mandru'], $this->names($natalia->children));
+        $this->assertSame('2005-03-31', $this->member('Elena', 'Mandru')->birthdate->toDateString());
+
+        $alexandr = $this->member('Alexandr', 'Boistean');
+        $this->assertSame(['Maria Boistean', 'Vova Boistean'], $this->names($alexandr->parents));
+        $this->assertSame(['Alina Boistean'], $this->names($alexandr->spouses));
+        $this->assertSame(['Andrei Boistean', 'Liuba Boistean'], $this->names($alexandr->children));
     }
 }
