@@ -4,6 +4,7 @@ import { FIXED_MOTIFS, SCATTER_MOTIFS, placeMotifs } from './motif-placement';
 import { member } from './testing/member-factory';
 import { SEED_MEMBERS as seed } from './testing/seed-fixture';
 import { MotifPlacement, TreeLayout } from './types';
+import { BANNER_BOTTOM, BANNER_TOP } from './medallion-geometry';
 
 const scattered = (p: MotifPlacement[]) => p.filter((m) => SCATTER_MOTIFS.includes(m.motif));
 
@@ -50,9 +51,14 @@ describe('placeMotifs', () => {
     expect(at('river-moldova').scale).toBeCloseTo((seedLayout.bounds.maxX - seedLayout.bounds.minX + 600) / 600);
   });
 
-  it('scatters one ornament per 4 members, min 2', () => expect(scattered(placeMotifs(seedLayout, 1))).toHaveLength(2));
+  it('scatters one ornament per 3 members, min 2', () =>
+    expect(scattered(placeMotifs(seedLayout, 1))).toHaveLength(Math.max(2, Math.floor(seedLayout.members.length / 3))));
 
-  it('caps scattered ornaments at 8', () => expect(scattered(placeMotifs(bigTree(), 1))).toHaveLength(8));
+  it('fills a large crown with more ornaments, up to 16', () => {
+    const n = scattered(placeMotifs(bigTree(), 1)).length;
+    expect(n).toBeGreaterThan(8);
+    expect(n).toBeLessThanOrEqual(16);
+  });
 
   it('places no crown ornaments when the only person is a founder in the roots', () =>
     expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(0));
@@ -80,9 +86,9 @@ describe('placeMotifs', () => {
       const s = scattered(placeMotifs(layout, 3));
       for (const o of s) {
         for (const m of layout.members) {
-          // ornament box (80×80) vs banner box: x ± 85 (half the 170 slot), y + 44 … y + 94
+          // ornament box (80×80) vs banner box: x ± 85 (half a slot), y + BANNER_TOP … y + BANNER_BOTTOM
           const overlapX = Math.abs(o.center.x - m.center.x) < 40 + 85;
-          const overlapY = o.center.y + 40 > m.center.y + 44 && o.center.y - 40 < m.center.y + 94;
+          const overlapY = o.center.y + 40 > m.center.y + BANNER_TOP && o.center.y - 40 < m.center.y + BANNER_BOTTOM;
           expect(overlapX && overlapY, `${o.motif} over banner of ${m.id}`).toBe(false);
         }
       }

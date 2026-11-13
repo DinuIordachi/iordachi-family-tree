@@ -159,6 +159,19 @@ export interface LifeBranch {
   childId: string;
 }
 
+/**
+ * A stretch of a sibling's rising line that is drawn by another sibling (the
+ * carrier). Not drawn on its own: it only re-paints that stretch when the
+ * sibling is lit and the carrier is not, so a lit lineage reads unbroken.
+ */
+export interface LifeRun {
+  id: string;
+  d: string;
+  color: string;
+  parentIds: string[];
+  childId: string;
+}
+
 export interface LifeBond {
   id: string;
   /** The bar as drawn (straight, or rising through basil flowers' open slots). */
@@ -180,6 +193,8 @@ export interface LifeLeaf {
 export interface LifeLayout {
   motifs: LifeMotif[];
   branches: LifeBranch[];
+  /** Shared stretches of sibling lines, for highlighting only (see LifeRun). */
+  runs: LifeRun[];
   bonds: LifeBond[];
   trunk: { x: number; top: number; bottom: number };
   leaves: LifeLeaf[];
@@ -229,6 +244,7 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
   const empty: LifeLayout = {
     motifs: [],
     branches: [],
+    runs: [],
     bonds: [],
     trunk: { x: 0, top: -G.tier, bottom: 90 },
     leaves: [],
@@ -344,6 +360,62 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     });
     return placed;
   };
+  // Main line: the stem is the family's spine. It rises through the founders
+  // and on through the heaviest line of descent (counting the families that
+  // hang off it) for as long as that line branches on, then ends in the rose.
+  // Everyone else's children alternate left/right off the stem, balanced by
+  // weight, so the stem stays near the middle of the crown.
+  const subtree = (u: Unit): Unit[] => [u, ...u.children.flatMap(subtree)];
+  const blockUnits = (b: number) => units.filter((u) => u.block === b);
+  const hangsOff = (b: number, own: Set<Unit>) =>
+    blockUnits(b).some((u) => childrenOf(u).some((ch) => own.has(unitOf.get(ch.id)!)));
+  const weight = (c: Unit): number => {
+    const own = new Set(subtree(c));
+    let w = own.size;
+    for (let b = 1; b < blockRoots.length; b++) if (hangsOff(b, own)) w += blockUnits(b).length;
+    return w;
+  };
+  const spine: Unit[] = [rootUnit];
+  for (;;) {
+    const next = [...spine.at(-1)!.children].sort((a, b) => weight(b) - weight(a))[0];
+    if (!next?.children.length) break;
+    spine.push(next);
+  }
+  const onSpine = new Set(spine);
+
+  // What hangs beside the stem: each spine couple's other children, and the
+  // families of anyone who married onto the spine. Heaviest first, each to
+  // the lighter side.
+  const spineBlocks = blockRoots
+    .map((r, b) => b)
+    .filter((b) => b > 0 && spine.some((u) => hangsOff(b, new Set([u]))));
+  type Side = { level: number; left: Unit[]; right: Unit[] };
+  const sides: Side[] = spine.map((_, level) => ({ level, left: [], right: [] }));
+  const blockSide = new Map<number, number>();
+  let lw = 0;
+  let rw = 0;
+  const items = [
+    ...spine.flatMap((u, level) =>
+      u.children.filter((c) => !onSpine.has(c)).map((c) => ({ w: weight(c), put: (s: number) => (s < 0 ? sides[level].left : sides[level].right).push(c) })),
+    ),
+    ...spineBlocks.map((b) => ({ w: blockUnits(b).length, put: (s: number) => blockSide.set(b, s) })),
+  ].sort((a, b) => b.w - a.w);
+  for (const it of items) {
+    const s = lw <= rw ? -1 : 1;
+    it.put(s);
+    if (s < 0) lw += it.w;
+    else rw += it.w;
+  }
+  // Someone who married onto the spine stands on the side their family hangs.
+  for (const u of spine) {
+    const inLaw = u.members.find((id) => blockSide.has(parentUnit(id)?.block ?? -1));
+    if (!inLaw || u.members.length < 2) continue;
+    const s = blockSide.get(parentUnit(inLaw)!.block)!;
+    u.members.splice(u.members.indexOf(inLaw), 1);
+    if (s < 0) u.members.unshift(inLaw);
+    else u.members.push(inLaw);
+  }
+
   const extent = (list: Unit[]) => {
     const lo = new Map<number, number>();
     const hi = new Map<number, number>();
@@ -354,61 +426,47 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     return { lo, hi };
   };
   const shift = (list: Unit[], dx: number) => list.forEach((u) => (u.x += dx));
-
-  // Main line: founders sit on the stem; their children alternate left/right
-  // (eldest nearest the stem) so the stem stays clear all the way to the rose.
-  // Sides are balanced by weight, counting the families that will hang off
-  // each line, so the stem stays near the middle of the crown.
-  const subtree = (u: Unit): Unit[] => [u, ...u.children.flatMap(subtree)];
-  const blockUnits = (b: number) => units.filter((u) => u.block === b);
-  const weight = (c: Unit): number => {
-    const own = new Set(subtree(c));
-    let w = own.size;
-    for (let b = 1; b < blockRoots.length; b++) {
-      const list = blockUnits(b);
-      if (list.some((u) => childrenOf(u).some((ch) => own.has(unitOf.get(ch.id)!)))) w += list.length;
+  /**
+   * Moves a block to one side of everything placed, generation by generation.
+   * Where nothing is placed yet it keeps `free` from the stem, or (without it)
+   * stays beyond the whole tree.
+   */
+  const hang = (block: Unit[], side: number, gap: number, free?: number) => {
+    // Only what stands on this side of the stem (the spine included) is in the way.
+    const ex = extent(placed.filter((u) => side * u.x >= 0));
+    const bx = extent(block);
+    let dx = side < 0 ? Infinity : -Infinity;
+    for (const g of new Set(block.map((u) => u.gen))) {
+      const outer = side < 0 ? Math.min(...ex.lo.values()) : Math.max(...ex.hi.values());
+      const known = side < 0 ? ex.lo.get(g) : ex.hi.get(g);
+      const edge = known ?? (free !== undefined ? side * (free - gap) : outer);
+      dx = side < 0 ? Math.min(dx, edge - gap - bx.hi.get(g)!) : Math.max(dx, edge + gap - bx.lo.get(g)!);
     }
-    return w;
+    shift(block, dx);
+    placed.push(...block);
   };
-  const left: Unit[] = [];
-  const right: Unit[] = [];
-  let lw = 0;
-  let rw = 0;
-  for (const c of [...rootUnit.children].sort((a, b) => weight(b) - weight(a))) {
-    if (lw <= rw) (left.push(c), (lw += weight(c)));
-    else (right.push(c), (rw += weight(c)));
+
+  for (const u of spine) u.x = 0;
+  const placed: Unit[] = [...spine];
+  // From the top of the spine down, so the crown narrows toward the rose.
+  const order = (u: Unit, list: Unit[]) => list.sort((a, b) => u.children.indexOf(a) - u.children.indexOf(b));
+  for (const { level, left, right } of [...sides].reverse()) {
+    // Eldest nearest the stem.
+    if (left.length) hang(layoutForest(order(spine[level], left).reverse()), -1, G.trunkClear, G.trunkClear);
+    if (right.length) hang(layoutForest(order(spine[level], right)), 1, G.trunkClear, G.trunkClear);
   }
-  const order = (list: Unit[]) => list.sort((a, b) => rootUnit.children.indexOf(a) - rootUnit.children.indexOf(b));
-  order(left);
-  order(right);
-  const leftPlaced = layoutForest([...left].reverse());
-  const rightPlaced = layoutForest(right);
-  const { hi: leftHi } = extent(leftPlaced);
-  const { lo: rightLo } = extent(rightPlaced);
-  shift(leftPlaced, -G.trunkClear - Math.max(...[...leftHi.values()], -Infinity));
-  shift(rightPlaced, G.trunkClear - Math.min(...[...rightLo.values()], Infinity));
-  rootUnit.x = 0;
-  const placed: Unit[] = [rootUnit, ...leftPlaced, ...rightPlaced];
 
   // Other families hang on the outer side of the member they married into.
   for (const root of blockRoots.slice(1)) {
+    const b = blockRoots.indexOf(root);
     const block = layoutForest([root]);
     const blockIds = new Set(block.map((u) => u.id));
     const anchors = block
       .flatMap((u) => childrenOf(u))
       .map((c) => unitOf.get(c.id)!)
       .filter((u) => !blockIds.has(u.id) && placed.includes(u));
-    const side = anchors.length ? Math.sign(anchors.reduce((s, u) => s + u.x, 0)) || 1 : 1;
-    const ex = extent(placed);
-    const bx = extent(block);
-    let dx = side < 0 ? Infinity : -Infinity;
-    for (const g of new Set(block.map((u) => u.gen))) {
-      const outer = side < 0 ? Math.min(...ex.lo.values()) : Math.max(...ex.hi.values());
-      const edge = side < 0 ? (ex.lo.get(g) ?? outer) : (ex.hi.get(g) ?? outer);
-      dx = side < 0 ? Math.min(dx, edge - G.blockGap - bx.hi.get(g)!) : Math.max(dx, edge + G.blockGap - bx.lo.get(g)!);
-    }
-    shift(block, dx);
-    placed.push(...block);
+    const side = blockSide.get(b) ?? (anchors.length ? Math.sign(anchors.reduce((s, u) => s + u.x, 0)) || 1 : 1);
+    hang(block, side, G.blockGap);
   }
 
   // ---- 5. Member order inside a unit: blood relative toward the stem,
@@ -445,15 +503,17 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
   for (const m of sorted) {
     const pu = parentUnit(m.id);
     if (!pu) continue;
+    // A spine child's descent is the stem itself.
+    if (onSpine.has(pu) && onSpine.has(unitOf.get(m.id)!)) continue;
     const parents = rel(m, 'parents').filter((p) => pu.members.includes(p));
     const px = parents.map((p) => xOf.get(p)!);
     edges.push({
       childId: m.id,
       parent: pu,
-      xs: pu === rootUnit ? 0 : px.reduce((a, b) => a + b, 0) / px.length,
+      xs: onSpine.has(pu) ? 0 : px.reduce((a, b) => a + b, 0) / px.length,
       xc: xOf.get(m.id)!,
       gen: pu.gen,
-      fromStem: pu === rootUnit,
+      fromStem: onSpine.has(pu),
       lane: 0,
     });
   }
@@ -507,8 +567,14 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     u.members.forEach((id) => lineColor.set(id, color));
     u.children.forEach((c) => paint(c, color));
   };
-  rootUnit.members.forEach((id) => lineColor.set(id, PALETTE.green));
-  rootUnit.children.forEach((c, i) => paint(c, BRANCH_COLORS[i % (BRANCH_COLORS.length - 1)]));
+  // The spine is the stem's green; the lines leaving it cycle through the rest
+  // (not red, which the spine's own members wear, nor forest, kept for in-laws).
+  const sideColors = BRANCH_COLORS.filter((c) => c !== PALETTE.red && c !== PALETTE.forest);
+  let nextColor = 0;
+  for (const u of spine) {
+    u.members.forEach((id) => lineColor.set(id, PALETTE.green));
+    for (const c of u.children) if (!onSpine.has(c)) paint(c, sideColors[nextColor++ % sideColors.length]);
+  }
   blockRoots.slice(1).forEach((r) => paint(r, PALETTE.forest));
   const colorOf = (id: string) => lineColor.get(id) ?? PALETTE.blue;
 
@@ -579,7 +645,7 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
         x1: x1 + insetOf(x1),
         x2: x2 - insetOf(x2),
         y,
-        color: u === rootUnit ? PALETTE.green : colorOf(u.members.find((id) => parentUnit(id)) ?? u.members[0]),
+        color: onSpine.has(u) ? PALETTE.green : colorOf(u.members.find((id) => parentUnit(id)) ?? u.members[0]),
         memberIds: u.members,
         gen: u.gen,
       };
@@ -602,6 +668,7 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
     const cur = carriers.get(key);
     if (!cur || sproutY(e) < sproutY(cur)) carriers.set(key, e);
   }
+  const runs: LifeRun[] = [];
   const branches: LifeBranch[] = edges.map((e) => {
     // Children leave from the bar, wherever it runs.
     const ys = tierY(e.gen) - (lift.get(e.parent.id) ?? 0);
@@ -618,6 +685,15 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
       const dd = Math.min(adx, G.diagonal);
       const c2 = Math.min(adx - dd, G.chamfer);
       const start = sprouts ? `M${e.xs} ${yh + dd}` : `M${e.xs} ${ys} V${yh + dd}`;
+      if (sprouts && !e.fromStem && ys > yh + dd + 0.5) {
+        runs.push({
+          id: `${e.parent.id}>${e.childId}:run`,
+          d: `M${e.xs} ${ys} V${yh + dd}`,
+          color: colorOf(e.parent.members[0]),
+          parentIds: e.parent.members,
+          childId: e.childId,
+        });
+      }
       d = `${start} L${e.xs + s * dd} ${yh} H${e.xc - s * c2} L${e.xc} ${yh - c2} V${yc}`;
     }
     return {
@@ -695,6 +771,7 @@ export function layoutLife(members: FamilyMember[]): LifeLayout {
   return {
     motifs,
     branches,
+    runs,
     bonds,
     // The stem stands on the girdle's upper rail.
     trunk,

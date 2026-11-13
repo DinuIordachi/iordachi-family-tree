@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { EngravingDefsComponent } from './engraving-defs.component';
+import { MEDALLION_RX, MEDALLION_RY } from '../engraving/medallion-geometry';
 
 @Component({
   imports: [EngravingDefsComponent],
@@ -30,11 +31,11 @@ describe('EngravingDefsComponent', () => {
     }
   });
 
-  it('clips medallions to a 34×42 oval at the origin', async () => {
+  it('clips medallions to the portrait oval at the origin', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     const ellipse = fixture.nativeElement.querySelector('#et-medallion-clip ellipse');
-    expect(ellipse.getAttribute('rx')).toBe('34');
-    expect(ellipse.getAttribute('ry')).toBe('42');
+    expect(ellipse.getAttribute('rx')).toBe(String(MEDALLION_RX));
+    expect(ellipse.getAttribute('ry')).toBe(String(MEDALLION_RY));
   });
 });

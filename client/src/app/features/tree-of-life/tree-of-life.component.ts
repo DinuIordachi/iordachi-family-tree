@@ -24,6 +24,7 @@ import { GIRDLE_BASE_LENGTH, GIRDLE_BASE_START, GIRDLE_HEIGHT, GIRDLE_PATHS, GIR
 import { decorate } from './life-decorations';
 import { LifeSceneComponent } from './life-scene.component';
 import { LifePanelComponent } from './life-panel.component';
+import { memberDelay } from './life-timing';
 
 type ViewState = 'loading' | 'error' | 'empty' | 'ready';
 
@@ -73,6 +74,7 @@ export class TreeOfLifeComponent implements OnInit {
   readonly hovered = signal<string | null>(null);
   /** Members whose photo failed to load: their element fills the avatar disc. */
   readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
+  protected readonly memberDelay = memberDelay;
 
   photoFailed(id: string): void {
     this.brokenPhotos.update((s) => new Set(s).add(id));

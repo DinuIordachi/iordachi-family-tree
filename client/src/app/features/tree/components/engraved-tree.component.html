@@ -18,14 +18,6 @@
       <g id="tree-back" class="et-forest-back" [attr.transform]="b.transform" [attr.aria-label]="'Family tree behind: ' + b.layout.members.length + ' people'">
         <path class="et-root-fine" [attr.d]="b.roots.fine" />
         <g aria-hidden="true">
-          <path class="et-leaves-shade" [attr.d]="b.foliage.shade" />
-          <path class="et-leaves-hatch" [attr.d]="b.foliage.hatch" />
-          <path class="et-leaves-lit" [attr.d]="b.foliage.lit" />
-        </g>
-        @for (branch of b.branches; track branch.id) {
-          <path class="et-twigs" [attr.d]="branch.twigs" />
-        }
-        <g aria-hidden="true">
           <clipPath id="et-back-above-ground">
             <rect x="-100000" y="-100000" width="200000" [attr.height]="100000 + b.layout.trunk.base.y" />
           </clipPath>
@@ -35,7 +27,9 @@
           }
           @for (branch of b.branches; track branch.id) {
             <path class="et-wood-ink" [attr.d]="branch.d" />
+            <path class="et-wood-ink" [attr.d]="branch.web" />
           }
+          <path class="et-wood-ink" [attr.d]="b.crownWood.body + b.crownWood.webs" />
         </g>
         <path class="et-roots" [attr.d]="b.roots.bodies" />
         <path class="et-root-grooves" [attr.d]="b.roots.grooves" />
@@ -45,23 +39,25 @@
           <path class="et-wood-shading" [attr.d]="t.shading" />
         }
         @for (branch of b.branches; track branch.id) {
+          <path class="et-branch et-web" [attr.d]="branch.web" />
           <path class="et-branch" [attr.d]="branch.d" />
           <path class="et-branch-bark" [attr.d]="branch.bark" />
         }
-        @for (knot of b.knots; track $index) {
-          <g class="et-knot" [attr.transform]="'translate(' + knot.x + ' ' + knot.y + ')'" aria-hidden="true">
-            <path class="et-knot-cord" [attr.d]="'M' + -cordHalf() + ' 0 Q0 7 ' + cordHalf() + ' 0'" />
-            <path class="et-knot-bow" d="M0 0 C-10 -11 -19 -4 -14 4 C-10 10 -4 5 0 0 Z M0 0 C10 -11 19 -4 14 4 C10 10 4 5 0 0 Z" />
-            <circle class="et-knot-bow" r="2.6" />
-          </g>
-        }
+        <path class="et-branch" [attr.d]="b.crownWood.webs + b.crownWood.body + b.crownWood.twigs" />
+        <path class="et-branch" [attr.d]="b.hangers" />
+        <g aria-hidden="true">
+          <path class="et-leaves-shade" [attr.d]="b.foliage.shade" />
+          <path class="et-leaves-hatch" [attr.d]="b.foliage.hatch" />
+          <path class="et-leaves-light" [attr.d]="b.foliage.light" />
+          <path class="et-leaves-lit" [attr.d]="b.foliage.lit" />
+        </g>
         @for (p of b.placed; track p.id) {
           <g
             etMedallion
             [attr.transform]="'translate(' + p.center.x + ' ' + p.center.y + ')'"
             [member]="p.member"
             [selected]="selectedId() === p.id"
-            [bannerMaxWidth]="personGap() - 40"
+            [bannerMaxWidth]="personGap() - 40 * bannerScale"
             (activate)="onActivate($event, 'back')"
           ></g>
         }
@@ -82,19 +78,13 @@
       <path class="et-root-fine" [attr.d]="roots().fine" />
     </g>
 
-    <g id="tree-foliage" aria-hidden="true">
-      <path class="et-leaves-shade" [attr.d]="foliage().shade" />
-      <path class="et-leaves-hatch" [attr.d]="foliage().hatch" />
-      <path class="et-leaves-lit" [attr.d]="foliage().lit" />
+    <!-- the soft canopy silhouette the leaves gather in, behind the crown -->
+    <g class="et-canopy" aria-hidden="true">
+      <path [attr.d]="foliage().canopy" />
     </g>
 
-    <!-- Twigs, then every wood outline in one layer, then the paper fills over them: where limbs meet the
-         trunk the overlapping outlines are covered, leaving one merged silhouette with smooth junctions. -->
-    <g id="tree-twigs" aria-hidden="true">
-      @for (branch of branches(); track branch.id) {
-        <path class="et-twigs" [attr.d]="branch.twigs" [style.--et-gen]="branch.generation" />
-      }
-    </g>
+    <!-- Every wood outline in one layer, then the fills over them: where limbs meet the trunk (and crown
+         branches meet the limbs) the overlapping outlines are covered, leaving one merged silhouette. -->
     <g id="tree-wood-ink" aria-hidden="true">
       <!-- the trunk is inked only above ground: below it, its foot runs on as the roots -->
       <clipPath id="et-above-ground">
@@ -106,7 +96,10 @@
       }
       @for (branch of branches(); track branch.id) {
         <path class="et-wood-ink" [attr.d]="branch.d" [style.--et-gen]="branch.generation" />
+        <path class="et-wood-ink" [attr.d]="branch.web" [style.--et-gen]="branch.generation" />
       }
+      <path class="et-wood-ink et-crown-wood" [attr.d]="crownWood().body + crownWood().webs" />
+      <path class="et-wood-ink et-hanger" [attr.d]="hangers()" />
     </g>
 
     <g id="tree-roots" aria-hidden="true">
@@ -125,6 +118,11 @@
 
     <g id="tree-branches">
       <g id="genealogical-connections">
+        <!-- the webs joining limbs to their parent wood: wood-coloured always, under the limbs, so a
+             highlighted line of descent lights up only its own limbs -->
+        @for (branch of branches(); track branch.id) {
+          <path class="et-branch et-web" [attr.d]="branch.web" [style.--et-gen]="branch.generation" />
+        }
         @for (branch of branches(); track branch.id) {
           <path
             class="et-branch"
@@ -135,17 +133,23 @@
           />
           <path class="et-branch-bark" [attr.d]="branch.bark" [style.--et-gen]="branch.generation" />
         }
+        <!-- the twigs the portraits hang from: one stem, or a short fork for a couple -->
+        <path class="et-branch et-hanger" [attr.d]="hangers()" />
+      </g>
+      <!-- the crown's lesser branches, forking out of the limbs down to fine twigs at the canopy's edge -->
+      <g id="crown-wood" aria-hidden="true">
+        <path class="et-branch et-crown-wood" [attr.d]="crownWood().webs + crownWood().body" />
+        <path class="et-branch et-crown-wood et-crown-twigs" [attr.d]="crownWood().twigs" />
       </g>
     </g>
 
-    @for (knot of knots(); track $index) {
-      <g class="et-knot" [attr.transform]="'translate(' + knot.x + ' ' + knot.y + ')'" aria-hidden="true">
-        <path class="et-knot-cord" [attr.d]="'M' + -cordHalf() + ' 0 Q0 7 ' + cordHalf() + ' 0'" />
-        <path class="et-knot-bow" d="M0 0 C-10 -11 -19 -4 -14 4 C-10 10 -4 5 0 0 Z M0 0 C10 -11 19 -4 14 4 C10 10 4 5 0 0 Z" />
-        <path class="et-knot-tails" d="M0 0 L-7 15 L-3 13 M0 0 L7 15 L3 13" />
-        <circle class="et-knot-bow" r="2.6" />
-      </g>
-    }
+    <!-- the leaves, hanging from the twigs, over the wood and under the portraits -->
+    <g id="tree-foliage" aria-hidden="true">
+      <path class="et-leaves-shade" [attr.d]="foliage().shade" />
+      <path class="et-leaves-hatch" [attr.d]="foliage().hatch" />
+      <path class="et-leaves-light" [attr.d]="foliage().light" />
+      <path class="et-leaves-lit" [attr.d]="foliage().lit" />
+    </g>
 
     <g id="decorative-details">
       @for (m of motifs(); track m.placement.motif + m.placement.center.x + m.placement.center.y) {
@@ -163,7 +167,7 @@
         [style.--et-gen]="p.generation"
         [member]="p.member"
         [selected]="selectedId() === p.id"
-        [bannerMaxWidth]="personGap() - 40"
+        [bannerMaxWidth]="personGap() - 40 * bannerScale"
         (activate)="onActivate($event, 'main')"
         (hoverChange)="onHover(p.id, $event)"
       ></g>

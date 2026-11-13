@@ -3,7 +3,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { vi } from 'vitest';
 import { FamilyTreeService } from '@app/core/services';
 import { FamilyMember } from '@app/core/models';
@@ -27,7 +27,7 @@ function fakeService(tree: FamilyMember[]) {
   };
 }
 
-async function setup(opts: { routeId?: string; tree?: FamilyMember[]; embedded?: boolean; presetParentIds?: number[] }) {
+async function setup(opts: { routeId?: string; params?: BehaviorSubject<ReturnType<typeof convertToParamMap>>; tree?: FamilyMember[]; embedded?: boolean; presetParentIds?: number[]; presetSpouseIds?: number[] }) {
   const service = fakeService(opts.tree ?? [dumitru, elena, tatiana, loner]);
   const router = { navigate: vi.fn(() => Promise.resolve(true)) };
   TestBed.configureTestingModule({
@@ -40,7 +40,7 @@ async function setup(opts: { routeId?: string; tree?: FamilyMember[]; embedded?:
       { provide: Router, useValue: router },
       {
         provide: ActivatedRoute,
-        useValue: { snapshot: { paramMap: convertToParamMap(opts.routeId ? { id: opts.routeId } : {}) } },
+        useValue: { paramMap: opts.params ?? of(convertToParamMap(opts.routeId ? { id: opts.routeId } : {})) },
       },
     ],
   });
@@ -50,6 +50,9 @@ async function setup(opts: { routeId?: string; tree?: FamilyMember[]; embedded?:
   }
   if (opts.presetParentIds) {
     fixture.componentRef.setInput('presetParentIds', opts.presetParentIds);
+  }
+  if (opts.presetSpouseIds) {
+    fixture.componentRef.setInput('presetSpouseIds', opts.presetSpouseIds);
   }
   fixture.detectChanges();
   await fixture.whenStable();
@@ -72,6 +75,22 @@ describe('FamilyMemberEditComponent', () => {
   });
 
   afterEach(() => vi.unstubAllGlobals());
+
+  it('reloads the form when the route moves to another member (e.g. a relation card)', async () => {
+    const params = new BehaviorSubject(convertToParamMap({ id: '1' }));
+    const { component, fixture, service } = await setup({ params });
+    expect(component.form.get('firstName')!.value).toBe('Dumitru');
+
+    params.next(convertToParamMap({ id: '3' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(service.show).toHaveBeenLastCalledWith('3');
+    expect(component.member()!.id).toBe('3');
+    expect(component.form.get('firstName')!.value).toBe('Tatiana');
+    expect(component.form.get('motherId')!.value).toBe(2);
+    fixture.destroy();
+  });
 
   describe('new child drawer (parent side)', () => {
     it('preselects the member and their first spouse as the new child’s parents', async () => {
@@ -115,6 +134,46 @@ describe('FamilyMemberEditComponent', () => {
       expect(component.form.get('childIds')!.value).toEqual([9]);
       expect(component.childOptions().map((o) => o.id)).toContain(9);
       expect(component.member()!.rels.children).toEqual(['3', '9']);
+      fixture.destroy();
+    });
+  });
+
+  describe('new spouse drawer', () => {
+    it('shows a "New spouse" button next to the spouses picker that opens the drawer', async () => {
+      const { component, fixture } = await setup({ routeId: '4' });
+      const button = [...fixture.nativeElement.querySelectorAll('button')].find((b: HTMLButtonElement) =>
+        b.textContent?.includes('New spouse'),
+      ) as HTMLButtonElement;
+      expect(button).toBeTruthy();
+      button.click();
+      fixture.detectChanges();
+      expect(component.spouseDrawerOpen()).toBe(true);
+      fixture.destroy();
+    });
+
+    it('closes the drawer and adds the new spouse after they are created, keeping unsaved edits', async () => {
+      const { component, service, fixture } = await setup({ routeId: '4' });
+      component.openSpouseDrawer();
+      component.form.get('biography')!.setValue('Unsaved note');
+
+      const wife = member('9', { spouses: ['4'] }, { 'first name': 'Maria', 'last name': 'Popa', gender: 'F' });
+      const freshLoner = { ...loner, rels: { ...loner.rels, spouses: ['9'] } };
+      service.show.mockReturnValue(of(freshLoner));
+      service.list.mockReturnValue(of([dumitru, elena, tatiana, freshLoner, wife]));
+
+      await component.onSpouseCreated(wife);
+
+      expect(component.spouseDrawerOpen()).toBe(false);
+      expect(component.form.get('spouseIds')!.value).toEqual([9]);
+      expect(component.spouseOptions().map((o) => o.id)).toContain(9);
+      expect(component.form.get('biography')!.value).toBe('Unsaved note');
+      fixture.destroy();
+    });
+
+    it('preselects the member as spouse when embedded in the drawer', async () => {
+      const { component, fixture } = await setup({ embedded: true, presetSpouseIds: [4] });
+      expect(component.isCreate()).toBe(true);
+      expect(component.form.value.spouseIds).toEqual([4]);
       fixture.destroy();
     });
   });

@@ -2,24 +2,31 @@ import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, outp
 import { FamilyMember } from '@app/core/models';
 import { fullName, lifespan, memberAriaLabel } from '../engraving/member-text';
 import { BannerComponent } from './banner.component';
-import { PORTRAIT_RX, PORTRAIT_RY } from '@app/shared/components/avatar-crop/avatar-crop-geometry';
+import {
+  BANNER_SCALE,
+  BANNER_Y,
+  LAUREL_LEAF,
+  LAUREL_OFFSET,
+  MEDALLION_RX,
+  MEDALLION_RY,
+} from '../engraving/medallion-geometry';
 
-const RX = PORTRAIT_RX;
-const RY = PORTRAIT_RY;
-const LEAVES_PER_SIDE = 9;
+const RX = MEDALLION_RX;
+const RY = MEDALLION_RY;
+const LEAVES_PER_SIDE = 13;
 
-/** Laurel leaves along both sides of the oval, 6 units outside the rim. */
-function laurelLeaves(): { x: number; y: number; angle: number }[] {
-  const leaves: { x: number; y: number; angle: number }[] = [];
+/** Laurel leaves along both sides of the oval, just outside the rim. */
+function laurelLeaves(): { x: number; y: number; angle: number; rx: number; ry: number }[] {
+  const leaves: { x: number; y: number; angle: number; rx: number; ry: number }[] = [];
   for (const side of [-1, 1]) {
     for (let i = 0; i < LEAVES_PER_SIDE; i++) {
       // sweep from the bottom (100°) up to the top (-70°) on each side
       const t = (100 - (170 * i) / (LEAVES_PER_SIDE - 1)) * (Math.PI / 180);
-      const x = side * Math.cos(t) * (RX + 6);
-      const y = Math.sin(t) * (RY + 6);
+      const x = side * Math.cos(t) * (RX + LAUREL_OFFSET);
+      const y = Math.sin(t) * (RY + LAUREL_OFFSET);
       // Leaves are tall ellipses (long axis = y), so align y with the rim tangent: tangent angle − 90°.
-      const tangent = Math.atan2(Math.cos(t) * (RY + 6), -side * Math.sin(t) * (RX + 6)) * (180 / Math.PI) - 90;
-      leaves.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, angle: Math.round(tangent) });
+      const tangent = Math.atan2(Math.cos(t) * (RY + LAUREL_OFFSET), -side * Math.sin(t) * (RX + LAUREL_OFFSET)) * (180 / Math.PI) - 90;
+      leaves.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, angle: Math.round(tangent), ...LAUREL_LEAF });
     }
   }
   return leaves;
@@ -51,7 +58,7 @@ const LEAVES = laurelLeaves();
     <svg:g class="et-medallion-body">
     <g class="et-laurel">
       @for (leaf of leaves; track $index) {
-        <ellipse rx="2.6" ry="6" [attr.transform]="'translate(' + leaf.x + ' ' + leaf.y + ') rotate(' + leaf.angle + ')'" />
+        <ellipse [attr.rx]="leaf.rx" [attr.ry]="leaf.ry" [attr.transform]="'translate(' + leaf.x + ' ' + leaf.y + ') rotate(' + leaf.angle + ')'" />
       }
     </g>
     <ellipse class="et-medallion-ground" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
@@ -69,15 +76,15 @@ const LEAVES = laurelLeaves();
         [attr.x]="-rx" [attr.y]="-ry" [attr.width]="rx * 2" [attr.height]="ry * 2" />
     }
     @if (member().deceased) {
-      <ellipse class="et-mourning-ring" cx="0" cy="0" [attr.rx]="rx + 2" [attr.ry]="ry + 2" />
+      <ellipse class="et-mourning-ring" cx="0" cy="0" [attr.rx]="rx + 3" [attr.ry]="ry + 3" />
     }
     <ellipse class="et-rim" cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
     <ellipse class="et-focus-ring" cx="0" cy="0" [attr.rx]="rx + 12" [attr.ry]="ry + 12" />
     @if (member().deceased) {
-      <text class="et-dagger" x="26" y="-30" aria-hidden="true">†</svg:text>
+      <text class="et-dagger" [attr.x]="rx * 0.76" [attr.y]="-ry * 0.72" aria-hidden="true">†</svg:text>
     }
     </svg:g>
-    <svg:g etBanner transform="translate(0 58)" [name]="name()" [years]="years()" [maxWidth]="bannerMaxWidth()" />
+    <svg:g etBanner [attr.transform]="'translate(0 ' + bannerY + ') scale(' + bannerScale + ')'" [name]="name()" [years]="years()" [maxWidth]="bannerMaxWidth() / bannerScale" />
   `,
   styles: `
     :host {
@@ -115,7 +122,7 @@ const LEAVES = laurelLeaves();
     }
     .et-dagger {
       font-family: var(--et-font-body);
-      font-size: 16px;
+      font-size: 22px;
       fill: var(--et-oxblood);
     }
     :host(:hover) .et-rim,
@@ -152,6 +159,8 @@ export class MedallionComponent {
   protected readonly rx = RX;
   protected readonly ry = RY;
   protected readonly leaves = LEAVES;
+  protected readonly bannerY = BANNER_Y;
+  protected readonly bannerScale = BANNER_SCALE;
 
   /** Reset whenever the thumbnail URL changes. */
   protected readonly photoFailed = linkedSignal(() => {

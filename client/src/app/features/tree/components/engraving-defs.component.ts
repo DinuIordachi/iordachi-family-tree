@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { MEDALLION_RX, MEDALLION_RY } from '../engraving/medallion-geometry';
 
 /**
  * Shared SVG <defs> for the engraved tree: paper grain, ink bleed, sepia
@@ -52,7 +53,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     </svg:pattern>
 
     <svg:clipPath id="et-medallion-clip" clipPathUnits="userSpaceOnUse">
-      <ellipse cx="0" cy="0" rx="34" ry="42" />
+      <ellipse cx="0" cy="0" [attr.rx]="rx" [attr.ry]="ry" />
     </svg:clipPath>
   `,
   styles: `
@@ -65,4 +66,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     }
   `,
 })
-export class EngravingDefsComponent {}
+export class EngravingDefsComponent {
+  protected readonly rx = MEDALLION_RX;
+  protected readonly ry = MEDALLION_RY;
+}

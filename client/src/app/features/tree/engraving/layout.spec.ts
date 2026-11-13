@@ -1,5 +1,5 @@
 import { buildHouseholds } from './households';
-import { layoutTree } from './layout';
+import { DEFAULT_LAYOUT_OPTIONS as O, layoutTree } from './layout';
 import { member } from './testing/member-factory';
 import { SEED_MEMBERS as seed } from './testing/seed-fixture';
 import { TreeLayout } from './types';
@@ -11,7 +11,7 @@ function assertNoOverlap(l: TreeLayout) {
     for (const b of l.members) {
       // portraits collide only when on (nearly) the same row
       if (a.id < b.id && Math.abs(a.center.y - b.center.y) < 150) {
-        expect(Math.abs(a.center.x - b.center.x)).toBeGreaterThanOrEqual(170 - 1e-6);
+        expect(Math.abs(a.center.x - b.center.x)).toBeGreaterThanOrEqual(O.personGap - 1e-6);
       }
     }
   }
@@ -22,14 +22,14 @@ describe('layoutTree', () => {
     const l = layoutTree(buildHouseholds(seed), { crownDroop: 0 });
     expect(center(l, '3').y).toBeLessThan(center(l, '1').y);
     expect(center(l, '8').y).toBeLessThan(center(l, '5').y);
-    expect(center(l, '3').y - center(l, '5').y).toBe(190);
+    expect(center(l, '3').y - center(l, '5').y).toBe(O.generationSpacing);
     expect(l.generationCount).toBe(4);
   });
 
   it('places spouses side by side in one generation', () => {
     const l = layoutTree(buildHouseholds(seed));
     expect(center(l, '3').y).toBe(center(l, '4').y);
-    expect(Math.abs(center(l, '3').x - center(l, '4').x)).toBe(170);
+    expect(Math.abs(center(l, '3').x - center(l, '4').x)).toBe(O.personGap);
   });
 
   it('never overlaps medallions, even with 12 siblings', () => {
@@ -63,10 +63,10 @@ describe('layoutTree', () => {
   it('sits the founders in the roots below the ground; the trunk rises to their children', () => {
     const l = layoutTree(buildHouseholds(seed));
     expect(l.trunk.base.y).toBe(0);
-    expect(l.trunk.top.y).toBe(-320); // the fork sits below the first row, so every branch rises
-    expect(center(l, '1').y).toBe(135);
-    expect(center(l, '2').y).toBe(135);
-    expect(center(l, '3').y).toBe(-480);
+    expect(l.trunk.top.y).toBe(-(O.trunkHeight - O.forkDrop)); // the fork sits below the first row, so every branch rises
+    expect(center(l, '1').y).toBe(O.rootRowDepth);
+    expect(center(l, '2').y).toBe(O.rootRowDepth);
+    expect(center(l, '3').y).toBe(-O.trunkHeight);
     expect(l.trunk.base.x).toBe(l.trunk.top.x);
   });
 
@@ -74,7 +74,7 @@ describe('layoutTree', () => {
     const l = layoutTree(buildHouseholds(seed));
     const root = l.branches.find((b) => b.id === 'trunk>1+2')!;
     expect(root.from).toEqual(l.trunk.base);
-    expect(root.to.y).toBe(135);
+    expect(root.to.y).toBe(O.rootRowDepth);
     expect(l.branches.find((b) => b.id === '1+2>3+4')!.from).toEqual(l.trunk.top);
   });
 
@@ -89,7 +89,7 @@ describe('layoutTree', () => {
   it('single member: one founder in the roots, only the root link', () => {
     const l = layoutTree(buildHouseholds([member('1')]));
     expect(l.members).toHaveLength(1);
-    expect(center(l, '1')).toEqual({ x: l.trunk.base.x, y: 135 });
+    expect(center(l, '1')).toEqual({ x: l.trunk.base.x, y: O.rootRowDepth });
     expect(l.branches.map((b) => b.id)).toEqual(['trunk>1']);
   });
 
@@ -100,7 +100,7 @@ describe('layoutTree', () => {
       expect(m.center.x).toBeLessThanOrEqual(l.bounds.maxX);
       expect(m.center.y).toBeGreaterThanOrEqual(l.bounds.minY);
     }
-    expect(l.bounds.maxY).toBe(135);
+    expect(l.bounds.maxY).toBe(O.rootRowDepth);
   });
 
   it('carries unplaced members through', () => {
@@ -230,7 +230,7 @@ describe('layoutTree — second ancestor line', () => {
   it("sits the spouse's parents in the founders' row, on that spouse's side, clear of everyone", () => {
     expect(center(l, '4').y).toBe(center(l, '1').y);
     expect(center(l, '5').y).toBe(center(l, '1').y);
-    expect(Math.min(center(l, '4').x, center(l, '5').x)).toBeGreaterThanOrEqual(Math.max(center(l, '1').x, center(l, '2').x) + 170);
+    expect(Math.min(center(l, '4').x, center(l, '5').x)).toBeGreaterThanOrEqual(Math.max(center(l, '1').x, center(l, '2').x) + O.personGap);
     expect(center(l, '6').x).toBeGreaterThan(center(l, '3').x); // the grafted spouse stands on that side
     assertNoOverlap(l);
   });

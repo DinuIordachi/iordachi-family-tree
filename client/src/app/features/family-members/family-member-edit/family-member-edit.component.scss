@@ -318,7 +318,10 @@
 
   &__relation-card-link {
     all: unset;
-    flex: 1 1 auto;
+    box-sizing: border-box;
+    /* Shrink with the card (long names truncate) so the remove button stays inside it. */
+    flex: 1 1 0;
+    min-width: 0;
     cursor: pointer;
     padding: 0.75rem 0.875rem;
   }
@@ -363,6 +366,7 @@
   }
 
   &__relation-card-link + p-button {
+    flex: 0 0 auto;
     align-self: center;
     padding-right: 0.5rem;
   }

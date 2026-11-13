@@ -18,6 +18,13 @@
   --et-oxblood: #7a2e22;
   --et-focus: #1f5f8b;
 
+  /* Wood and leaves: warm wood that stands out from the paper */
+  --et-wood: #b98d5f;
+  --et-wood-shade: #7e5a38;
+  --et-bark: #4a3220;
+  --et-leaf-light: #8a7a45;
+  --et-canopy: #6f7a3e;
+
   /* Typography. IM Fell is Latin-1 only: Cormorant Garamond supplies ă, ș, ț. */
   --et-font-display: 'IM Fell English SC', 'Cormorant Garamond', serif;
   --et-font-name: 'IM Fell English', 'Cormorant Garamond', serif;
@@ -50,4 +57,11 @@
   --et-gilt: #e0b862;
   --et-oxblood: #c4614e;
   --et-focus: #8cc4ec;
+
+  /* Wood clearly lighter and warmer than the dark ground, so the tree's structure reads first */
+  --et-wood: #8f6741;
+  --et-wood-shade: #5a3f27;
+  --et-bark: #2a1b10;
+  --et-leaf-light: #d8cf8c;
+  --et-canopy: #7f8a48;
 }

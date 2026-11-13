@@ -3,6 +3,7 @@ import { LifeDecoration } from './life-decorations';
 import { GEOMETRY, LifeBranch, LifeLayout, PALETTE, tintOf } from './life-layout';
 import { LifeMotifComponent, PaintMode } from './life-motif.component';
 import { ElementKind } from './life-decorations';
+import { bondDelay, branchDelay, memberDelay, sprigDelay } from './life-timing';
 
 /**
  * Everything drawn in line and element: the stem with its chevrons, branches,
@@ -46,18 +47,33 @@ import { ElementKind } from './life-decorations';
           [attr.d]="b.d"
           [attr.stroke]="paint(b.color)"
           pathLength="1"
-          [style.animation-delay.ms]="b.gen * 380 + 200"
+          [style.animation-delay.ms]="branchDelay(b.gen)"
           [class.dim]="dims() && !branchLit(b)"
         />
       }
+      <!-- A lit sibling's stretch of a shared rising line, which another sibling draws. -->
+      @if (dims() && lit()) {
+        @for (r of L.runs; track r.id) {
+          @if (branchLit(r)) {
+            <svg:path class="unit run" [attr.d]="r.d" [attr.stroke]="paint(r.color)" />
+          }
+        }
+      }
       @for (bond of L.bonds; track bond.id) {
-        <svg:path class="unit bond" [attr.d]="bond.d" [attr.stroke]="paint(bond.color)" [class.dim]="dims() && !isLit(bond.memberIds)" />
+        <svg:path
+          class="unit bond"
+          [attr.d]="bond.d"
+          [attr.stroke]="paint(bond.color)"
+          pathLength="1"
+          [style.animation-delay.ms]="bondDelay(bond.gen)"
+          [class.dim]="dims() && !isLit(bond.memberIds)"
+        />
       }
     </svg:g>
 
     <svg:g class="decor" [class.dim]="dims() && !!lit()">
       @for (d of decorations(); track d.id) {
-        <svg:g class="sprig" [style.animation-delay.ms]="1500 + $index * 60">
+        <svg:g class="sprig" [style.animation-delay.ms]="sprigDelay($index)">
           @for (ln of d.lines; track $index) {
             <svg:path
               class="unit"
@@ -84,7 +100,7 @@ import { ElementKind } from './life-decorations';
         [attr.transform]="'translate(' + mo.x + ' ' + mo.y + ')'"
         [class.dim]="dims() && !isLit([mo.id])"
         [class.deceased]="dims() && mo.deceased"
-        [style.animation-delay.ms]="mo.gen * 380 + 520"
+        [style.animation-delay.ms]="memberDelay(mo.gen)"
       >
         <svg:g class="figure" [class.hot]="hovered() === mo.id">
           @if (mo.photo) {
@@ -151,7 +167,9 @@ import { ElementKind } from './life-decorations';
       opacity: 0.5;
     }
 
-    .branch {
+    /* Lines grow in: hidden (fully dashed off) until their delay, then drawn. */
+    .branch,
+    .bond {
       stroke-dasharray: 1;
       stroke-dashoffset: 1;
       animation: grow 900ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -209,7 +227,8 @@ import { ElementKind } from './life-decorations';
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .branch {
+      .branch,
+      .bond {
         animation: none;
         stroke-dashoffset: 0;
       }
@@ -233,6 +252,10 @@ export class LifeSceneComponent {
   readonly photoError = output<string>();
 
   protected readonly g = GEOMETRY;
+  protected readonly branchDelay = branchDelay;
+  protected readonly bondDelay = bondDelay;
+  protected readonly memberDelay = memberDelay;
+  protected readonly sprigDelay = sprigDelay;
   protected readonly green = PALETTE.green;
   /** The photo inside the avatar disc: a ring of line colour shows around it. */
   protected readonly photoR = GEOMETRY.avatar - 5;
@@ -251,7 +274,7 @@ export class LifeSceneComponent {
     return !lit || ids.some((id) => lit.has(id));
   }
 
-  protected branchLit(b: LifeBranch): boolean {
+  protected branchLit(b: Pick<LifeBranch, 'childId' | 'parentIds'>): boolean {
     const lit = this.lit();
     return !lit || (lit.has(b.childId) && b.parentIds.some((id) => lit.has(id)));
   }

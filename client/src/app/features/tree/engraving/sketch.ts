@@ -65,7 +65,8 @@ export function ribbonOutline(centre: Point[], half: number[]): string {
   return (
     `M${pt(left[0])}` +
     left.slice(1).map((p) => `L${pt(p)}`).join('') +
-    `A${fmt(tip)} ${fmt(tip)} 0 0 1 ${pt(right[last])}` +
+    // sweep 0: the cap bulges outward past the end (sweep 1 would notch a half-disc into it)
+    `A${fmt(tip)} ${fmt(tip)} 0 0 0 ${pt(right[last])}` +
     right
       .slice(0, last)
       .reverse()

@@ -17,30 +17,39 @@ import { FamilyMember } from '@app/core/models';
 import { select } from 'd3-selection';
 import 'd3-transition';
 import { ZoomBehavior, ZoomTransform, zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
-import { branchWidths } from '../engraving/branch-geometry';
-import { Clearing, generateFoliage } from '../engraving/foliage';
+import { woodWidth } from '../engraving/branch-geometry';
+import { Clearing, Foliage, generateFoliage, insideClearing } from '../engraving/foliage';
 import { splitForest } from '../engraving/forest';
 import { buildHouseholds } from '../engraving/households';
 import { DEFAULT_LAYOUT_OPTIONS, layoutTree } from '../engraving/layout';
+import { layoutTrunkTree } from '../engraving/trunk-layout';
 import { lineageBranchIds } from '../engraving/lineage';
 import { bannerSpan, fullName, lifespan } from '../engraving/member-text';
 import { FIXED_MOTIFS, placeMotifs } from '../engraving/motif-placement';
 import { hashSeed } from '../engraving/seeded-random';
 import { MotifId, MotifPlacement, Point, TreeLayout } from '../engraving/types';
-import { engravedBranch, engravedTrunk, rootSystem, soilHatching } from '../engraving/wood';
+import { growCrownWood } from '../engraving/canopy-wood';
+import { decorativeSpurs, engravedBranch, engravedTrunk, HANG_ABOVE, hangers, limbContexts, rootSystem, soilHatching } from '../engraving/wood';
 import { seededRandom } from '../engraving/seeded-random';
+import {
+  BANNER_BAND,
+  BANNER_BOTTOM,
+  BANNER_SCALE,
+  BANNER_TOP,
+  MEDALLION_RX,
+  MEDALLION_TOP,
+} from '../engraving/medallion-geometry';
 import { EngravingDefsComponent } from './engraving-defs.component';
 import { MedallionComponent } from './medallion.component';
 import { MotifComponent } from './motif.component';
 
-const SCALE_EXTENT: [number, number] = [0.25, 2.5];
+/** Far enough out that a whole large family fits the screen, crown to roots. */
+const SCALE_EXTENT: [number, number] = [0.06, 2.5];
 const FALLBACK_VIEWPORT = { width: 1200, height: 800 };
 /** Person slots widen (up to this cap) so the longest name's banner never touches its neighbours. */
-const MAX_PERSON_GAP = 280;
+const MAX_PERSON_GAP = 460;
 const FOCUS_MARGIN = 80;
 const ALII_LINE = 20;
-/** Medallion rim plus laurel ring: a couple's cord runs between these on each side. */
-const MEDALLION_REACH = 46;
 /** Depth of the soil cutaway holding the roots. */
 const SOIL_DEPTH = 230;
 /** Named layers for the fixed motifs (the brief's SVG architecture). */
@@ -80,49 +89,89 @@ const DRAWER_WIDTH = 416;
 
 type Placed = TreeLayout['members'][number] & { member: FamilyMember };
 
-/** One knot between each pair of neighbouring spouses. */
-function knotsOf(layout: TreeLayout): Point[] {
-  const knots: Point[] = [];
-  const members = layout.members;
-  for (let i = 1; i < members.length; i++) {
-    const [a, b] = [members[i - 1], members[i]];
-    if (a.householdId === b.householdId) {
-      knots.push({ x: (a.center.x + b.center.x) / 2, y: a.center.y });
-    }
-  }
-  return knots;
+/**
+ * The trunk's width from its base (t = 0) to its top (t = 1): it carries everyone on the limbs above
+ * each height, so it steps a little thinner just above every limb that leaves it.
+ */
+function trunkProfile(layout: TreeLayout): (t: number) => number {
+  const { base, top } = layout.trunk;
+  const height = Math.max(1, base.y - top.y);
+  const onTrunk = (p: Point) => Math.abs(p.x - base.x) < 1 && p.y <= base.y && p.y >= top.y - 1;
+  const leaving = layout.branches.filter((b) => b.parentHouseholdId !== null && onTrunk(b.from) && !b.rise);
+  const crown = leaving.filter((b) => Math.abs(b.from.y - top.y) < 1);
+  const sides = leaving.filter((b) => !crown.includes(b));
+  const crownWeight = crown.reduce((n, b) => n + (b.weight ?? 1), 0) || 1;
+  return (t) => {
+    const y = base.y - t * height;
+    // a limb's load joins the trunk over a short stretch below where it leaves, not in one step
+    const carried = sides.reduce((n, b) => n + (b.weight ?? 1) * Math.max(0, Math.min(1, (y - b.from.y + 20) / 90)), crownWeight);
+    return woodWidth(carried) * 1.1;
+  };
 }
 
 /** Engraved branches; a branch that forks again ends at its children's start width. */
 function branchesOf(layout: TreeLayout) {
-  // a limb that forks again tapers only to the thickest limb it carries on
-  const onward = new Map<string, number>();
+  // a limb that forks again tapers only to the wood that carries everyone beyond the fork, so the
+  // limbs it hands on to grow out of it without a step
+  const handedOn = new Map<string, number>();
   for (const b of layout.branches) {
-    if (b.parentHouseholdId !== null) {
-      const w = branchWidths(b.generation, b.weight).start;
-      onward.set(b.parentHouseholdId, Math.max(onward.get(b.parentHouseholdId) ?? 0, w));
+    if (b.parentHouseholdId !== null && !b.graft) {
+      handedOn.set(b.parentHouseholdId, (handedOn.get(b.parentHouseholdId) ?? 0) + (b.weight ?? 1));
     }
   }
+  const onward = new Map([...handedOn].map(([id, people]) => [id, woodWidth(people)]));
+  const contexts = limbContexts(layout);
   return layout.branches.map((b) => {
-    const wood = engravedBranch(b, onward.get(b.childHouseholdId));
-    return { id: b.id, generation: b.generation, d: wood.body, bark: wood.grooves + wood.shading, twigs: wood.twigs };
+    const wood = engravedBranch(b, onward.get(b.childHouseholdId), contexts.get(b.id));
+    return {
+      id: b.id,
+      generation: b.generation,
+      root: b.parentHouseholdId === null,
+      d: wood.body,
+      bark: wood.grooves + wood.shading,
+      twigs: wood.twigs,
+      web: wood.web,
+      centre: wood.centre,
+      half: wood.half,
+    };
   });
 }
 
-/** Medallions, banners and couple cords are kept clear of leaves so they stay legible. */
-function personClearings(placed: Placed[], knots: Point[], personGap: number, cordHalf: number): Clearing[] {
+/** Room the crown's lesser wood keeps from portraits, banners and ornaments. */
+const WOOD_CLEAR = 12;
+
+/**
+ * The crown's lesser branches and twigs, grown recursively out of the limbs: inside the crown's
+ * silhouette, above the ground, and clear of every portrait, banner, ornament and hanging twig.
+ */
+function crownWoodOf(layout: TreeLayout, limbs: ReturnType<typeof branchesOf>, foliage: Foliage, clearings: Clearing[], seed: number) {
+  const grown = clearings.map((c): Clearing =>
+    c.kind === 'ellipse'
+      ? { ...c, rx: c.rx + WOOD_CLEAR, ry: c.ry + WOOD_CLEAR }
+      : { kind: 'rect', x: c.x - WOOD_CLEAR, y: c.y - WOOD_CLEAR, w: c.w + 2 * WOOD_CLEAR, h: c.h + 2 * WOOD_CLEAR },
+  );
+  // the stems the portraits hang from, between the twig point and the medallion
+  for (const m of layout.members) {
+    grown.push({ kind: 'rect', x: m.center.x - 26, y: m.center.y - HANG_ABOVE - 16, w: 52, h: HANG_ABOVE });
+  }
+  const ground = layout.trunk.base.y - 40;
+  return growCrownWood(
+    limbs.filter((l) => !l.root).map((l) => ({ centre: l.centre, half: l.half })),
+    { seed, allowed: (p) => p.y < ground && foliage.contains(p) && !grown.some((c) => insideClearing(p, c)) },
+  );
+}
+
+/** Medallions and banners are kept clear of leaves so they stay legible. */
+function personClearings(placed: Placed[], personGap: number): Clearing[] {
   const list: Clearing[] = [];
   for (const p of placed) {
     const { x, y } = p.center;
     const ribbonHalf = Math.min(bannerSpan(fullName(p.member)), personGap - 8) / 2 + 3;
-    list.push({ kind: 'ellipse', cx: x, cy: y, rx: 54, ry: 62 });
-    list.push({ kind: 'rect', x: x - ribbonHalf, y: y + 44, w: ribbonHalf * 2, h: 28 });
+    list.push({ kind: 'ellipse', cx: x, cy: y, rx: MEDALLION_RX + 20, ry: MEDALLION_TOP });
+    list.push({ kind: 'rect', x: x - ribbonHalf, y: y + BANNER_TOP, w: ribbonHalf * 2, h: BANNER_BAND });
     if (lifespan(p.member)) {
-      list.push({ kind: 'rect', x: x - 36, y: y + 72, w: 72, h: 22 });
+      list.push({ kind: 'rect', x: x - 36 * BANNER_SCALE, y: y + BANNER_TOP + BANNER_BAND, w: 72 * BANNER_SCALE, h: BANNER_BOTTOM - BANNER_TOP - BANNER_BAND });
     }
-  }
-  for (const k of knots) {
-    list.push({ kind: 'rect', x: k.x - cordHalf, y: k.y - 12, w: cordHalf * 2, h: 26 });
   }
   return list;
 }
@@ -156,9 +205,23 @@ export class EngravedTreeComponent {
     const widest = Math.max(0, ...this.members().map((m) => bannerSpan(fullName(m)) + 10));
     return Math.min(MAX_PERSON_GAP, Math.max(DEFAULT_LAYOUT_OPTIONS.personGap, widest));
   });
-  private readonly split = computed(() => splitForest(this.members()));
-  protected readonly layout = computed(() =>
-    layoutTree(buildHouseholds(this.split().main), { personGap: this.personGap() }),
+  /**
+   * The whole family as one tree around the main couple's trunk (father's family on one side, mother's
+   * on the other), when the family has that shape.
+   */
+  private readonly trunkLayout = computed(() => {
+    const byId = new Map(this.members().map((m) => [m.id, m]));
+    return layoutTrunkTree(buildHouseholds(this.members()), { personGap: this.personGap() }, {
+      gender: (id) => byId.get(id)?.data.gender,
+      parents: (id) => byId.get(id)?.rels.parents ?? [],
+    });
+  });
+  /** Otherwise the main family, with the family it married into standing behind it as its own tree. */
+  private readonly split = computed(() =>
+    this.trunkLayout() ? { main: this.members(), back: null } : splitForest(this.members()),
+  );
+  protected readonly layout = computed(
+    () => this.trunkLayout() ?? layoutTree(buildHouseholds(this.split().main), { personGap: this.personGap() }),
   );
   protected readonly motifs = computed(() => {
     const layout = this.layout();
@@ -174,7 +237,7 @@ export class EngravedTreeComponent {
   );
   protected readonly branches = computed(() => branchesOf(this.layout()));
   protected readonly trunks = computed(() =>
-    this.layout().trunks.map((t, i) => engravedTrunk(t, hashSeed('trunk', String(i)))),
+    this.layout().trunks.map((t, i) => engravedTrunk(t, hashSeed('trunk', String(i)), 92, trunkProfile(this.layout()))),
   );
   private readonly soil = computed(() => {
     const { bounds, trunk } = this.layout();
@@ -204,7 +267,7 @@ export class EngravedTreeComponent {
   });
   /** Medallions, banners, couple cords and ornaments are kept clear of leaves so they stay legible. */
   private readonly clearings = computed<Clearing[]>(() => {
-    const list = personClearings(this.placedMembers(), this.knots(), this.personGap(), this.cordHalf());
+    const list = personClearings(this.placedMembers(), this.personGap());
     for (const m of this.motifs()) {
       if (m.placement.motif === 'eagle-cross') {
         // a niche at the top of the crown for the coat of arms
@@ -215,8 +278,14 @@ export class EngravedTreeComponent {
     }
     return list;
   });
+  /** Decorative side branches filling the crown's open spaces, each ending in a leaf tuft. */
+  protected readonly spurs = computed(() => decorativeSpurs(this.layout(), hashSeed('spurs'), this.personGap()));
+  /** The crown's lesser branches and fine twigs, forking out of the limbs into the open spaces. */
+  protected readonly crownWood = computed(() =>
+    crownWoodOf(this.layout(), this.branches(), this.foliage(), this.clearings(), hashSeed('crown-wood')),
+  );
   protected readonly foliage = computed(() =>
-    generateFoliage(this.layout(), { seed: hashSeed('foliage'), clearings: this.clearings() }),
+    generateFoliage(this.layout(), { seed: hashSeed('foliage'), clearings: this.clearings(), extraTips: this.spurs().tips }),
   );
   protected readonly lineage = computed(() => {
     const id = this.hoveredId();
@@ -225,8 +294,8 @@ export class EngravedTreeComponent {
   protected readonly unplaced = computed(() =>
     this.layout().unplacedMemberIds.map((id) => ({ id, member: this.byId().get(id)!, name: fullName(this.byId().get(id)!) })),
   );
-  /** One knot between each pair of neighbouring spouses, with a cord from rim to rim. */
-  protected readonly knots = computed(() => knotsOf(this.layout()));
+  /** The twigs each household's portraits hang from (a fork for a couple). */
+  protected readonly hangers = computed(() => hangers(this.layout()));
   /** The main tree's family name, from its founders (for the "back to" control). */
   protected readonly mainFamily = computed(() => {
     const founder = this.layout().members.find((m) => m.generation === 0);
@@ -244,7 +313,6 @@ export class EngravedTreeComponent {
     }
     const layout = layoutTree(buildHouseholds(split.members), { personGap: this.personGap() });
     const placed: Placed[] = layout.members.map((p) => ({ ...p, member: this.byId().get(p.id)! }));
-    const knots = knotsOf(layout);
     const main = this.layout();
     // its trunk stands near the outer edge of the main crown, so half its crown mixes with the main one
     const targetX = main.bounds.maxX - 40;
@@ -252,19 +320,19 @@ export class EngravedTreeComponent {
     const ty = main.trunk.base.y - BACK_HORIZON - BACK_SCALE * layout.trunk.base.y;
     const { bounds } = layout;
     const spreadX = Math.max(260, (bounds.maxX - bounds.minX) / 2 + 40);
+    const clearings = personClearings(placed, this.personGap());
+    const foliage = generateFoliage(layout, { seed: hashSeed('back-foliage'), clearings, maxLeaves: 6000 });
+    const branches = branchesOf(layout);
     return {
       layout,
       placed,
-      knots,
+      hangers: hangers(layout),
       focusId: split.focusMemberId,
-      branches: branchesOf(layout),
-      trunks: layout.trunks.map((t, i) => engravedTrunk(t, hashSeed('back-trunk', String(i)))),
+      branches,
+      crownWood: crownWoodOf(layout, branches, foliage, clearings, hashSeed('back-crown-wood')),
+      trunks: layout.trunks.map((t, i) => engravedTrunk(t, hashSeed('back-trunk', String(i)), 92, trunkProfile(layout))),
       roots: rootSystem(layout.trunk.base, { spreadX, depth: SOIL_DEPTH * 0.8 }, hashSeed('back-roots')),
-      foliage: generateFoliage(layout, {
-        seed: hashSeed('back-foliage'),
-        clearings: personClearings(placed, knots, this.personGap(), this.cordHalf()),
-        maxLeaves: 6000,
-      }),
+      foliage,
       transform: `translate(${tx} ${ty}) scale(${BACK_SCALE})`,
       box: {
         minX: tx + BACK_SCALE * (bounds.minX - 110),
@@ -274,7 +342,7 @@ export class EngravedTreeComponent {
       },
     };
   });
-  protected readonly cordHalf = computed(() => Math.max(0, this.personGap() / 2 - MEDALLION_REACH));
+  protected readonly bannerScale = BANNER_SCALE;
 
   protected readonly ground = computed(() => {
     const { bounds, trunk } = this.layout();

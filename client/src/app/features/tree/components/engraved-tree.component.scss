@@ -75,12 +75,12 @@
   stroke-width: var(--et-stroke-main);
 }
 
-/* ===== Engraved wood: paper-filled bodies, inked contours, bark lines ===== */
-/* Outlines are drawn doubled underneath and the paper fills cover their inner half, so only the outer
+/* ===== Engraved wood: warm wood bodies, dark contours, bark furrows and shade-side strokes ===== */
+/* Outlines are drawn doubled underneath and the wood fills cover their inner half, so only the outer
    edge of the merged wood silhouette stays inked. */
 .et-wood-ink {
   fill: none;
-  stroke: var(--et-ink);
+  stroke: var(--et-bark);
   stroke-width: calc(2 * var(--et-stroke-fine));
   stroke-linejoin: round;
   pointer-events: none;
@@ -94,7 +94,9 @@
 .et-roots,
 .et-trunk,
 .et-branch {
-  fill: var(--et-paper);
+  /* one flat wood colour, so a limb and the trunk merge into one silhouette without seams; the
+     bark furrows and shade-side strokes give it its light and form */
+  fill: var(--et-wood);
   stroke: none;
 }
 
@@ -102,23 +104,27 @@
 .et-root-grooves,
 .et-branch-bark {
   fill: none;
-  /* softer ink: bark stays legible up close without the wood turning solid when zoomed out */
-  stroke: var(--et-ink-soft);
-  stroke-width: var(--et-stroke-hair);
+  /* dark bark furrows on the lighter wood, the same on screen at every zoom so the bark never vanishes */
+  stroke: var(--et-bark);
+  stroke-width: 1.3;
+  stroke-opacity: 0.6;
+  vector-effect: non-scaling-stroke;
   stroke-linecap: round;
   pointer-events: none;
 }
 
 .et-wood-shading {
   fill: none;
-  stroke: var(--et-ink-soft);
-  stroke-width: 0.55;
+  stroke: var(--et-bark);
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+  vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
 
 .et-wood-knots {
   fill: none;
-  stroke: var(--et-ink);
+  stroke: var(--et-bark);
   stroke-width: 0.7;
 }
 
@@ -130,7 +136,7 @@
 }
 
 .et-twigs {
-  fill: var(--et-ink);
+  fill: var(--et-wood-shade);
   stroke: none;
 }
 
@@ -173,6 +179,25 @@
   stroke: var(--et-ink);
   stroke-width: 0.6;
   stroke-linecap: round;
+}
+
+/* a few leaves catching the light, in a lighter tone */
+.et-leaves-light {
+  fill: var(--et-leaf-light);
+  stroke: var(--et-ink);
+  stroke-width: 0.4;
+  stroke-opacity: 0.5;
+}
+
+/* the canopy's soft silhouette: discs merged into one shape, then made see-through as a whole */
+.et-canopy {
+  opacity: 0.16;
+  pointer-events: none;
+
+  path {
+    fill: var(--et-canopy);
+    stroke: none;
+  }
 }
 
 .et-title-scroll,

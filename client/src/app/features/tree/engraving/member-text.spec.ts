@@ -1,3 +1,4 @@
+import { BANNER_SCALE } from './medallion-geometry';
 import { bannerSpan, fullName, lifespan, memberAriaLabel } from './member-text';
 import { member } from './testing/member-factory';
 
@@ -54,8 +55,8 @@ describe('memberAriaLabel', () => {
 });
 
 describe('bannerSpan', () => {
-  it('covers band (min 120) plus both swallow tails', () => {
-    expect(bannerSpan('Ion')).toBe(120 + 32);
-    expect(bannerSpan('Gheorghița Iordachi')).toBe(19 * 8 + 28 + 32);
+  it('covers band (min 120) plus both swallow tails, at the banner\'s drawn scale', () => {
+    expect(bannerSpan('Ion')).toBeCloseTo((120 + 32) * BANNER_SCALE, 6);
+    expect(bannerSpan('Gheorghița Iordachi')).toBeCloseTo((19 * 8 + 28 + 32) * BANNER_SCALE, 6);
   });
 });

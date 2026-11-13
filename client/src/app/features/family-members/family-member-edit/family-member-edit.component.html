@@ -326,6 +326,12 @@
                            placeholder="Add a spouse" [filter]="true" filterBy="label"
                            appendTo="body" display="chip" [showHeader]="true"
                            styleClass="member-edit__picker" />
+            @if (member() && !embedded()) {
+              <p-button label="New spouse" icon="pi pi-user-plus"
+                        severity="secondary" [outlined]="true"
+                        styleClass="member-edit__new-child"
+                        (onClick)="openSpouseDrawer()" />
+            }
           </div>
           @if (optionsByIds(form.get('spouseIds')?.value ?? []); as spouses) {
             @if (spouses.length > 0) {
@@ -421,6 +427,18 @@
                               [presetParentIds]="newChildParentIds()"
                               (created)="onChildCreated($event)"
                               (cancelled)="childDrawerOpen.set(false)" />
+    }
+  </p-drawer>
+  <p-drawer [visible]="spouseDrawerOpen()"
+            (visibleChange)="spouseDrawerOpen.set($event)"
+            position="right"
+            [header]="'New spouse of ' + fullName(m)"
+            styleClass="member-edit__child-drawer">
+    @if (spouseDrawerOpen()) {
+      <app-family-member-edit [embedded]="true"
+                              [presetSpouseIds]="[+m.id]"
+                              (created)="onSpouseCreated($event)"
+                              (cancelled)="spouseDrawerOpen.set(false)" />
     }
   </p-drawer>
 }

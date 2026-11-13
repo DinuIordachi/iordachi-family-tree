@@ -1,3 +1,4 @@
+import { BANNER_BOTTOM, BANNER_TOP } from './medallion-geometry';
 import { seededRandom } from './seeded-random';
 import { MotifId, MotifPlacement, Point, TreeLayout } from './types';
 
@@ -8,9 +9,6 @@ const MIN_GAP = 90;
 const OFFSETS = [60, 110];
 const ALONG = [0.5, 0.35, 0.65];
 const ORNAMENT_HALF = 40;
-/** A medallion's banner and years occupy y + 44 … y + 94 below its centre. */
-const BANNER_TOP = 44;
-const BANNER_BOTTOM = 94;
 
 function shuffle<T>(items: T[], rnd: () => number): T[] {
   const a = [...items];
@@ -48,7 +46,8 @@ export function placeMotifs(layout: TreeLayout, seed: number, bannerHalf = 85): 
   ];
 
   const rnd = seededRandom(seed);
-  const target = Math.min(8, Math.max(2, Math.floor(layout.members.length / 4)));
+  // one ornament for every few people, so a large crown has as many to fill its open spaces
+  const target = Math.min(16, Math.max(2, Math.floor(layout.members.length / 3)));
   const candidates: Point[] = [];
   for (const b of layout.branches) {
     const dx = b.to.x - b.from.x;

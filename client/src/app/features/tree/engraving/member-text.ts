@@ -1,3 +1,4 @@
+import { BANNER_SCALE } from './medallion-geometry';
 import { FamilyMember } from '@app/core/models';
 
 /**
@@ -50,5 +51,5 @@ export function memberAriaLabel(m: FamilyMember): string {
 
 /** Estimated width of a name's ribbon banner: band (min 120, ≈8 units per glyph + 28 padding) plus both 16-unit swallow tails. */
 export function bannerSpan(name: string): number {
-  return Math.max(120, name.length * 8 + 28) + 32;
+  return (Math.max(120, name.length * 8 + 28) + 32) * BANNER_SCALE;
 }

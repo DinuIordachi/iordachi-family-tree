@@ -16,7 +16,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { distinctUntilChanged, firstValueFrom, forkJoin, map, Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
@@ -85,11 +86,14 @@ export class FamilyMemberEditComponent implements OnInit {
   readonly embedded = input(false);
   /** Parents to preselect in embedded create mode, slotted into mother/father by gender. */
   readonly presetParentIds = input<number[]>([]);
+  /** Spouses to preselect in embedded create mode. */
+  readonly presetSpouseIds = input<number[]>([]);
   readonly created = output<FamilyMember>();
   readonly cancelled = output<void>();
 
   /** Drawer for creating a child of this member and their first spouse. */
   readonly childDrawerOpen = signal(false);
+  readonly spouseDrawerOpen = signal(false);
 
   /**
    * 'create' when navigated from /family-members/new (no id param),
@@ -169,19 +173,48 @@ export class FamilyMemberEditComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const id = this.embedded() ? null : this.route.snapshot.paramMap.get('id');
+    /* Siblings follow the parent pickers, whichever member is loaded. */
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.recomputeSiblings());
+
+    if (this.embedded()) {
+      this.load(null);
+      return;
+    }
+    /* Follow the route, not a snapshot: moving from one member's card to
+     * another reuses this component, so each new `:id` must reload the form. */
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id')),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((id) => this.load(id));
+  }
+
+  private loadSub?: Subscription;
+
+  private load(id: string | null): void {
+    this.loadSub?.unsubscribe();
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.setNewAvatar(null);
+    this.childDrawerOpen.set(false);
+    this.spouseDrawerOpen.set(false);
 
     /* `new` route lands here without an id. Skip member loading entirely
      * and just fetch the tree to populate relation pickers + sibling computation. */
     if (!id) {
       this.mode.set('create');
-      this.familyTreeService.list().subscribe({
+      this.member.set(null);
+      this.loadSub = this.familyTreeService.list().subscribe({
         next: (tree) => {
           this.tree.set(tree);
           this.applyPresetParents(this.presetParentIds(), tree);
+          this.applyPresetSpouses(this.presetSpouseIds());
           this.recomputeSiblings();
           this.loading.set(false);
-          this.form.valueChanges.subscribe(() => this.recomputeSiblings());
         },
         error: () => {
           this.errorMessage.set('Failed to load the family tree.');
@@ -192,7 +225,7 @@ export class FamilyMemberEditComponent implements OnInit {
     }
 
     this.mode.set('edit');
-    forkJoin({
+    this.loadSub = forkJoin({
       member: this.familyTreeService.show(id),
       tree: this.familyTreeService.list(),
     }).subscribe({
@@ -202,8 +235,7 @@ export class FamilyMemberEditComponent implements OnInit {
         this.applyMemberToForm(member, tree);
         this.recomputeSiblings();
         this.loading.set(false);
-
-        this.form.valueChanges.subscribe(() => this.recomputeSiblings());
+        if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
       },
       error: () => {
         this.errorMessage.set('Failed to load the family member.');
@@ -267,6 +299,12 @@ export class FamilyMemberEditComponent implements OnInit {
       fatherId,
       lastName: surnameSource?.data['last name'] ?? '',
     });
+  }
+
+  private applyPresetSpouses(ids: number[]): void {
+    if (ids.length > 0) {
+      this.form.patchValue({ spouseIds: [...ids] });
+    }
   }
 
   private findParentId(
@@ -570,6 +608,10 @@ export class FamilyMemberEditComponent implements OnInit {
     this.childDrawerOpen.set(true);
   }
 
+  openSpouseDrawer(): void {
+    this.spouseDrawerOpen.set(true);
+  }
+
   /**
    * A child was created in the drawer: close it and reload this member so the
    * new child shows up. Only the children added on the server are merged into
@@ -577,6 +619,21 @@ export class FamilyMemberEditComponent implements OnInit {
    */
   async onChildCreated(child: FamilyMember): Promise<void> {
     this.childDrawerOpen.set(false);
+    await this.mergeCreatedRelation(child, 'children', 'childIds', 'child');
+  }
+
+  /** Same as a new child, for a spouse created in the drawer. */
+  async onSpouseCreated(spouse: FamilyMember): Promise<void> {
+    this.spouseDrawerOpen.set(false);
+    await this.mergeCreatedRelation(spouse, 'spouses', 'spouseIds', 'spouse');
+  }
+
+  private async mergeCreatedRelation(
+    created: FamilyMember,
+    rel: 'children' | 'spouses',
+    controlName: 'childIds' | 'spouseIds',
+    noun: string,
+  ): Promise<void> {
     const member = this.member();
     if (!member) {
       return;
@@ -588,14 +645,14 @@ export class FamilyMemberEditComponent implements OnInit {
           tree: this.familyTreeService.list(),
         }),
       );
-      const before = new Set(member.rels.children);
-      const added = fresh.rels.children.filter((id) => !before.has(id)).map(Number);
-      if (!added.includes(Number(child.id))) {
-        added.push(Number(child.id));
+      const before = new Set(member.rels[rel]);
+      const added = fresh.rels[rel].filter((id) => !before.has(id)).map(Number);
+      if (!added.includes(Number(created.id))) {
+        added.push(Number(created.id));
       }
       this.tree.set(tree);
       this.member.set(fresh);
-      const ctrl = this.form.get('childIds')!;
+      const ctrl = this.form.get(controlName)!;
       const current = (ctrl.value as number[]) ?? [];
       ctrl.setValue([...current, ...added.filter((id) => !current.includes(id))]);
       this.recomputeSiblings();
@@ -603,7 +660,7 @@ export class FamilyMemberEditComponent implements OnInit {
       this.messages.add({
         severity: 'warn',
         summary: 'Could not refresh',
-        detail: 'The child was added; reload the page to see them.',
+        detail: `The ${noun} was added; reload the page to see them.`,
         life: 5000,
       });
     }

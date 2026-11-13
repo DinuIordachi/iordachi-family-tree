@@ -1,4 +1,5 @@
 import { hierarchy, tree } from 'd3-hierarchy';
+import { CLEAR_RISE } from './medallion-geometry';
 import { BranchSegment, HouseholdForest, PlacedMember, Point, TreeLayout } from './types';
 
 export interface LayoutOptions {
@@ -18,21 +19,19 @@ export interface LayoutOptions {
 }
 
 export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
-  generationSpacing: 190,
-  personGap: 170,
+  generationSpacing: 280,
+  personGap: 280,
   /** Tall enough that the first generation clears Ștefan and Molda at the trunk base. */
-  trunkHeight: 480,
+  trunkHeight: 560,
   groundY: 0,
-  rootRowDepth: 135,
-  forkDrop: 160,
-  crownDroop: 0.00032,
+  rootRowDepth: 175,
+  forkDrop: 240,
+  crownDroop: 0.00026,
 };
 
 /** Where along the parent's leader a side limb leaves it: [outermost, innermost] fraction of the leader. */
 const TRUNK_ATTACH: [number, number] = [-0.6, 0.3];
 const LIMB_ATTACH: [number, number] = [0.35, 0.6];
-/** A limb growing out of a household climbs this far before spreading: above the portraits (42) and laurel. */
-const CLEAR_RISE = 58;
 
 interface Node {
   id: string;

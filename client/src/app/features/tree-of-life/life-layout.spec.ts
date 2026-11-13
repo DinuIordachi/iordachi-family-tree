@@ -36,13 +36,12 @@ describe('layoutLife', () => {
     expect(l.generations).toBe(4);
   });
 
-  it('keeps the founders on the stem and the stem clear above them', () => {
+  it('runs the stem up through the main line of couples while it branches on, clear of everyone else', () => {
     const l = layoutLife(seed);
-    const founders = l.motifs.filter((m) => m.gen === 0);
-    expect(founders.reduce((s, m) => s + m.x, 0)).toBe(0);
-    for (const m of l.motifs.filter((x) => x.gen > 0)) {
-      expect(Math.abs(m.x)).toBeGreaterThanOrEqual(GEOMETRY.trunkClear);
-    }
+    const x = (id: string) => l.motifs.find((m) => m.id === id)!.x;
+    // 1+2 → 3+4 → 5+6 is the spine; 8 and 9 have no children, so it ends there.
+    for (const [a, b] of [['1', '2'], ['3', '4'], ['5', '6']]) expect(x(a) + x(b)).toBe(0);
+    for (const id of ['7', '8', '9']) expect(Math.abs(x(id))).toBeGreaterThanOrEqual(GEOMETRY.trunkClear);
     expect(l.rose.y).toBeLessThan(Math.min(...l.motifs.map((m) => m.y)));
   });
 
@@ -51,9 +50,10 @@ describe('layoutLife', () => {
     for (const m of l.motifs) expect(m.motif).toBe(MOTIFS[m.gen]);
   });
 
-  it('draws one branch per child, built from vertical, 45° and horizontal runs only', () => {
+  it('draws one branch per child off the spine, built from vertical, 45° and horizontal runs only', () => {
     const l = layoutLife(seed);
-    const children = seed.filter((m) => m.rels.parents.length);
+    // 3 and 5 continue the spine: their descent is the stem itself.
+    const children = seed.filter((m) => m.rels.parents.length && !['3', '5'].includes(m.id));
     expect(l.branches.map((b) => b.childId).sort()).toEqual(children.map((m) => m.id).sort());
     for (const b of l.branches) {
       const pts: number[][] = [];
@@ -72,12 +72,27 @@ describe('layoutLife', () => {
   });
 
   it('lets only one sibling carry the run up from the parents; the rest sprout from it', () => {
-    const l = layoutLife(seed);
+    const l = layoutLife(joined);
     const byParents = new Map<string, string[]>();
     for (const b of l.branches) byParents.set(b.parentIds.join('+'), [...(byParents.get(b.parentIds.join('+')) ?? []), b.d]);
+    expect(byParents.has('10+11')).toBe(true);
     for (const [parents, ds] of byParents) {
-      if (parents === '1+2') continue; // founders' branches all sprout from the stem
+      if (parents.includes('1') && !parents.includes('10')) continue; // the spine's branches all sprout from the stem
+      if (parents.includes('3')) continue;
       expect(ds.filter((d) => /^M\S+ \S+ V/.test(d)).length).toBe(1);
+    }
+  });
+
+  it('gives every sprouting sibling a run over the stretch its carrier draws, for highlighting', () => {
+    const l = layoutLife(joined);
+    expect(l.runs.length).toBeGreaterThan(0);
+    for (const b of l.branches) {
+      if (['1', '3'].some((id) => b.parentIds.includes(id)) || /^M\S+ \S+ V/.test(b.d)) continue; // stem sprouts and carriers
+      const run = l.runs.find((r) => r.childId === b.childId);
+      expect(run).toBeDefined();
+      const [, x, y] = /^M(\S+) (\S+)/.exec(b.d)!;
+      expect(run!.d.endsWith(`V${y}`)).toBe(true); // ends where the sibling sprouts
+      expect(run!.d.startsWith(`M${x} `)).toBe(true); // on the shared vertical
     }
   });
 
@@ -98,10 +113,12 @@ describe('layoutLife', () => {
   it('hangs an in-law family on the outer side of the member who married in', () => {
     const l = layoutLife(joined);
     const x = (id: string) => l.motifs.find((m) => m.id === id)!.x;
-    const side = Math.sign(x('3'));
+    // 3+12 is on the spine: 12 stands on the side their family hangs, 3 opposite.
+    const side = Math.sign(x('12'));
+    expect(x('3')).toBe(-x('12'));
     expect(Math.sign(x('10'))).toBe(side);
-    expect(Math.abs(x('10'))).toBeGreaterThan(Math.abs(x('3')));
-    expect(Math.abs(x('12'))).toBeGreaterThan(Math.abs(x('3')));
+    expect(Math.abs(x('10'))).toBeGreaterThan(Math.abs(x('12')));
+    expect(Math.sign(x('4'))).toBe(-side); // 3's sibling balances the in-law family
   });
 
   it('colours a married-in member and the branch from their parents with their own family line', () => {

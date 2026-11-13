@@ -5,6 +5,10 @@ import { bannerSpan } from '../engraving/member-text';
 import { member } from '../engraving/testing/member-factory';
 import { SEED_MEMBERS } from '../engraving/testing/seed-fixture';
 import { EngravedTreeComponent } from './engraved-tree.component';
+import { TWIG_TIP, woodWidth } from '../engraving/branch-geometry';
+import { fmt } from '../engraving/sketch';
+import { TreeLayout } from '../engraving/types';
+import { BANNER_BOTTOM, BANNER_TOP } from '../engraving/medallion-geometry';
 
 @Component({
   imports: [EngravedTreeComponent],
@@ -33,17 +37,34 @@ describe('EngravedTreeComponent', () => {
     expect(ids).toEqual(['1+2>3+4', '3+4>5+6', '3+4>7', '5+6>8', '5+6>9', 'trunk>1+2']);
   });
 
-  it('joins forks smoothly: a branch with children ends at its children’s start width', async () => {
+  it('joins forks smoothly: a branch with children ends at its children’s start width, a leaf in a twig tip', async () => {
     const { root } = await setup();
     const d = (id: string) => root.querySelector(`path.et-branch[data-branch-id="${id}"]`)!.getAttribute('d')!;
-    expect(d('1+2>3+4')).toContain('A10 10 '); // ends at its thickest onward limb, 3+4>5+6 = 20
-    expect(d('3+4>7')).toContain('A1.6 1.6 '); // 7 is a leaf carrying one person → starts at 13, ends at 13 × 0.25
+    const cap = (width: number) => `A${fmt(width / 2)} ${fmt(width / 2)} `;
+    expect(d('1+2>3+4')).toContain(cap(woodWidth(5))); // beyond the fork it carries 5, 6, 8, 9 and 7
+    expect(d('3+4>7')).toContain(cap(TWIG_TIP)); // 7 carries nobody on
+  });
+
+  it('makes the trunk thickest at the base and thinner above each limb that leaves it', async () => {
+    const { fixture } = await setup();
+    const tree = fixture.debugElement.children[0].componentInstance as unknown as { layout: () => TreeLayout };
+    const layout = tree.layout();
+    const width = (y: number) => {
+      const d = (fixture.nativeElement as HTMLElement).querySelector('#tree-trunk path.et-trunk')!.getAttribute('d')!;
+      const xs = [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]).filter(([, py]) => Math.abs(py - y) < 25);
+      return Math.max(...xs.map(([x]) => x)) - Math.min(...xs.map(([x]) => x));
+    };
+    const { base, top } = layout.trunk;
+    const low = width(base.y - (base.y - top.y) * 0.1);
+    const high = width(base.y - (base.y - top.y) * 0.9);
+    expect(low).toBeGreaterThan(1.3 * high);
+    expect(low).toBeGreaterThan(woodWidth(9));
   });
 
   it('inks all wood outlines in one layer under the paper fills, so limbs merge smoothly into the trunk', async () => {
     const { root } = await setup();
     const ink = root.querySelector('#tree-wood-ink')!;
-    expect(ink.querySelectorAll('path.et-wood-ink')).toHaveLength(8); // the roots, 1 trunk + 6 branches
+    expect(ink.querySelectorAll('path.et-wood-ink')).toHaveLength(16); // the roots, 1 trunk, 6 branches and their 6 joint webs, the crown wood and the hanging twigs
     const fills = root.querySelector('#genealogical-connections')!;
     expect(ink.compareDocumentPosition(fills) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(root.querySelector('#tree-trunk')!.compareDocumentPosition(ink) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -60,9 +81,9 @@ describe('EngravedTreeComponent', () => {
   it('engraves bark grooves and twigs on every branch', async () => {
     const { root } = await setup();
     const bark = [...root.querySelectorAll('path.et-branch-bark')];
-    expect(bark).toHaveLength(6);
+    expect(bark).toHaveLength(6); // one per branch: bark only on the limbs, not the crown's lesser wood
     expect(bark.filter((b) => (b.getAttribute('d') ?? '').startsWith('M')).length).toBeGreaterThan(3);
-    expect([...root.querySelectorAll('path.et-twigs')].some((t) => (t.getAttribute('d') ?? '').length > 0)).toBe(true);
+    expect(root.querySelector('#crown-wood path.et-crown-wood')!.getAttribute('d')!.length).toBeGreaterThan(0);
   });
 
   it('lets foliage grow between neighbouring banners instead of leaving a bare band per generation', async () => {
@@ -76,7 +97,12 @@ describe('EngravedTreeComponent', () => {
     const [minX, maxX] = [Math.min(x5, x7), Math.max(x5, x7)];
     // under the ribbons, only the short years line stays bare; foliage fills the rest of the row
     const beside = leaves.filter(
-      (p) => p.x > minX - 40 && p.x < maxX + 40 && p.y > rowY + 76 && p.y < rowY + 92 && Math.min(Math.abs(p.x - x5), Math.abs(p.x - x7)) > 40,
+      (p) =>
+        p.x > minX - 40 &&
+        p.x < maxX + 40 &&
+        p.y > rowY + BANNER_TOP + 32 &&
+        p.y < rowY + BANNER_BOTTOM - 2 &&
+        Math.min(Math.abs(p.x - x5), Math.abs(p.x - x7)) > 40,
     );
     expect(beside.length).toBeGreaterThan(10);
   });
@@ -123,9 +149,39 @@ describe('EngravedTreeComponent', () => {
     }
   });
 
-  describe('with a second family behind the main tree', () => {
+  describe('with the mother\'s family joined to the main couple', () => {
     // paternal 1+2 → 3 (married to 6, child 7), 10 ; maternal 4+5 → 6, 12
     const families = [
+      member('1', { spouses: ['2'], children: ['3', '10'] }, { 'last name': 'Iordachi' }),
+      member('2', { spouses: ['1'], children: ['3', '10'] }, { gender: 'F' }),
+      member('3', { parents: ['1', '2'], spouses: ['6'], children: ['7'] }),
+      member('10', { parents: ['1', '2'] }),
+      member('4', { spouses: ['5'], children: ['6', '12'] }),
+      member('5', { spouses: ['4'], children: ['6', '12'] }, { gender: 'F' }),
+      member('6', { parents: ['4', '5'], spouses: ['3'], children: ['7'] }, { 'first name': 'Alexandra', gender: 'F' }),
+      member('12', { parents: ['4', '5'] }),
+      member('7', { parents: ['3', '6'] }),
+    ];
+    const xOf = (root: HTMLElement, id: string) =>
+      Number(root.querySelector(`#tree-main g[etMedallion][data-member-id="${id}"]`)!.getAttribute('transform')!.match(/translate\(([-\d.]+)/)![1]);
+
+    it('grows one tree around the couple: her family on the left, his on the right', async () => {
+      const { root } = await setup(families);
+      expect(root.querySelector('#tree-back')).toBeNull();
+      expect(root.querySelectorAll('#tree-main g[etMedallion]')).toHaveLength(9);
+      expect(xOf(root, '6')).toBeLessThan(0);
+      expect(xOf(root, '3')).toBeGreaterThan(0);
+      for (const id of ['4', '5', '12']) expect(xOf(root, id)).toBeLessThan(0);
+      for (const id of ['1', '2', '10']) expect(xOf(root, id)).toBeGreaterThan(0);
+    });
+  });
+
+  describe('with a second family behind the main tree', () => {
+    // paternal 1+2 → 3 (married to 6, child 7), 10 ; maternal 4+5 → 6, 12 ; and an unrelated
+    // founder family 20 → 21, so the family does not grow as one trunk and falls back to two trees
+    const families = [
+      member('20', { children: ['21'] }),
+      member('21', { parents: ['20'] }),
       member('1', { spouses: ['2'], children: ['3', '10'] }, { 'last name': 'Iordachi' }),
       member('2', { spouses: ['1'], children: ['3', '10'] }),
       member('3', { parents: ['1', '2'], spouses: ['6'], children: ['7'] }),
@@ -141,8 +197,8 @@ describe('EngravedTreeComponent', () => {
 
     it('keeps one main tree and stands her family tree behind it, smaller', async () => {
       const { root } = await setup(families);
-      expect(main(root).querySelectorAll('g[etMedallion]')).toHaveLength(6);
-      expect([...main(root).querySelectorAll('g[etMedallion]')].map((g) => g.getAttribute('data-member-id')).sort()).toEqual(['1', '10', '2', '3', '6', '7'].sort());
+      expect(main(root).querySelectorAll('g[etMedallion]')).toHaveLength(8);
+      expect([...main(root).querySelectorAll('g[etMedallion]')].map((g) => g.getAttribute('data-member-id')).sort()).toEqual(['1', '10', '2', '20', '21', '3', '6', '7'].sort());
       expect([...back(root).querySelectorAll('g[etMedallion]')].map((g) => g.getAttribute('data-member-id')).sort()).toEqual(['12', '4', '5', '6']);
       expect(back(root).compareDocumentPosition(main(root)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // drawn behind
       expect(back(root).getAttribute('transform')).toMatch(/scale\(0\.68\)/);
@@ -293,15 +349,12 @@ describe('EngravedTreeComponent', () => {
     expect(viewport()).toBe(initial);
   });
 
-  it('ties each couple with a ribbon knot between their medallions', async () => {
+  it('hangs every portrait above ground from a twig, couples from a short fork, with no knots', async () => {
     const { root } = await setup();
-    const knots = [...root.querySelectorAll('g.et-knot')];
-    expect(knots).toHaveLength(3); // 1+2, 3+4, 5+6
-    const at = (id: string) =>
-      root.querySelector(`g[etMedallion][data-member-id="${id}"]`)!.getAttribute('transform')!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!.slice(1).map(Number);
-    const [x3, y3] = at('3');
-    const [x4] = at('4');
-    expect(knots.map((k) => k.getAttribute('transform'))).toContain(`translate(${(x3 + x4) / 2} ${y3})`);
+    expect(root.querySelectorAll('g.et-knot')).toHaveLength(0);
+    const twigs = root.querySelector('#genealogical-connections path.et-hanger')!.getAttribute('d')!;
+    // one stem per person above ground: 3, 4, 5, 6, 7, 8, 9 (the founders 1 and 2 sit in the roots)
+    expect(twigs.match(/M/g)).toHaveLength(7);
   });
 
   it('spaces medallions so long names never make neighbouring banners collide', async () => {

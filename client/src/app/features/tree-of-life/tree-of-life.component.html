@@ -157,7 +157,7 @@
               [attr.transform]="'translate(' + m.x + ' ' + m.y + ')'"
               [class.dim]="!isLit([m.id])"
               [class.active]="selected()?.id === m.id"
-              [style.animation-delay.ms]="m.gen * 380 + 520"
+              [style.animation-delay.ms]="memberDelay(m.gen)"
               tabindex="0"
               role="button"
               [attr.aria-label]="ariaLabel(m)"
