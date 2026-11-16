@@ -1,0 +1,178 @@
+/* =====================================================================
+ * Admin design tokens
+ *
+ * Three layers, each only referencing the one below it:
+ *   1. Primitive  – raw scales. Colour primitives are PrimeNG Aura's own
+ *                   palette (--p-surface-*, --p-emerald-*, --p-red-*), so the
+ *                   admin stays in lockstep with the component theme. This file
+ *                   adds the non-colour scales Aura does not expose.
+ *   2. Semantic   – what a value is for (text, surface, accent, danger…).
+ *                   Light/dark switching happens here and only here.
+ *   3. Component  – per-component knobs (form field, section, relation card,
+ *                   action bar). Components read these, never primitives.
+ *
+ * Root font-size is 14px (see styles.scss), so 1rem = 14px below.
+ * ===================================================================== */
+
+:root {
+  /* ---------- 1. Primitive ---------- */
+
+  /* Spacing — 4px grid */
+  --space-1: 0.2857rem;  /*  4px */
+  --space-2: 0.5714rem;  /*  8px */
+  --space-3: 0.8571rem;  /* 12px */
+  --space-4: 1.1429rem;  /* 16px */
+  --space-5: 1.4286rem;  /* 20px */
+  --space-6: 1.7143rem;  /* 24px */
+  --space-8: 2.2857rem;  /* 32px */
+  --space-10: 2.8571rem; /* 40px */
+  --space-12: 3.4286rem; /* 48px */
+
+  /* Type scale (px in comments) */
+  --font-size-2xs: 0.7857rem; /* 11 */
+  --font-size-xs: 0.8571rem;  /* 12 */
+  --font-size-sm: 0.9286rem;  /* 13 */
+  --font-size-md: 1rem;       /* 14 */
+  --font-size-lg: 1.1429rem;  /* 16 */
+  --font-size-xl: 1.4286rem;  /* 20 */
+  --font-size-2xl: 1.8571rem; /* 26 */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+
+  --letter-spacing-caps: 0.06em;
+
+  /* The engraved tree's register — used only for people's names. */
+  --font-family-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+
+  --radius-sm: 0.4286rem;  /*  6px */
+  --radius-md: 0.7143rem;  /* 10px */
+  --radius-lg: 0.8571rem;  /* 12px */
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --shadow-md: 0 4px 16px rgb(15 23 42 / 0.08);
+
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* ---------- 2. Semantic (light) ---------- */
+
+  --color-text: var(--p-text-color);
+  --color-text-muted: var(--p-text-muted-color);
+  --color-text-subtle: var(--p-surface-400);
+
+  --color-surface: var(--p-content-background);
+  --color-surface-sunken: var(--p-surface-50);
+  --color-surface-raised: var(--p-content-background);
+  --color-border: var(--p-content-border-color);
+  --color-border-strong: var(--p-surface-300);
+
+  --color-accent: var(--p-primary-color);
+  --color-accent-strong: var(--p-primary-700);
+  --color-accent-soft: color-mix(in oklab, var(--p-primary-color) 10%, transparent);
+
+  --color-danger: var(--p-red-600);
+  --color-danger-soft: color-mix(in oklab, var(--p-red-500) 8%, transparent);
+  --color-danger-border: color-mix(in oklab, var(--p-red-500) 30%, var(--p-content-border-color));
+
+  --color-warning: var(--p-amber-600);
+  --color-warning-soft: color-mix(in oklab, var(--p-amber-500) 12%, transparent);
+
+  --color-focus-ring: var(--p-primary-color);
+
+  /* ---------- 3. Component ---------- */
+
+  /* Page frame */
+  --layout-topbar-height: 4rem;
+  --page-max-width: 76rem;
+  --sticky-top: calc(var(--layout-topbar-height) + var(--space-4));
+
+  /* Page action bar */
+  --actionbar-bg: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  --actionbar-border: var(--color-border);
+  --actionbar-padding: var(--space-3) var(--space-5);
+  --actionbar-radius: var(--radius-lg);
+
+  /* Form section (a titled group of fields) */
+  --form-section-bg: var(--color-surface);
+  --form-section-border: var(--color-border);
+  --form-section-radius: var(--radius-lg);
+  --form-section-padding: var(--space-6);
+  --form-section-gap: var(--space-5);
+  --form-section-title-size: var(--font-size-lg);
+  --form-section-title-weight: var(--font-weight-semibold);
+  --form-section-desc-size: var(--font-size-sm);
+
+  /* Form field (label + control + help/error) */
+  --form-label-size: var(--font-size-sm);
+  --form-label-weight: var(--font-weight-medium);
+  --form-label-color: var(--color-text);
+  --form-required-color: var(--color-danger);
+  --form-help-size: var(--font-size-xs);
+  --form-help-color: var(--color-text-muted);
+  --form-error-color: var(--color-danger);
+  --form-field-gap: var(--space-2);
+  --form-row-gap: var(--space-5);
+  --form-col-gap: var(--space-5);
+
+  /* Sub-group heading inside a section ("Parents", "Children"…) */
+  --form-group-label-size: var(--font-size-2xs);
+  --form-group-label-weight: var(--font-weight-semibold);
+  --form-group-label-color: var(--color-text-muted);
+
+  /* Relation card (a linked relative) */
+  --relation-card-bg: var(--color-surface);
+  --relation-card-border: var(--color-border);
+  --relation-card-border-hover: var(--color-accent);
+  --relation-card-bg-hover: var(--color-accent-soft);
+  --relation-card-radius: var(--radius-md);
+  --relation-card-padding: var(--space-2) var(--space-3);
+
+  /* Member profile card + portrait (the tree medallion's 34:42 oval) */
+  --member-profile-width: 17rem;
+  --member-profile-sticky-top: calc(var(--sticky-top) + 5.5rem); /* below the action bar */
+  --member-portrait-height: 9rem;
+  --member-portrait-height-compact: 6rem;
+  --member-portrait-ratio: calc(34 / 42);
+  --member-death-field-width: 22rem;
+
+  /* Status / deceased marks */
+  --status-dot-size: 0.5rem;
+  --stamp-size-sm: 1.05rem;
+  --stamp-size-md: 1.75rem;
+
+  /* Empty / placeholder well */
+  --well-bg: var(--color-surface-sunken);
+  --well-border: var(--color-border);
+  --well-radius: var(--radius-md);
+}
+
+/* ---------- 2. Semantic (dark) — the only place dark mode is decided ---------- */
+:root[class*='app-dark'] {
+  --color-text-subtle: var(--p-surface-500);
+  --color-surface-sunken: color-mix(in oklab, var(--p-surface-950) 60%, var(--p-surface-900));
+  --color-border-strong: var(--p-surface-600);
+  --color-accent-strong: var(--p-primary-300);
+  --color-accent-soft: color-mix(in oklab, var(--p-primary-color) 14%, transparent);
+  --color-danger: var(--p-red-400);
+  --color-danger-soft: color-mix(in oklab, var(--p-red-400) 10%, transparent);
+  --color-danger-border: color-mix(in oklab, var(--p-red-400) 35%, var(--p-content-border-color));
+  --color-warning: var(--p-amber-400);
+  --color-warning-soft: color-mix(in oklab, var(--p-amber-400) 14%, transparent);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 6px 20px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

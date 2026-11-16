@@ -1,5 +1,6 @@
 @use 'primeicons/primeicons.css';
 @use './app/features/tree/styles/tree-tokens';
+@use './styles/admin-tokens';
 
 /* ===== Custom pink tag severity =====
    <app-tag severity="pink"> applies `.app-tag-pink` to the underlying

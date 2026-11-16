@@ -92,6 +92,82 @@ describe('FamilyMemberEditComponent', () => {
     fixture.destroy();
   });
 
+  describe('unsaved changes', () => {
+    it('tracks edits, disables saving while pristine, and lets a clean form leave freely', async () => {
+      const { component, fixture } = await setup({ routeId: '1' });
+      const save = () => [...fixture.nativeElement.querySelectorAll('button')]
+        .find((b: HTMLButtonElement) => b.textContent?.includes('Save changes')) as HTMLButtonElement;
+
+      expect(component.dirty()).toBe(false);
+      expect(save().disabled).toBe(true);
+      expect(component.canLeave()).toBe(true);
+
+      const ctrl = component.form.get('firstName')!;
+      ctrl.markAsDirty();
+      ctrl.setValue('Dima');
+      fixture.detectChanges();
+
+      expect(component.dirty()).toBe(true);
+      expect(save().disabled).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain('Unsaved changes');
+      fixture.destroy();
+    });
+
+    it('asks before leaving with edits, and stays when the admin keeps editing', async () => {
+      const { component } = await setup({ routeId: '1' });
+      const confirm = TestBed.inject(ConfirmationService);
+      const spy = vi.spyOn(confirm, 'confirm').mockImplementation((c) => { c.reject?.(); return confirm; });
+
+      component.form.get('firstName')!.markAsDirty();
+      await expect(component.canLeave()).resolves.toBe(false);
+      expect(spy).toHaveBeenCalledOnce();
+
+      spy.mockImplementation((c) => { c.accept?.(); return confirm; });
+      await expect(component.canLeave()).resolves.toBe(true);
+    });
+
+    it('counts removing a linked relative as an edit', async () => {
+      const { component } = await setup({ routeId: '1' });
+      component.removeFromArray('childIds', 3);
+      expect(component.dirty()).toBe(true);
+      expect(component.form.dirty).toBe(true);
+    });
+  });
+
+  describe('date of death', () => {
+    it('starts on for a deceased member and requires a date while on', async () => {
+      const dead = { ...tatiana, diedAt: '2020-01-02T10:00:00.000Z', deceased: true } as FamilyMember;
+      const { component } = await setup({ routeId: '3', tree: [dumitru, elena, dead, loner] });
+      expect(component.form.get('deceased')!.value).toBe(true);
+      expect(component.isDeceased()).toBe(true);
+
+      component.form.get('diedAt')!.setValue(null);
+      expect(component.form.hasError('diedAtRequired')).toBe(true);
+    });
+
+    it('rejects a death before the birth', async () => {
+      const { component } = await setup({ routeId: '1' });
+      component.form.patchValue({
+        birthdate: new Date('2000-05-01'),
+        deceased: true,
+        diedAt: new Date('1999-01-01'),
+      });
+      expect(component.form.hasError('diedBeforeBorn')).toBe(true);
+    });
+
+    it('clears the date and saves the member as living when "Has died" is turned off', async () => {
+      const dead = { ...tatiana, diedAt: '2020-01-02T10:00:00.000Z', deceased: true } as FamilyMember;
+      const { component, service } = await setup({ routeId: '3', tree: [dumitru, elena, dead, loner] });
+      service.update.mockReturnValue(of({ ...tatiana }));
+
+      component.form.get('deceased')!.setValue(false);
+      expect(component.form.get('diedAt')!.value).toBeNull();
+
+      await component.save();
+      expect(service.update.mock.calls[0][1]).toMatchObject({ diedAt: null });
+    });
+  });
+
   describe('new child drawer (parent side)', () => {
     it('preselects the member and their first spouse as the new child’s parents', async () => {
       const { component, fixture } = await setup({ routeId: '1' });

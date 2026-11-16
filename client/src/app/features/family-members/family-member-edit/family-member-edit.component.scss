@@ -1,92 +1,177 @@
+/* Family member editor. Reads only semantic + component tokens from
+ * src/styles/_admin-tokens.scss — no raw colours or magic sizes here. */
+
 :host {
   display: block;
 }
 
 .member-edit {
-  max-width: 1200px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding-bottom: 4rem;
+  padding-bottom: var(--space-12);
 
+  /* ---------- Action bar ---------- */
   &__bar {
     position: sticky;
-    /* Layout topbar is 4rem fixed at top:0; sit just below it with 1rem of breathing room. */
-    top: 5rem;
+    top: var(--sticky-top);
     z-index: 5;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
-    background-color: color-mix(in oklab, var(--surface-card) 85%, transparent);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--content-border-radius);
+    gap: var(--space-4);
+    padding: var(--actionbar-padding);
+    margin-bottom: var(--space-6);
+    background-color: var(--actionbar-bg);
+    border: 1px solid var(--actionbar-border);
+    border-radius: var(--actionbar-radius);
+    box-shadow: var(--shadow-sm);
     backdrop-filter: blur(12px);
+  }
+
+  &__bar-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  &__crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+
+    a {
+      color: inherit;
+
+      &:hover {
+        color: var(--color-accent);
+        text-decoration: underline;
+      }
+    }
+
+    i {
+      font-size: var(--font-size-2xs);
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__bar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-right: var(--space-2);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+
+    &.is-dirty {
+      color: var(--color-warning);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+
+  &__status-dot {
+    width: var(--status-dot-size);
+    height: var(--status-dot-size);
+    border-radius: var(--radius-pill);
+    background-color: currentColor;
+    box-shadow: 0 0 0 3px var(--color-warning-soft);
   }
 
   &__placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4rem 1rem;
-    color: var(--text-color-secondary);
+    gap: var(--space-3);
+    padding: var(--space-12) var(--space-4);
+    color: var(--color-text-muted);
   }
 
-  &__grid {
+  /* ---------- Layout: profile | form ---------- */
+  &__layout {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+    grid-template-columns: var(--member-profile-width) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
   }
 
-  &__hero {
+  &__main {
     display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    min-width: 0;
+  }
+
+  /* ---------- Profile card ---------- */
+  &__profile {
+    position: sticky;
+    top: var(--member-profile-sticky-top);
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    padding: 1.75rem 2rem;
-    background:
-      linear-gradient(135deg, color-mix(in oklab, var(--p-emerald-500) 8%, transparent) 0%, transparent 60%),
-      var(--surface-card);
-    border: 1px solid var(--surface-border);
+    text-align: center;
+    padding: var(--space-8) var(--space-6) var(--space-6);
+    background-color: var(--form-section-bg);
+    border: 1px solid var(--form-section-border);
+    border-radius: var(--form-section-radius);
   }
 
-  &__hero-avatar {
-    flex: 0 0 auto;
+  /* The signature: the tree's 34:42 medallion oval, so the admin sees the
+   * portrait exactly as the engraved tree will frame it. */
+  &__portrait {
     position: relative;
-
-    /* Oval, in the tree medallion's 34:42 proportions, so the preview
-     * shows the same framing as the tree. */
-    .p-avatar img {
-      object-fit: cover;
-    }
-
-    .p-avatar {
-      width: calc(6rem * 34 / 42);
-      height: 6rem;
-      font-size: 1.75rem;
-      box-shadow:
-        0 0 0 4px color-mix(in oklab, var(--p-emerald-500) 25%, transparent),
-        0 8px 24px rgba(0, 0, 0, 0.35);
-    }
-  }
-
-  &__hero-avatar-trigger {
-    position: relative;
-    display: block;
-    border: 0;
+    display: grid;
+    place-items: center;
+    width: calc(var(--member-portrait-height) * var(--member-portrait-ratio));
+    height: var(--member-portrait-height);
     padding: 0;
-    background: transparent;
+    border: 0;
     border-radius: 50%;
+    background-color: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    box-shadow:
+      0 0 0 3px var(--color-surface),
+      0 0 0 5px var(--color-accent-soft),
+      var(--shadow-md);
     cursor: pointer;
-    appearance: none;
-    transition: transform 0.15s ease;
+    overflow: visible;
+    transition: box-shadow var(--duration-base) var(--ease-out);
 
-    &:focus-visible {
-      outline: 2px solid var(--p-emerald-500);
-      outline-offset: 4px;
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     &:hover:not(:disabled) {
-      transform: scale(1.02);
+      box-shadow:
+        0 0 0 3px var(--color-surface),
+        0 0 0 5px var(--color-accent),
+        var(--shadow-md);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 6px;
     }
 
     &:disabled {
@@ -94,248 +179,428 @@
     }
   }
 
-  &__hero-avatar-overlay {
+  &__portrait-initials {
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-2xl);
+    color: var(--color-text);
+  }
+
+  &__portrait-icon {
+    font-size: var(--font-size-2xl);
+  }
+
+  &__portrait-overlay {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.15rem;
+    gap: var(--space-1);
     border-radius: 50%;
-    color: #fff;
-    background-color: rgba(15, 23, 42, 0.55);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--p-surface-0);
+    background-color: color-mix(in oklab, var(--p-surface-950) 55%, transparent);
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--duration-fast) var(--ease-out);
     pointer-events: none;
 
     i {
-      font-size: 1.25rem;
+      font-size: var(--font-size-lg);
     }
   }
 
-  &__hero-avatar-trigger:hover &__hero-avatar-overlay,
-  &__hero-avatar-trigger:focus-visible &__hero-avatar-overlay,
-  &__hero-avatar.is-uploading &__hero-avatar-overlay {
+  &__portrait:hover &__portrait-overlay,
+  &__portrait:focus-visible &__portrait-overlay,
+  &__portrait.is-uploading &__portrait-overlay {
     opacity: 1;
   }
 
-  &__hero-stamp {
+  &__portrait-stamp {
     position: absolute;
-    bottom: -2px;
     right: -2px;
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1.2rem;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px var(--surface-card);
-    pointer-events: none;
+    bottom: 4px;
+    width: var(--stamp-size-md);
+    height: var(--stamp-size-md);
+    font-size: var(--font-size-lg);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 0 3px var(--color-surface);
   }
 
-  &__hero.is-deceased {
-    /* Replace the emerald-tinted gradient with a quieter slate wash so the
-     * hero card itself signals "in memoriam" alongside the dagger stamp. */
-    background:
-      linear-gradient(135deg, color-mix(in oklab, var(--deceased-accent) 70%, transparent) 0%, transparent 60%),
-      var(--surface-card);
+  &__name {
+    margin: var(--space-5) 0 0;
+    font-family: var(--font-family-display);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+    overflow-wrap: anywhere;
 
-    .p-avatar {
-      box-shadow:
-        0 0 0 4px color-mix(in oklab, var(--deceased-accent) 70%, transparent),
-        0 8px 24px rgba(0, 0, 0, 0.35);
+    &--placeholder {
+      color: var(--color-text-muted);
     }
   }
 
-  &__hero-meta {
-    flex: 1 1 auto;
-    min-width: 0;
+  &__facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
   }
 
-  &__avatar-fallback {
-    background-color: color-mix(in oklab, var(--p-emerald-500) 25%, var(--surface-card));
-    color: var(--text-color);
-    font-weight: 600;
+  &__lifespan,
+  &__hint {
+    margin: var(--space-3) 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
   }
 
+  &__hint {
+    color: var(--color-text-muted);
+  }
+
+  &__photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1);
+    margin-top: var(--space-5);
+  }
+
+  &__meta {
+    width: 100%;
+    margin: var(--space-5) 0 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    display: grid;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs);
+
+    div {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    dt {
+      color: var(--color-text-muted);
+    }
+
+    dd {
+      margin: 0;
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__profile.is-deceased &__portrait {
+    box-shadow:
+      0 0 0 3px var(--color-surface),
+      0 0 0 5px var(--deceased-accent),
+      var(--shadow-md);
+  }
+
+  /* ---------- Sections ---------- */
   &__section {
-    padding: 1.75rem 2rem;
-    border: 1px solid var(--surface-border);
+    padding: var(--form-section-padding);
+    background-color: var(--form-section-bg);
+    border: 1px solid var(--form-section-border);
+    border-radius: var(--form-section-radius);
   }
 
   &__section-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.875rem;
-    margin-bottom: 1.5rem;
-
-    > i {
-      flex: 0 0 auto;
-      width: 2.25rem;
-      height: 2.25rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 0.625rem;
-      background-color: color-mix(in oklab, var(--p-emerald-500) 14%, transparent);
-      color: var(--p-emerald-400, #34d399);
-    }
+    margin-bottom: var(--form-section-gap);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
 
     h3 {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--text-color);
+      margin: 0;
+      font-size: var(--form-section-title-size);
+      font-weight: var(--form-section-title-weight);
+      line-height: var(--line-height-tight);
+    }
+
+    p {
+      margin: var(--space-1) 0 0;
+      font-size: var(--form-section-desc-size);
+      color: var(--color-text-muted);
     }
   }
 
+  /* ---------- Fields ---------- */
   &__fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem 1.5rem;
+    gap: var(--form-row-gap) var(--form-col-gap);
   }
 
   &__field {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-
-    label {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--text-color-secondary);
-    }
+    gap: var(--form-field-gap);
+    min-width: 0;
 
     &--full {
       grid-column: 1 / -1;
     }
 
-    ::ng-deep .p-datepicker,
-    ::ng-deep .p-select,
-    ::ng-deep .p-multiselect {
+    > label,
+    .member-edit__label {
+      font-size: var(--form-label-size);
+      font-weight: var(--form-label-weight);
+      color: var(--form-label-color);
+    }
+
+    ::ng-deep :is(.p-datepicker, .p-select, .p-multiselect, .p-inputtext, .p-textarea) {
       width: 100%;
     }
   }
 
-  &__lane {
+  &__label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+
+    label {
+      font-size: var(--form-label-size);
+      font-weight: var(--form-label-weight);
+      color: var(--form-label-color);
+    }
+  }
+
+  &__req {
+    color: var(--form-required-color);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  &__help {
+    font-size: var(--form-help-size);
+    line-height: var(--line-height-normal);
+    color: var(--form-help-color);
+  }
+
+  &__error {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--form-help-size);
+    font-weight: var(--font-weight-medium);
+    color: var(--form-error-color);
+
+    i {
+      font-size: var(--form-help-size);
+    }
+  }
+
+  &__counter {
+    font-size: var(--form-help-size);
+    color: var(--form-help-color);
+    font-variant-numeric: tabular-nums;
+
+    &.is-over {
+      color: var(--form-error-color);
+      font-weight: var(--font-weight-semibold);
+    }
+  }
+
+  ::ng-deep .member-edit__segmented {
+    display: flex;
+
+    .p-togglebutton {
+      flex: 1 1 0;
+    }
+  }
+
+  /* "Has died" switch + the date it reveals, in one quiet well */
+  &__life {
+    padding: var(--space-4);
+    background-color: var(--well-bg);
+    border: 1px solid var(--well-border);
+    border-radius: var(--well-radius);
+  }
+
+  &__switch {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    cursor: pointer;
+
+    > span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+
+  &__switch-label {
+    font-size: var(--form-label-size);
+    font-weight: var(--form-label-weight);
+    color: var(--form-label-color);
+  }
+
+  &__death {
+    max-width: var(--member-death-field-width);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-border-strong);
+  }
+
+  /* ---------- Family groups ---------- */
+  &__group {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: var(--space-3);
+
+    & + & {
+      margin-top: var(--space-6);
+      padding-top: var(--space-6);
+      border-top: 1px solid var(--color-border);
+    }
   }
 
-  &__lane + &__lane {
-    margin-top: 0.5rem;
-  }
-
-  &__lane-label {
-    font-size: 0.8125rem;
+  &__group-label {
+    margin: 0;
+    font-size: var(--form-group-label-size);
+    font-weight: var(--form-group-label-weight);
+    letter-spacing: var(--letter-spacing-caps);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 600;
-    color: var(--text-color-secondary);
+    line-height: var(--line-height-tight);
+    color: var(--form-group-label-color);
   }
 
-  &__lane-hint {
-    text-transform: none;
-    letter-spacing: normal;
-    font-weight: 400;
-    color: var(--text-color-secondary);
-    opacity: 0.75;
-  }
-
-  &__lane-row {
+  &__group-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-2);
+  }
+
+  &__picker {
+    flex: 1 1 16rem;
+    min-width: 0;
   }
 
   &__parents {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+    gap: var(--space-4);
   }
 
   &__parent {
-    position: relative;
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1rem;
-    border: 1px dashed var(--surface-border);
-    border-radius: 0.875rem;
-    background-color: color-mix(in oklab, var(--surface-card) 95%, transparent);
+    flex-direction: column;
+    gap: var(--form-field-gap);
+    min-width: 0;
+
+    ::ng-deep .p-select {
+      width: 100%;
+    }
   }
 
-  &__parent-tag {
-    position: absolute;
-    top: -0.55rem;
-    left: 0.75rem;
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 700;
-    color: var(--p-emerald-400, #34d399);
-    background-color: var(--surface-card);
-    padding: 0 0.4rem;
+  &__parent-role {
+    font-size: var(--form-label-size);
+    font-weight: var(--form-label-weight);
+    color: var(--form-label-color);
   }
 
   &__cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-2);
   }
 
+  &__empty {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    background-color: var(--well-bg);
+    border: 1px dashed var(--well-border);
+    border-radius: var(--well-radius);
+  }
+
+  /* ---------- Relation card ---------- */
   &__relation-card {
     all: unset;
+    box-sizing: border-box;
     display: block;
     cursor: pointer;
-    border: 1px solid var(--surface-border);
-    border-radius: 0.75rem;
-    padding: 0.75rem 0.875rem;
-    background-color: color-mix(in oklab, var(--surface-card) 92%, transparent);
+    padding: var(--relation-card-padding);
+    background-color: var(--relation-card-bg);
+    border: 1px solid var(--relation-card-border);
+    border-radius: var(--relation-card-radius);
     transition:
-      border-color 0.15s ease,
-      transform 0.15s ease,
-      background-color 0.15s ease;
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
 
     &:hover {
-      border-color: color-mix(in oklab, var(--p-emerald-500) 60%, var(--surface-border));
-      transform: translateY(-1px);
-      background-color: color-mix(in oklab, var(--p-emerald-500) 6%, var(--surface-card));
+      border-color: var(--relation-card-border-hover);
+      background-color: var(--relation-card-bg-hover);
     }
 
-    &:focus-visible {
-      outline: 2px solid var(--p-emerald-500);
+    &:focus-visible,
+    &:has(.member-edit__relation-card-link:focus-visible) {
+      outline: 2px solid var(--color-focus-ring);
       outline-offset: 2px;
     }
 
     &--with-action {
       display: flex;
-      align-items: stretch;
-      padding: 0;
-      overflow: hidden;
+      align-items: center;
+      padding: 0 var(--space-1) 0 0;
+      cursor: default;
+    }
+
+    &.is-deceased {
+      box-shadow: inset 2px 0 0 0 var(--deceased-accent);
     }
   }
 
   &__relation-card-link {
     all: unset;
     box-sizing: border-box;
-    /* Shrink with the card (long names truncate) so the remove button stays inside it. */
+    /* Shrinks with the card (long names truncate) so the remove button stays inside. */
     flex: 1 1 0;
     min-width: 0;
     cursor: pointer;
-    padding: 0.75rem 0.875rem;
+    padding: var(--relation-card-padding);
   }
 
   &__relation-card-inner {
     display: flex;
     align-items: center;
-    gap: 0.875rem;
+    gap: var(--space-3);
     min-width: 0;
+  }
 
-    .p-tag {
-      font-size: 0.625rem;
-      padding: 0.125rem 0.4rem;
-    }
+  &__relation-name {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__relation-sub {
+    margin-top: 2px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+  }
+
+  &__relation-go {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-subtle);
+    transition: transform var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  }
+
+  &__relation-card:hover &__relation-go {
+    color: var(--color-accent);
+    transform: translateX(2px);
   }
 
   &__relation-card-avatar {
@@ -345,81 +610,127 @@
 
   &__relation-card-stamp {
     position: absolute;
-    bottom: -3px;
     right: -3px;
-    width: 1.05rem;
-    height: 1.05rem;
-    font-size: 0.8rem;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px var(--surface-card);
+    bottom: -3px;
+    width: var(--stamp-size-sm);
+    height: var(--stamp-size-sm);
+    font-size: var(--font-size-xs);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 0 0 2px var(--color-surface);
   }
 
-  &__relation-card.is-deceased,
-  &__relation-card--with-action.is-deceased {
-    /* Soft slate ribbon along the leading edge — quiet but unmistakable. */
-    border-left: 2px solid var(--deceased-accent);
-
-    &:hover {
-      border-color: var(--deceased-accent);
-      background-color: color-mix(in oklab, var(--deceased-accent) 12%, var(--surface-card));
-    }
+  &__avatar-fallback {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+    font-weight: var(--font-weight-semibold);
   }
 
-  &__relation-card-link + p-button {
-    flex: 0 0 auto;
-    align-self: center;
-    padding-right: 0.5rem;
-  }
-
-  &__empty {
-    padding: 1rem 1.25rem;
-    border: 1px dashed var(--surface-border);
-    border-radius: 0.75rem;
-    color: var(--text-color-secondary);
-    font-size: 0.875rem;
-    background-color: color-mix(in oklab, var(--surface-card) 96%, transparent);
-  }
-
-  &__picker {
-    min-width: 18rem;
-    flex: 1 1 18rem;
-  }
-
+  /* ---------- Delete ---------- */
   &__danger {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    border-color: color-mix(in oklab, var(--p-red-500, #ef4444) 35%, var(--surface-border));
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    background-color: var(--color-danger-soft);
+    border-color: var(--color-danger-border);
+
+    h3 {
+      margin: 0;
+      font-size: var(--font-size-md);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    p {
+      margin: var(--space-1) 0 0;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
   }
 }
 
-@media (min-width: 992px) {
-  .member-edit__hero {
-    align-items: flex-start;
+/* ---------- Responsive ---------- */
+@media (max-width: 1199px) {
+  .member-edit__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Profile becomes a horizontal header card above the form. */
+  .member-edit__profile {
+    position: static;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'portrait name'
+      'portrait facts'
+      'portrait lifespan'
+      'portrait actions'
+      'meta meta';
+    column-gap: var(--space-6);
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+    padding: var(--space-6);
+
+    > .member-edit__portrait { grid-area: portrait; }
+    > .member-edit__name { grid-area: name; margin-top: 0; }
+    > .member-edit__facts { grid-area: facts; justify-content: flex-start; }
+    > .member-edit__lifespan,
+    > .member-edit__hint { grid-area: lifespan; }
+    > .member-edit__photo-actions { grid-area: actions; justify-content: flex-start; margin-top: var(--space-3); }
+    > .member-edit__meta {
+      grid-area: meta;
+      grid-template-columns: repeat(2, max-content);
+      column-gap: var(--space-8);
+
+      div { justify-content: flex-start; }
+    }
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .member-edit__bar {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+    align-items: stretch;
+    top: var(--layout-topbar-height);
+  }
+
+  .member-edit__bar-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .member-edit__status {
+    margin-right: auto;
   }
 
   .member-edit__fields,
   .member-edit__parents {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .member-edit__hero {
+  .member-edit__section {
+    padding: var(--space-4);
+  }
+
+  .member-edit__profile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'portrait' 'name' 'facts' 'lifespan' 'actions' 'meta';
+    justify-items: center;
+    text-align: center;
+
+    > .member-edit__facts,
+    > .member-edit__photo-actions { justify-content: center; }
+    > .member-edit__name { margin-top: var(--space-4); }
+  }
+
+  .member-edit__danger {
     flex-direction: column;
     align-items: flex-start;
-    text-align: left;
   }
 }
 
-/* Embedded in the "new child" drawer: the drawer is the scroll container, so
- * the action bar sticks to its top and the page chrome goes away. */
+/* Embedded in a drawer: the drawer scrolls, the page chrome goes away, and
+ * there's no room for the side-by-side profile. */
 .member-edit.is-embedded {
   max-width: none;
   padding-bottom: 0;
@@ -428,8 +739,24 @@
     top: 0;
   }
 
-  .member-edit__hero {
-    padding: 1.25rem 1.5rem;
+  .member-edit__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-edit__profile {
+    position: static;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'portrait name' 'portrait lifespan' 'portrait actions';
+    column-gap: var(--space-5);
+    justify-items: start;
+    text-align: left;
+    padding: var(--space-5);
+
+    > .member-edit__portrait { grid-area: portrait; width: calc(var(--member-portrait-height-compact) * var(--member-portrait-ratio)); height: var(--member-portrait-height-compact); }
+    > .member-edit__name { grid-area: name; margin-top: 0; }
+    > .member-edit__hint { grid-area: lifespan; }
+    > .member-edit__photo-actions { grid-area: actions; justify-content: flex-start; margin-top: var(--space-2); }
   }
 }
 

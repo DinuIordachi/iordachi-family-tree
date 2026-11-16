@@ -11,9 +11,11 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule, DatePipe } from '@angular/common';
 import {
+  AbstractControl,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
+  ValidationErrors,
   Validators,
 } from '@angular/forms';
 import { distinctUntilChanged, firstValueFrom, forkJoin, map, Subscription } from 'rxjs';
@@ -25,7 +27,9 @@ import { DatePicker } from 'primeng/datepicker';
 import { Select } from 'primeng/select';
 import { MultiSelect } from 'primeng/multiselect';
 import { Avatar } from 'primeng/avatar';
-import { Divider } from 'primeng/divider';
+import { SelectButton } from 'primeng/selectbutton';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Tooltip } from 'primeng/tooltip';
 import { Message } from 'primeng/message';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Drawer } from 'primeng/drawer';
@@ -33,6 +37,9 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { FamilyTreeService } from '@app/core/services';
 import { FamilyMember, FamilyMemberPayload } from '@app/core/models';
 import { AppTag, AppTagSeverity, AvatarCropDialogComponent } from '@app/shared/components';
+
+/** Matches the API's biography limit. */
+const BIO_MAX = 10000;
 
 interface MemberOption {
   id: number;
@@ -60,12 +67,18 @@ interface MemberOption {
     MultiSelect,
     Avatar,
     AppTag,
-    Divider,
+    SelectButton,
+    ToggleSwitch,
+    Tooltip,
     Message,
     ConfirmDialog,
     Drawer,
     AvatarCropDialogComponent,
   ],
+  host: {
+    '(document:keydown)': 'onKeydown($event)',
+    '(window:beforeunload)': 'onBeforeUnload($event)',
+  },
   templateUrl: './family-member-edit.component.html',
   styleUrl: './family-member-edit.component.scss',
 })
@@ -118,6 +131,11 @@ export class FamilyMemberEditComponent implements OnInit {
   readonly member = signal<FamilyMember | null>(null);
   readonly tree = signal<FamilyMember[]>([]);
 
+  readonly parentSlots = [
+    { control: 'motherId', label: 'Mother' },
+    { control: 'fatherId', label: 'Father' },
+  ] as const;
+
   readonly genderOptions = [
     { label: 'Male', value: 'M' },
     { label: 'Female', value: 'F' },
@@ -129,12 +147,37 @@ export class FamilyMemberEditComponent implements OnInit {
     birthdate: [null as Date | null],
     diedAt: [null as Date | null],
     gender: [null as 'M' | 'F' | null],
-    biography: ['', [Validators.maxLength(10000)]],
+    deceased: [false],
+    biography: ['', [Validators.maxLength(BIO_MAX)]],
     motherId: [null as number | null],
     fatherId: [null as number | null],
     spouseIds: [[] as number[]],
     childIds: [[] as number[]],
-  });
+  }, { validators: [FamilyMemberEditComponent.lifeDatesValidator] });
+
+  readonly bioMax = BIO_MAX;
+
+  /** Mirrors `form.dirty` so the action bar can react (forms aren't signals). */
+  readonly dirty = signal(false);
+  readonly bioLength = signal(0);
+  readonly isDeceased = signal(false);
+
+  /**
+   * A death date is required once "has died" is on, and can't precede the
+   * birthdate. Errors live on the group; the template reads them per field.
+   */
+  private static lifeDatesValidator(group: AbstractControl): ValidationErrors | null {
+    const deceased = group.get('deceased')?.value as boolean;
+    const born = group.get('birthdate')?.value as Date | null;
+    const died = group.get('diedAt')?.value as Date | null;
+    if (deceased && !died) {
+      return { diedAtRequired: true };
+    }
+    if (deceased && born && died && died.getTime() < born.getTime()) {
+      return { diedBeforeBorn: true };
+    }
+    return null;
+  }
 
   readonly otherMembers = computed<MemberOption[]>(() => {
     const current = this.member();
@@ -176,7 +219,22 @@ export class FamilyMemberEditComponent implements OnInit {
     /* Siblings follow the parent pickers, whichever member is loaded. */
     this.form.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recomputeSiblings());
+      .subscribe((value) => {
+        this.recomputeSiblings();
+        this.dirty.set(this.form.dirty);
+        this.bioLength.set((value.biography ?? '').length);
+        this.isDeceased.set(!!value.deceased);
+      });
+
+    /* Turning "has died" off forgets the date, so a living member never
+     * carries a stale death date into the save. */
+    this.form.get('deceased')!.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((deceased) => {
+        if (!deceased && this.form.get('diedAt')!.value) {
+          this.form.get('diedAt')!.setValue(null);
+        }
+      });
 
     if (this.embedded()) {
       this.load(null);
@@ -254,6 +312,7 @@ export class FamilyMemberEditComponent implements OnInit {
       lastName: member.data['last name'] ?? '',
       birthdate: member.data.birthday ? new Date(member.data.birthday) : null,
       diedAt: member.diedAt ? new Date(member.diedAt) : null,
+      deceased: !!member.diedAt,
       gender: member.data.gender ?? null,
       biography: member.biography ?? '',
       motherId: motherId,
@@ -446,10 +505,101 @@ export class FamilyMemberEditComponent implements OnInit {
     }
     const current = (ctrl.value as number[]) ?? [];
     ctrl.setValue(current.filter((x) => x !== id));
+    this.markEdited(ctrl);
   }
 
   clearParent(controlName: 'motherId' | 'fatherId'): void {
-    this.form.get(controlName)?.setValue(null);
+    const ctrl = this.form.get(controlName);
+    ctrl?.setValue(null);
+    if (ctrl) this.markEdited(ctrl);
+  }
+
+  /** Programmatic edits (remove buttons) count as user edits. */
+  private markEdited(ctrl: AbstractControl): void {
+    ctrl.markAsDirty();
+    this.dirty.set(true);
+  }
+
+  /** Throw away unsaved edits, so leaving or reloading doesn't ask again. */
+  private markSaved(): void {
+    this.form.markAsPristine();
+    this.dirty.set(false);
+  }
+
+  /**
+   * Route guard hook: confirm before leaving with unsaved edits. Moving to a
+   * relative's card, Cancel, the sidebar and the back button all pass here.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (this.embedded() || !this.form.dirty || this.saving()) {
+      return true;
+    }
+    return new Promise<boolean>((resolve) => {
+      this.confirm.confirm({
+        header: 'Discard unsaved changes?',
+        message: 'You have edits on this member that are not saved yet. Leaving will discard them.',
+        icon: 'pi pi-exclamation-circle',
+        acceptLabel: 'Discard changes',
+        rejectLabel: 'Keep editing',
+        acceptButtonProps: { severity: 'danger', outlined: true },
+        rejectButtonProps: { severity: 'secondary' },
+        accept: () => resolve(true),
+        reject: () => resolve(false),
+      });
+    });
+  }
+
+  /** Cmd/Ctrl+S saves. Only the innermost form handles it while a drawer is open. */
+  onKeydown(event: KeyboardEvent): void {
+    if (!(event.key === 's' || event.key === 'S') || !(event.metaKey || event.ctrlKey)) {
+      return;
+    }
+    if (!this.embedded() && (this.childDrawerOpen() || this.spouseDrawerOpen())) {
+      return;
+    }
+    event.preventDefault();
+    if (!this.saving() && !this.loading()) {
+      void this.save();
+    }
+  }
+
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.embedded() && this.form.dirty) {
+      event.preventDefault();
+    }
+  }
+
+  /** Error text for a field, or null — shown under the control once touched. */
+  fieldError(name: string): string | null {
+    const ctrl = this.form.get(name);
+    if (!ctrl) {
+      return null;
+    }
+    if (name === 'diedAt') {
+      if (!ctrl.touched && !this.form.get('deceased')?.touched) return null;
+      if (this.form.hasError('diedAtRequired')) return 'Enter the date of death, or turn off “Has died”.';
+      if (this.form.hasError('diedBeforeBorn')) return 'The date of death is before the birthdate.';
+      return null;
+    }
+    if (!ctrl.touched || !ctrl.errors) {
+      return null;
+    }
+    if (ctrl.hasError('required')) return 'Enter a first name.';
+    if (ctrl.hasError('maxlength')) {
+      const max = ctrl.getError('maxlength').requiredLength;
+      return `Keep this under ${max.toLocaleString()} characters.`;
+    }
+    return null;
+  }
+
+  /** Move focus to the first field the admin has to fix. */
+  private focusFirstInvalid(): void {
+    const order = ['firstName', 'lastName', 'diedAt', 'biography'];
+    const first = order.find((name) => this.fieldError(name));
+    if (!first || typeof document === 'undefined') return;
+    const el = document.getElementById(first);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.focus({ preventScroll: true });
   }
 
   goToMember(id: number): void {
@@ -473,10 +623,11 @@ export class FamilyMemberEditComponent implements OnInit {
       this.form.markAllAsTouched();
       this.messages.add({
         severity: 'warn',
-        summary: 'Check the form',
-        detail: 'Please fix the highlighted fields before saving.',
+        summary: 'Not saved yet',
+        detail: 'Fix the highlighted fields, then save again.',
         life: 4000,
       });
+      queueMicrotask(() => this.focusFirstInvalid());
       return;
     }
 
@@ -491,7 +642,7 @@ export class FamilyMemberEditComponent implements OnInit {
       birthdate: value.birthdate
         ? (value.birthdate as Date).toISOString().slice(0, 10)
         : null,
-      diedAt: value.diedAt ? (value.diedAt as Date).toISOString() : null,
+      diedAt: value.deceased && value.diedAt ? (value.diedAt as Date).toISOString() : null,
       gender: value.gender,
       biography: value.biography?.trim() || null,
       parentIds,
@@ -507,6 +658,7 @@ export class FamilyMemberEditComponent implements OnInit {
           this.familyTreeService.store(payload as FamilyMemberPayload),
         );
         created = await this.uploadNewAvatar(created);
+        this.markSaved();
         this.messages.add({
           severity: 'success',
           summary: 'Member added',
@@ -548,8 +700,8 @@ export class FamilyMemberEditComponent implements OnInit {
       this.recomputeSiblings();
       this.messages.add({
         severity: 'success',
-        summary: 'Saved',
-        detail: 'Family member updated successfully.',
+        summary: 'Changes saved',
+        detail: `${this.fullName(updated)} is up to date.`,
         life: 3000,
       });
     } catch {
@@ -807,6 +959,7 @@ export class FamilyMemberEditComponent implements OnInit {
   private delete(member: FamilyMember): void {
     this.familyTreeService.remove(member.id).subscribe({
       next: () => {
+        this.markSaved();
         this.messages.add({
           severity: 'success',
           summary: 'Deleted',
