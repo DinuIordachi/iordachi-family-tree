@@ -22,6 +22,7 @@
             <rect x="-100000" y="-100000" width="200000" [attr.height]="100000 + b.layout.trunk.base.y" />
           </clipPath>
           <path class="et-wood-ink et-wood-ink-roots" [attr.d]="b.roots.bodies" />
+          <path class="et-wood-ink" [attr.transform]="b.rootWood.transform" [attr.d]="b.rootWood.body" />
           @for (t of b.trunks; track $index) {
             <path class="et-wood-ink et-wood-ink-trunk" clip-path="url(#et-back-above-ground)" [attr.d]="t.body" />
           }
@@ -31,6 +32,7 @@
           }
           <path class="et-wood-ink" [attr.d]="b.crownWood.body + b.crownWood.webs" />
         </g>
+        <path class="et-roots" [attr.transform]="b.rootWood.transform" [attr.d]="b.rootWood.body + b.rootWood.twigs" />
         <path class="et-roots" [attr.d]="b.roots.bodies" />
         <path class="et-root-grooves" [attr.d]="b.roots.grooves" />
         @for (t of b.trunks; track $index) {
@@ -50,6 +52,10 @@
           <path class="et-leaves-hatch" [attr.d]="b.foliage.hatch" />
           <path class="et-leaves-light" [attr.d]="b.foliage.light" />
           <path class="et-leaves-lit" [attr.d]="b.foliage.lit" />
+          @for (f of b.crownWood.fruits; track $index) {
+            <use class="et-fruit" [attr.href]="f.href" [attr.x]="-f.width / 2" y="0" [attr.width]="f.width" [attr.height]="f.height"
+                 [attr.transform]="'translate(' + f.at.x + ' ' + f.at.y + ') rotate(' + f.tilt + ')'" />
+          }
         </g>
         @for (p of b.placed; track p.id) {
           <g
@@ -91,6 +97,7 @@
         <rect x="-100000" y="-100000" width="200000" [attr.height]="100000 + ground().y" />
       </clipPath>
       <path class="et-wood-ink et-wood-ink-roots" [attr.d]="roots().bodies" />
+      <path class="et-wood-ink et-root-wood" [attr.transform]="rootWood().transform" [attr.d]="rootWood().body" />
       @for (t of trunks(); track $index) {
         <path class="et-wood-ink et-wood-ink-trunk" clip-path="url(#et-above-ground)" [attr.d]="t.body" />
       }
@@ -103,6 +110,8 @@
     </g>
 
     <g id="tree-roots" aria-hidden="true">
+      <!-- the lesser roots, forking off the founder roots down and out through the soil -->
+      <path class="et-roots et-root-wood" [attr.transform]="rootWood().transform" [attr.d]="rootWood().body + rootWood().twigs" />
       <path class="et-roots" [attr.d]="roots().bodies" />
       <path class="et-root-grooves" [attr.d]="roots().grooves" />
     </g>
@@ -149,6 +158,14 @@
       <path class="et-leaves-hatch" [attr.d]="foliage().hatch" />
       <path class="et-leaves-light" [attr.d]="foliage().light" />
       <path class="et-leaves-lit" [attr.d]="foliage().lit" />
+    </g>
+
+    <!-- Moldovan symbols hanging from the twig ends like fruit: grapes, the star, the aurochs, the rose -->
+    <g id="tree-fruit" aria-hidden="true">
+      @for (f of crownWood().fruits; track $index) {
+        <use class="et-fruit" [attr.href]="f.href" [attr.x]="-f.width / 2" y="0" [attr.width]="f.width" [attr.height]="f.height"
+             [attr.transform]="'translate(' + f.at.x + ' ' + f.at.y + ') rotate(' + f.tilt + ')'" />
+      }
     </g>
 
     <g id="decorative-details">

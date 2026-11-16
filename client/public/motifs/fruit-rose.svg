@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 22" width="96" height="88">
+<!-- Engraved fruit: heraldic rose of the Moldovan arms. Original line art for the Iordachi family tree; hangs from a twig at (12, 0). -->
+<symbol id="fruit" viewBox="0 0 24 22">
+<g style="stroke:var(--et-bark);stroke-linejoin:round;stroke-linecap:round;stroke-width:0.8">
+<path d="M12 0 Q12.8 2.2 12 4.4" style="fill:none;stroke-width:1"/><path d="M12.3 2.4 Q16 -0.6 19 1.6 Q16.2 4.6 12.3 2.4 Z" style="fill:var(--et-leaf-light)"/><path d="M12.6 2.4 L17.6 1.9" style="fill:none;stroke-width:0.4"/><circle cx="12.00" cy="8.80" r="3.6" style="fill:var(--et-oxblood)"/><circle cx="15.99" cy="11.70" r="3.6" style="fill:var(--et-oxblood)"/><circle cx="14.47" cy="16.40" r="3.6" style="fill:var(--et-oxblood)"/><circle cx="9.53" cy="16.40" r="3.6" style="fill:var(--et-oxblood)"/><circle cx="8.01" cy="11.70" r="3.6" style="fill:var(--et-oxblood)"/><path d="M13.88 10.41 L15.76 7.82" style="fill:none;stroke:var(--et-leaf-light);stroke-width:0.9"/><path d="M15.04 13.99 L18.09 14.98" style="fill:none;stroke:var(--et-leaf-light);stroke-width:0.9"/><path d="M12.00 16.20 L12.00 19.40" style="fill:none;stroke:var(--et-leaf-light);stroke-width:0.9"/><path d="M8.96 13.99 L5.91 14.98" style="fill:none;stroke:var(--et-leaf-light);stroke-width:0.9"/><path d="M10.12 10.41 L8.24 7.82" style="fill:none;stroke:var(--et-leaf-light);stroke-width:0.9"/><circle cx="12" cy="13" r="2.6" style="fill:var(--et-gilt)"/><circle cx="12" cy="13" r="1" style="fill:var(--et-bark);stroke:none;fill-opacity:0.5"/>
+</g>
+</symbol>
+<use href="#fruit" width="24" height="22"/>
+</svg>

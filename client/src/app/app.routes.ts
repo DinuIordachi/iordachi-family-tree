@@ -20,6 +20,8 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/tree-of-life/tree-of-life.component').then(m => m.TreeOfLifeComponent)
   },
+  /* The public tree is the front door; the admin lives under the layout. */
+  { path: '', redirectTo: 'tree', pathMatch: 'full' },
   {
     path: '',
     component: AppLayout,
@@ -33,8 +35,7 @@ export const routes: Routes = [
         path: 'family-members',
         loadChildren: () => import('./features/family-members/family-member.routes').then(m => m.FAMILY_MEMBER_ROUTES)
       },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: 'tree' }
 ];

@@ -64,7 +64,7 @@ describe('EngravedTreeComponent', () => {
   it('inks all wood outlines in one layer under the paper fills, so limbs merge smoothly into the trunk', async () => {
     const { root } = await setup();
     const ink = root.querySelector('#tree-wood-ink')!;
-    expect(ink.querySelectorAll('path.et-wood-ink')).toHaveLength(16); // the roots, 1 trunk, 6 branches and their 6 joint webs, the crown wood and the hanging twigs
+    expect(ink.querySelectorAll('path.et-wood-ink')).toHaveLength(17); // the roots, the lesser roots, 1 trunk, 6 branches and their 6 joint webs, the crown wood and the hanging twigs
     const fills = root.querySelector('#genealogical-connections')!;
     expect(ink.compareDocumentPosition(fills) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(root.querySelector('#tree-trunk')!.compareDocumentPosition(ink) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -262,7 +262,7 @@ describe('EngravedTreeComponent', () => {
 
   it('groups the engraving into named layers', async () => {
     const { root } = await setup();
-    for (const id of ['tree-roots', 'tree-trunk', 'tree-branches', 'tree-foliage', 'genealogical-connections', 'family-portraits', 'decorative-details', 'coat-of-arms', 'stephen-the-great', 'molda']) {
+    for (const id of ['tree-roots', 'tree-trunk', 'tree-branches', 'tree-foliage', 'genealogical-connections', 'family-portraits', 'decorative-details', 'coat-of-arms', 'trunk-shield', 'tree-fruit']) {
       expect(root.querySelector(`#${id}`), id).not.toBeNull();
     }
   });
@@ -291,12 +291,35 @@ describe('EngravedTreeComponent', () => {
     expect(root.querySelector('path.et-roots')!.getAttribute('d')).toMatch(/^M/);
   });
 
-  it('places the five fixed Moldovan motifs', async () => {
+  it('places the three fixed Moldovan motifs, and no figures on the ground', async () => {
     const { root } = await setup();
     const hrefs = [...root.querySelectorAll('g[etMotif] use')].map((u) => u.getAttribute('href'));
-    for (const id of ['stefan-cel-mare', 'molda-hound', 'aurochs-shield', 'eagle-cross', 'river-moldova']) {
+    for (const id of ['aurochs-shield', 'eagle-cross', 'river-moldova']) {
       expect(hrefs).toContain(`motifs/${id}.svg#motif`);
     }
+    expect(hrefs).not.toContain('motifs/stefan-cel-mare.svg#motif');
+    expect(hrefs).not.toContain('motifs/molda-hound.svg#motif');
+  });
+
+  it('hangs Moldovan symbols from the crown twigs like fruit, clear of the portraits', async () => {
+    const { root } = await setup();
+    const fruit = [...root.querySelectorAll('#tree-fruit use.et-fruit')];
+    expect(fruit.length).toBeGreaterThan(0);
+    for (const f of fruit) {
+      expect(f.getAttribute('href')).toMatch(/^motifs\/fruit-(grapes|star|aurochs|rose)\.svg#fruit$/);
+    }
+    // over the leaves, under the portraits
+    const leaves = root.querySelector('#tree-foliage')!;
+    const fruitLayer = root.querySelector('#tree-fruit')!;
+    expect(leaves.compareDocumentPosition(fruitLayer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fruitLayer.compareDocumentPosition(root.querySelector('#family-portraits')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('grows lesser roots off the founder roots, mirrored down into the soil', async () => {
+    const { root } = await setup();
+    const roots = root.querySelector('#tree-roots path.et-root-wood')!;
+    expect(roots.getAttribute('d')).toMatch(/^M/);
+    expect(roots.getAttribute('transform')).toMatch(/^matrix\(1 0 0 -1 0 /);
   });
 
   it('shows the title cartouche', async () => {
@@ -414,6 +437,6 @@ describe('EngravedTreeComponent', () => {
     const { root } = await setup([]);
     expect(root.querySelectorAll('g[etMedallion]')).toHaveLength(0);
     expect(root.querySelector('path.et-trunk')).not.toBeNull();
-    expect(root.querySelector('g.et-motif--stefan-cel-mare')).not.toBeNull();
+    expect(root.querySelector('g.et-motif--aurochs-shield')).not.toBeNull();
   });
 });

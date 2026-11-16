@@ -3,10 +3,7 @@ import { layoutTree } from './layout';
 import { FIXED_MOTIFS, SCATTER_MOTIFS, placeMotifs } from './motif-placement';
 import { member } from './testing/member-factory';
 import { SEED_MEMBERS as seed } from './testing/seed-fixture';
-import { MotifPlacement, TreeLayout } from './types';
-import { BANNER_BOTTOM, BANNER_TOP } from './medallion-geometry';
-
-const scattered = (p: MotifPlacement[]) => p.filter((m) => SCATTER_MOTIFS.includes(m.motif));
+import { TreeLayout } from './types';
 
 function bigTree(): TreeLayout {
   const kids = Array.from({ length: 12 }, (_, i) => String(i + 2));
@@ -32,18 +29,10 @@ describe('placeMotifs', () => {
     }
   });
 
-  it('groups Ștefan and Molda together at the trunk, his hand within reach of her head', () => {
+  it('keeps the ground by the trunk free of figures: only the shield, the arms and the river', () => {
     const p = placeMotifs(seedLayout, 1);
     const at = (id: string) => p.find((m) => m.motif === id)!;
-    const bx = seedLayout.trunk.base.x;
-    const stefan = at('stefan-cel-mare');
-    const molda = at('molda-hound');
-    expect(stefan.center).toEqual({ x: bx - 250, y: -112 });
-    expect(molda.center).toEqual({ x: bx - 126, y: -78 });
-    expect(molda.mirrored).toBe(false);
-    // both left of the trunk, Molda between him and the trunk
-    expect(stefan.center.x).toBeLessThan(molda.center.x);
-    expect(molda.center.x).toBeLessThan(bx);
+    expect(p.some((m) => m.motif === 'stefan-cel-mare' || m.motif === 'molda-hound')).toBe(false);
     expect(at('aurochs-shield').scale).toBe(0.8);
     expect(at('eagle-cross').center.y).toBe(seedLayout.bounds.minY - 150);
     // the river sits on the horizon behind the figures, not in the soil
@@ -51,57 +40,10 @@ describe('placeMotifs', () => {
     expect(at('river-moldova').scale).toBeCloseTo((seedLayout.bounds.maxX - seedLayout.bounds.minX + 600) / 600);
   });
 
-  it('scatters one ornament per 3 members, min 2', () =>
-    expect(scattered(placeMotifs(seedLayout, 1))).toHaveLength(Math.max(2, Math.floor(seedLayout.members.length / 3))));
-
-  it('fills a large crown with more ornaments, up to 16', () => {
-    const n = scattered(placeMotifs(bigTree(), 1)).length;
-    expect(n).toBeGreaterThan(8);
-    expect(n).toBeLessThanOrEqual(16);
-  });
-
-  it('places no crown ornaments when the only person is a founder in the roots', () =>
-    expect(scattered(placeMotifs(layoutTree(buildHouseholds([member('1')])), 1))).toHaveLength(0));
-
-  it('places none when there are no members at all', () =>
-    expect(scattered(placeMotifs(layoutTree(buildHouseholds([])), 1))).toHaveLength(0));
-
-  it('keeps 90 units from medallions and other ornaments', () => {
-    const layout = bigTree();
-    const s = scattered(placeMotifs(layout, 3));
-    for (const o of s) {
-      for (const m of layout.members) {
-        expect(Math.hypot(o.center.x - m.center.x, o.center.y - m.center.y)).toBeGreaterThanOrEqual(90);
-      }
-      for (const other of s) {
-        if (other !== o) {
-          expect(Math.hypot(o.center.x - other.center.x, o.center.y - other.center.y)).toBeGreaterThanOrEqual(90);
-        }
-      }
-    }
-  });
-
-  it('keeps ornaments off every name banner and its years', () => {
-    for (const layout of [seedLayout, bigTree()]) {
-      const s = scattered(placeMotifs(layout, 3));
-      for (const o of s) {
-        for (const m of layout.members) {
-          // ornament box (80×80) vs banner box: x ± 85 (half a slot), y + BANNER_TOP … y + BANNER_BOTTOM
-          const overlapX = Math.abs(o.center.x - m.center.x) < 40 + 85;
-          const overlapY = o.center.y + 40 > m.center.y + BANNER_TOP && o.center.y - 40 < m.center.y + BANNER_BOTTOM;
-          expect(overlapX && overlapY, `${o.motif} over banner of ${m.id}`).toBe(false);
-        }
-      }
-    }
-  });
-
-  it('keeps ornaments in the crown, never down among the roots', () => {
-    for (const layout of [seedLayout, bigTree()]) {
-      for (let seed = 1; seed <= 6; seed++) {
-        for (const o of scattered(placeMotifs(layout, seed))) {
-          expect(o.center.y + 40, o.motif).toBeLessThanOrEqual(layout.trunk.base.y - 20);
-        }
-      }
+  it('places no crown ornaments any more: the hanging fruit fills the crown instead', () => {
+    for (const layout of [seedLayout, bigTree(), layoutTree(buildHouseholds([]))]) {
+      expect(placeMotifs(layout, 1).filter((m) => SCATTER_MOTIFS.includes(m.motif))).toHaveLength(0);
+      expect(placeMotifs(layout, 1).map((m) => m.motif).sort()).toEqual([...FIXED_MOTIFS].sort());
     }
   });
 

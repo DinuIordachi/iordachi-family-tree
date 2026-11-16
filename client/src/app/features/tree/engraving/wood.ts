@@ -65,18 +65,37 @@ export function limbHalfWidths(start: number, tip: number, samples: number, coll
   });
 }
 
-/** A root from the trunk base down to a founder couple: it dives, then eases sideways — never climbs. */
+/** How thin a founder root is where it reaches the founders (it runs on under them as a point). */
+const ROOT_TIP_WIDTH = 9;
+
+/**
+ * A root from the trunk base out to a founder couple, the way a buttress root runs: it leaves the
+ * trunk's foot nearly level just under the soil, sweeps outward, then bends down toward the
+ * founders — never climbing — with a little wander along the way.
+ */
 export function rootCentreline(seg: BranchSegment, samples = 24): Point[] {
   const dx = seg.to.x - seg.from.x;
   const dy = Math.max(0, seg.to.y - seg.from.y);
   const start = { x: seg.from.x, y: seg.from.y - ROOT_TUCK };
-  return sampleCubic(
+  const line = sampleCubic(
     start,
-    { x: seg.from.x + dx * 0.1, y: seg.from.y + dy * 0.45 },
-    { x: seg.to.x - dx * 0.25, y: seg.to.y - dy * 0.2 },
+    { x: seg.from.x + dx * 0.42, y: seg.from.y + dy * 0.12 },
+    { x: seg.to.x - dx * 0.22, y: seg.to.y - dy * 0.55 },
     seg.to,
     samples,
   );
+  const rnd = seededRandom(hashSeed(seg.id) ^ 0x2f6b);
+  const wander = noise1D(rnd, 5);
+  const amp = Math.min(7, Math.hypot(dx, dy) * 0.025);
+  const n = normals(line);
+  let lowest = start.y;
+  return line.map((p, i) => {
+    const t = i / samples;
+    // no wander where it leaves the trunk or where it reaches the founders, and never climbing
+    const k = wander(t) * amp * Math.sin(Math.PI * t);
+    lowest = Math.max(lowest, p.y + n[i].y * k);
+    return { x: p.x + n[i].x * k, y: lowest };
+  });
 }
 
 /** Light from the upper left: the right-hand side (+frac) of wood is the shadow side. */
@@ -388,7 +407,7 @@ export function engravedBranch(seg: BranchSegment, endWidth?: number, ctx: LimbC
   const centre = isRoot ? rootCentreline(seg, samples) : branchCentreline(seg, samples, ctx);
   const widths = branchWidths(seg.generation, seg.weight);
   const start = isRoot ? TAPROOT_WIDTH : widths.start;
-  const tip = endWidth ?? widths.end;
+  const tip = isRoot ? ROOT_TIP_WIDTH : endWidth ?? widths.end;
   // only a limb growing straight out of the trunk (not one carrying on from a fork) flares at its base
   const half = limbHalfWidths(start, tip, samples, isRoot || !seg.rise);
 

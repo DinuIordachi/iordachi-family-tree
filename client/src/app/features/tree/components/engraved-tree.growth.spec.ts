@@ -39,7 +39,7 @@ describe('EngravedTreeComponent growth', () => {
     expect(gen('[data-branch-id="5+6>8"]')).toBe('3');
     expect(gen('g[etMedallion][data-member-id="1"]')).toBe('0');
     expect(gen('g.et-motif--eagle-cross')).toBe('4');
-    expect(gen('g.et-motif--stefan-cel-mare')).toBe('0');
+    expect(gen('g.et-motif--aurochs-shield')).toBe('0');
   });
 
   it('grows, then settles once the last generation has appeared', async () => {

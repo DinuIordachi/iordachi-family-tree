@@ -23,6 +23,15 @@ export interface CrownWood {
   twigs: string;
   /** Joint webs where crown branches leave the limbs. */
   webs: string;
+  /** Where a branch ends without forking on: its tip, heading and width there (fruit hangs here). */
+  tips: WoodTip[];
+}
+
+export interface WoodTip {
+  at: Point;
+  dir: Point;
+  /** Width of the branch the tip ends, at its start. */
+  width: number;
 }
 
 export interface CrownWoodOptions {
@@ -104,7 +113,7 @@ export function growCrownWood(limbs: LimbWood[], opts: CrownWoodOptions): CrownW
   const rnd = seededRandom(opts.seed);
   const spacing = opts.spacing ?? 64;
   const maxDepth = opts.depth ?? 6;
-  const out: CrownWood = { body: '', twigs: '', webs: '' };
+  const out: CrownWood = { body: '', twigs: '', webs: '', tips: [] };
 
   // ---- Occupancy grid: which branch holds each cell, so a new branch neither crosses nor crowds one.
   const grid = new Map<number, number>();
@@ -206,6 +215,7 @@ export function growCrownWood(limbs: LimbWood[], opts: CrownWoodOptions): CrownW
 
     // the branch tapers to the width of its thickest fork, or, where nothing forks on, to a soft point
     const half = taper(w0, grewChildren ? wEnd : 0.5, 8);
+    if (!grewChildren) out.tips.push({ at: line[line.length - 1], dir: endDir, width: w0 });
     const shapeD = ribbonOutline(line, half);
     if (w0 >= TWIG_WIDTH) {
       out.body += shapeD;

@@ -27,6 +27,7 @@ import { lineageBranchIds } from '../engraving/lineage';
 import { bannerSpan, fullName, lifespan } from '../engraving/member-text';
 import { FIXED_MOTIFS, placeMotifs } from '../engraving/motif-placement';
 import { hashSeed } from '../engraving/seeded-random';
+import { FRUIT_SIZES, placeFruits } from '../engraving/fruits';
 import { MotifId, MotifPlacement, Point, TreeLayout } from '../engraving/types';
 import { growCrownWood } from '../engraving/canopy-wood';
 import { decorativeSpurs, engravedBranch, engravedTrunk, HANG_ABOVE, hangers, limbContexts, rootSystem, soilHatching } from '../engraving/wood';
@@ -56,8 +57,6 @@ const SOIL_DEPTH = 230;
 const MOTIF_LAYERS: Partial<Record<MotifId, string>> = {
   'eagle-cross': 'coat-of-arms',
   'aurochs-shield': 'trunk-shield',
-  'stefan-cel-mare': 'stephen-the-great',
-  'molda-hound': 'molda',
 };
 /** Spec §5: --et-dur-grow (1600ms) plus one 300ms stagger per generation after the first. */
 const GROW_MS = 1600;
@@ -145,20 +144,51 @@ const WOOD_CLEAR = 12;
  * silhouette, above the ground, and clear of every portrait, banner, ornament and hanging twig.
  */
 function crownWoodOf(layout: TreeLayout, limbs: ReturnType<typeof branchesOf>, foliage: Foliage, clearings: Clearing[], seed: number) {
-  const grown = clearings.map((c): Clearing =>
-    c.kind === 'ellipse'
-      ? { ...c, rx: c.rx + WOOD_CLEAR, ry: c.ry + WOOD_CLEAR }
-      : { kind: 'rect', x: c.x - WOOD_CLEAR, y: c.y - WOOD_CLEAR, w: c.w + 2 * WOOD_CLEAR, h: c.h + 2 * WOOD_CLEAR },
-  );
+  const grown = grownClearings(clearings);
   // the stems the portraits hang from, between the twig point and the medallion
   for (const m of layout.members) {
     grown.push({ kind: 'rect', x: m.center.x - 26, y: m.center.y - HANG_ABOVE - 16, w: 52, h: HANG_ABOVE });
   }
   const ground = layout.trunk.base.y - 40;
-  return growCrownWood(
+  const allowed = (p: Point) => p.y < ground && foliage.contains(p) && !grown.some((c) => insideClearing(p, c));
+  const wood = growCrownWood(
     limbs.filter((l) => !l.root).map((l) => ({ centre: l.centre, half: l.half })),
-    { seed, allowed: (p) => p.y < ground && foliage.contains(p) && !grown.some((c) => insideClearing(p, c)) },
+    { seed, allowed },
   );
+  // Moldovan symbols hanging from the twig ends like fruit: plenty of them, but never crowded
+  const fruits = placeFruits(wood.tips, {
+    seed: seed ^ 0x9e3779b9,
+    allowed,
+    count: Math.min(80, Math.max(6, Math.round(layout.members.length * 1.5))),
+  }).map((f) => ({ ...f, ...FRUIT_SIZES[f.kind], href: `motifs/fruit-${f.kind}.svg#fruit` }));
+  return { ...wood, fruits };
+}
+
+function grownClearings(clearings: Clearing[]): Clearing[] {
+  return clearings.map((c): Clearing =>
+    c.kind === 'ellipse'
+      ? { ...c, rx: c.rx + WOOD_CLEAR, ry: c.ry + WOOD_CLEAR }
+      : { kind: 'rect', x: c.x - WOOD_CLEAR, y: c.y - WOOD_CLEAR, w: c.w + 2 * WOOD_CLEAR, h: c.h + 2 * WOOD_CLEAR },
+  );
+}
+
+/**
+ * Lesser roots forking off the founder roots through the soil, grown like the crown's branches but
+ * downward: the root wood is mirrored across the ground line, grown with the crown's rules (which
+ * pull toward the light), and mirrored back — so roots fork, taper and keep apart exactly as
+ * branches do, while heading down and outward into the earth. Draw it under `transform`.
+ */
+function rootWoodOf(layout: TreeLayout, limbs: ReturnType<typeof branchesOf>, clearings: Clearing[], spreadX: number, depth: number, seed: number) {
+  const g = layout.trunk.base.y;
+  const bx = layout.trunk.base.x;
+  const flip = (p: Point): Point => ({ x: p.x, y: 2 * g - p.y });
+  const grown = grownClearings(clearings);
+  const inSoil = (p: Point) => p.y > g + 12 && ((p.x - bx) / (spreadX * 0.97)) ** 2 + ((p.y - g) / (depth * 0.95)) ** 2 <= 1;
+  const wood = growCrownWood(
+    limbs.filter((l) => l.root).map((l) => ({ centre: l.centre.map(flip), half: l.half })),
+    { seed, spacing: 48, depth: 5, allowed: (q) => { const p = flip(q); return inSoil(p) && !grown.some((c) => insideClearing(p, c)); } },
+  );
+  return { body: wood.webs + wood.body, twigs: wood.twigs, transform: `matrix(1 0 0 -1 0 ${2 * g})` };
 }
 
 /** Medallions and banners are kept clear of leaves so they stay legible. */
@@ -253,6 +283,10 @@ export class EngravedTreeComponent {
       fine: parts.map((r) => r.fine).join(''),
     };
   });
+  /** The founder roots' lesser roots, forking down and out through the soil. */
+  protected readonly rootWood = computed(() =>
+    rootWoodOf(this.layout(), this.branches(), this.clearings(), this.soil().opts.spreadX, this.soil().opts.depth, hashSeed('root-wood')),
+  );
   protected readonly soilD = computed(() => soilHatching(this.soil().base, this.soil().opts, hashSeed('soil')));
   /** Tufts of grass along the ground line. */
   protected readonly grassD = computed(() => {
@@ -332,6 +366,7 @@ export class EngravedTreeComponent {
       crownWood: crownWoodOf(layout, branches, foliage, clearings, hashSeed('back-crown-wood')),
       trunks: layout.trunks.map((t, i) => engravedTrunk(t, hashSeed('back-trunk', String(i)), 92, trunkProfile(layout))),
       roots: rootSystem(layout.trunk.base, { spreadX, depth: SOIL_DEPTH * 0.8 }, hashSeed('back-roots')),
+      rootWood: rootWoodOf(layout, branches, clearings, spreadX, SOIL_DEPTH * 0.8, hashSeed('back-root-wood')),
       foliage,
       transform: `translate(${tx} ${ty}) scale(${BACK_SCALE})`,
       box: {

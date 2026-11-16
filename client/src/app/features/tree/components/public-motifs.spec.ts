@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { FIXED_MOTIFS, SCATTER_MOTIFS } from '../engraving/motif-placement';
+import { FRUIT_KINDS } from '../engraving/fruits';
 
 const dir = `${process.cwd()}/public/motifs`;
-const files = [...FIXED_MOTIFS, ...SCATTER_MOTIFS, 'silhouette-m', 'silhouette-f', 'silhouette-u'];
+// Ștefan and Molda no longer stand on the ground, but their artwork is kept and still checked
+const files = [...FIXED_MOTIFS, ...SCATTER_MOTIFS, 'stefan-cel-mare', 'molda-hound', 'silhouette-m', 'silhouette-f', 'silhouette-u'];
 
 describe('motif artwork files', () => {
   for (const id of files) {
@@ -36,6 +38,33 @@ describe('motif artwork files', () => {
         const svg = readFileSync(path, 'utf8');
         expect(svg).not.toMatch(/Gradient/);
         expect(svg).toMatch(/class="hatch"/);
+      });
+    });
+  }
+});
+
+describe('fruit artwork files', () => {
+  for (const kind of FRUIT_KINDS) {
+    describe(kind, () => {
+      const path = `${dir}/fruit-${kind}.svg`;
+
+      it('exists and is well-formed XML', () => {
+        expect(existsSync(path)).toBe(true);
+        const doc = new DOMParser().parseFromString(readFileSync(path, 'utf8'), 'image/svg+xml');
+        expect(doc.getElementsByTagName('parsererror')).toHaveLength(0);
+      });
+
+      it('exposes one themeable "fruit" symbol, painted from an inner group', () => {
+        const svg = readFileSync(path, 'utf8');
+        expect(svg).toMatch(/<symbol id="fruit"[^>]*viewBox="[\d.\s-]+"/);
+        expect(svg.match(/<symbol /g)).toHaveLength(1);
+        expect(svg).not.toMatch(/<symbol [^>]*style=/);
+      });
+
+      it('takes every colour from the tree theme', () => {
+        const svg = readFileSync(path, 'utf8');
+        expect(svg).not.toMatch(/#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b(?![\w-])/);
+        expect(svg).toMatch(/var\(--et-/);
       });
     });
   }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 21" width="96" height="84">
+<!-- Engraved fruit: grape bunch. Original line art for the Iordachi family tree; hangs from a twig at (12, 0). -->
+<symbol id="fruit" viewBox="0 0 24 21">
+<g style="stroke:var(--et-bark);stroke-linejoin:round;stroke-linecap:round;stroke-width:0.8">
+<path d="M12 0 Q12.8 2.2 12 4.4" style="fill:none;stroke-width:1"/><path d="M12.3 2.4 Q8 -0.6 5 1.6 Q7.8 4.6 12.3 2.4 Z" style="fill:var(--et-leaf-light)"/><path d="M12.6 2.4 L6.4 1.9" style="fill:none;stroke-width:0.4"/><circle cx="7" cy="8.6" r="3" style="fill:var(--et-oxblood)"/><circle cx="12" cy="8" r="3" style="fill:var(--et-oxblood)"/><circle cx="17" cy="8.6" r="3" style="fill:var(--et-oxblood)"/><circle cx="9.5" cy="12.8" r="3" style="fill:var(--et-oxblood)"/><circle cx="14.5" cy="12.8" r="3" style="fill:var(--et-oxblood)"/><circle cx="12" cy="17.2" r="3" style="fill:var(--et-oxblood)"/><path d="M5.35 8.30 A1.80 1.80 0 0 1 6.85 6.80" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M10.35 7.70 A1.80 1.80 0 0 1 11.85 6.20" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M15.35 8.30 A1.80 1.80 0 0 1 16.85 6.80" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M7.85 12.50 A1.80 1.80 0 0 1 9.35 11.00" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M12.85 12.50 A1.80 1.80 0 0 1 14.35 11.00" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M10.35 16.90 A1.80 1.80 0 0 1 11.85 15.40" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/><path d="M12 4.4 L12 6" style="fill:none;stroke-width:0.8"/>
+</g>
+</symbol>
+<use href="#fruit" width="24" height="21"/>
+</svg>

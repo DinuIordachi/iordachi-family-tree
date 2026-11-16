@@ -115,6 +115,13 @@ describe('engravedBranch — root to the founders', () => {
     expect(Math.max(...near) - Math.min(...near)).toBeGreaterThan(60);
     expect(root.twigs).toBe('');
   });
+
+  it('tapers to a slender point at the founders, like a real root, not a blunt log', () => {
+    const half = root.half;
+    expect(half[0] * 2).toBeGreaterThan(80);
+    expect(half[half.length - 1] * 2).toBeLessThan(12);
+    for (let i = 4; i < half.length; i++) expect(half[i]).toBeLessThanOrEqual(half[i - 1] + 1e-9);
+  });
 });
 
 describe('rootCentreline', () => {

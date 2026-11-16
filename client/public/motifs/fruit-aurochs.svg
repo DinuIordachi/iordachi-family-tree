@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 25" width="96" height="100">
+<!-- Engraved fruit: aurochs head of the Moldovan arms. Original line art for the Iordachi family tree; hangs from a twig at (12, 0). -->
+<symbol id="fruit" viewBox="0 0 24 25">
+<g style="stroke:var(--et-bark);stroke-linejoin:round;stroke-linecap:round;stroke-width:0.8">
+<path d="M12 0 Q12.8 2.2 12 4.4" style="fill:none;stroke-width:1"/><path d="M12.3 2.4 Q8 -0.6 5 1.6 Q7.8 4.6 12.3 2.4 Z" style="fill:var(--et-leaf-light)"/><path d="M12.6 2.4 L6.4 1.9" style="fill:none;stroke-width:0.4"/><circle cx="12" cy="15" r="9.4" style="fill:var(--et-gilt)"/><path d="M9.2 12.2 Q5.6 12 5.4 8.4 Q6.6 10.4 9.6 10.6" style="fill:var(--et-paper);stroke-width:0.6"/><path d="M14.8 12.2 Q18.4 12 18.6 8.4 Q17.4 10.4 14.4 10.6" style="fill:var(--et-paper);stroke-width:0.6"/><path d="M9.3 12.4 L7.2 13.6 L9.4 14.2 Z M14.7 12.4 L16.8 13.6 L14.6 14.2 Z" style="fill:var(--et-paper);stroke-width:0.5"/><path d="M9.2 11.2 Q12 9.9 14.8 11.2 L14.4 17 Q14.2 20.6 12 21 Q9.8 20.6 9.6 17 Z" style="fill:var(--et-paper);stroke-width:0.65"/><circle cx="10.7" cy="13.8" r="0.55" style="fill:var(--et-bark);stroke:none"/><circle cx="13.3" cy="13.8" r="0.55" style="fill:var(--et-bark);stroke:none"/><path d="M11 19.3 Q11.4 18.6 11.6 19.3 M12.4 19.3 Q12.6 18.6 13 19.3" style="fill:none;stroke-width:0.45"/><path d="M12.00 6.40 L12.29 7.41 L13.20 6.90 L12.69 7.81 L13.70 8.10 L12.69 8.39 L13.20 9.30 L12.29 8.79 L12.00 9.80 L11.71 8.79 L10.80 9.30 L11.31 8.39 L10.30 8.10 L11.31 7.81 L10.80 6.90 L11.71 7.41 Z" style="fill:var(--et-paper);stroke-width:0.4"/>
+</g>
+</symbol>
+<use href="#fruit" width="24" height="25"/>
+</svg>

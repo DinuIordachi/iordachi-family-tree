@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 23" width="96" height="92">
+<!-- Engraved fruit: eight-pointed star of the Moldovan arms. Original line art for the Iordachi family tree; hangs from a twig at (12, 0). -->
+<symbol id="fruit" viewBox="0 0 24 23">
+<g style="stroke:var(--et-bark);stroke-linejoin:round;stroke-linecap:round;stroke-width:0.8">
+<path d="M12 0 Q12.8 2.2 12 4.4" style="fill:none;stroke-width:1"/><path d="M12.3 2.4 Q16 -0.6 19 1.6 Q16.2 4.6 12.3 2.4 Z" style="fill:var(--et-leaf-light)"/><path d="M12.6 2.4 L17.6 1.9" style="fill:none;stroke-width:0.4"/><circle cx="12" cy="14" r="8.6" style="fill:var(--et-gilt)"/><circle cx="12" cy="14" r="7" style="fill:none;stroke-width:0.4;stroke-dasharray:0.6 0.9"/><path d="M12.00 8.60 L12.88 11.88 L15.82 10.18 L14.12 13.12 L17.40 14.00 L14.12 14.88 L15.82 17.82 L12.88 16.12 L12.00 19.40 L11.12 16.12 L8.18 17.82 L9.88 14.88 L6.60 14.00 L9.88 13.12 L8.18 10.18 L11.12 11.88 Z" style="fill:var(--et-paper);stroke-width:0.6"/><path d="M7.27 13.14 A5.16 5.16 0 0 1 11.57 8.84" style="fill:none;stroke:var(--et-paper);stroke-width:0.6;stroke-opacity:0.8"/>
+</g>
+</symbol>
+<use href="#fruit" width="24" height="23"/>
+</svg>
