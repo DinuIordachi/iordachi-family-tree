@@ -55,8 +55,11 @@ class Policy extends Command
         $this->roleRepository = app(config('permission.models.role', Role::class));
         $this->permissionRepository = app(config('permission.models.permission', Permission::class));
 
-        $this->call('config:cache');
-        $this->newLine();
+        // Never cache config from a test run: it would pin the testing env (sqlite :memory:) for the real app.
+        if (! app()->runningUnitTests()) {
+            $this->call('config:cache');
+            $this->newLine();
+        }
         $this->startExecutionTime();
 
         $this->roles = $this->syncGetRoles();

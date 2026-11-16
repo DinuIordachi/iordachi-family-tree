@@ -1,0 +1,46 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "start",
+        "--",
+        "--port",
+        "4200"
+      ],
+      "port": 4200
+    },
+    {
+      "name": "client-10200",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "start",
+        "--",
+        "--port",
+        "10200"
+      ],
+      "port": 10200,
+      "autoPort": false
+    },
+    {
+      "name": "client-4000",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "start",
+        "--",
+        "--port",
+        "4000"
+      ],
+      "port": 4000,
+      "autoPort": false
+    }
+  ]
+}

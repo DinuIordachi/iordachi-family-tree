@@ -19,17 +19,8 @@ Route::prefix('v1')->group(function () {
      * Public routes
      */
     Route::post('/login', Auth\LoginController::class);
-    Route::post('/register', Auth\RegisterController::class);
     Route::post('/forgot-password', Auth\ForgotPasswordController::class);
     Route::post('/reset-password', Auth\ResetPasswordController::class);
-
-    /*
-     * Public family tree (read-only).
-     */
-    Route::prefix('family-tree')->controller(FamilyTree\FamilyTreeController::class)->group(function () {
-        Route::get('/', 'index');
-        Route::get('/{family_member}', 'show')->withTrashed();
-    });
 
     /*
      * Authenticated routes (no email verification required)
@@ -76,9 +67,11 @@ Route::prefix('v1')->group(function () {
         });
 
         /*
-         * Family tree writes (protected).
+         * Family tree (reads and writes need a verified login).
          */
         Route::prefix('family-tree')->controller(FamilyTree\FamilyTreeController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::get('/{family_member}', 'show')->withTrashed();
             Route::post('/', 'store');
             Route::put('/{family_member}', 'update');
             Route::delete('/{family_member}', 'destroy');

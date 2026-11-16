@@ -108,7 +108,8 @@ class IordachiFamilySeederTest extends TestCase
         }
         $this->assertFalse($this->member('Valentina', 'Rapcea')->isDeceased());
 
-        $json = $this->getJson('/api/v1/family-tree')->json('data');
+        $json = $this->withToken($this->apiToken())
+            ->getJson('/api/v1/family-tree')->json('data');
         $rabdau = collect($json)->first(fn ($m) => $m['data']['first name'] === 'Ion' && ($m['data']['last name'] ?? null) === 'Rabdau');
         $this->assertTrue($rabdau['deceased']);
         $this->assertNull($rabdau['diedAt']);

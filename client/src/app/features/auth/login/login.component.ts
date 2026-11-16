@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '@app/core/services';
 import { InputText } from 'primeng/inputtext';
 import { Password } from 'primeng/password';
@@ -15,7 +15,6 @@ import { AppFloatingConfigurator } from '@app/layout';
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    RouterLink,
     InputText,
     Password,
     Button,

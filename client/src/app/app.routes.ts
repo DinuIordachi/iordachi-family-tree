@@ -8,19 +8,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
   {
-    path: 'register',
-    loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
-  },
-  {
     path: 'tree',
+    canActivate: [authGuard],
     loadComponent: () => import('./features/tree/tree.component').then(m => m.TreeComponent)
   },
   {
     path: 'tree-of-life',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/tree-of-life/tree-of-life.component').then(m => m.TreeOfLifeComponent)
   },
-  /* The public tree is the front door; the admin lives under the layout. */
+  /* The tree is the front door (after login); the admin lives under the layout. */
   { path: '', redirectTo: 'tree', pathMatch: 'full' },
   {
     path: '',

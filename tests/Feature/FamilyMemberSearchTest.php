@@ -40,7 +40,8 @@ class FamilyMemberSearchTest extends TestCase
         FamilyMember::factory()->create(['first_name' => 'Natalia', 'last_name' => 'Mandru']);
         FamilyMember::factory()->create(['first_name' => 'Vasile', 'last_name' => 'Iordachi']);
 
-        $this->getJson('/api/v1/family-tree?asTree=false&term=natal')
+        $this->withToken($this->apiToken())
+            ->getJson('/api/v1/family-tree?asTree=false&term=natal')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('meta.total', 1);

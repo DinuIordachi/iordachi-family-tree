@@ -1,14 +1,3 @@
-# Password-protect the site (login popup) when C:/OSPanel/home/iordachi-family-tree/.htpasswd exists.
-# /api and /sanctum are left out: the app sends its own "Authorization: Bearer" token there,
-# which would replace the Basic credentials and make every API call fail.
-# THE_REQUEST is the original request line, so the check survives the rewrite to index.php.
-<If "-f 'C:/OSPanel/home/iordachi-family-tree/.htpasswd' && %{THE_REQUEST} !~ m#^[A-Z]+ /(api|sanctum)/#">
-    AuthType Basic
-    AuthName "Iordachi Family Tree"
-    AuthUserFile "C:/OSPanel/home/iordachi-family-tree/.htpasswd"
-    Require valid-user
-</If>
-
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
