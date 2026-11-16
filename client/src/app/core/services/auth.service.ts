@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
 import { LoginRequest, RegisterRequest, AuthResponse } from '../models/auth.model';
 import { ApiResponse } from '../models/api-response.model';
+import { RETURN_URL_PARAM, safeReturnUrl } from '../guards/return-url';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -85,10 +86,15 @@ export class AuthService {
     localStorage.setItem('auth_token', token);
   }
 
-  clearAuth(): void {
+  /**
+   * Forget the session and go to /login. Pass the current page as `returnUrl` when the session
+   * ended on its own (expired token) so logging in again brings the user back to it.
+   */
+  clearAuth(returnUrl?: string): void {
     this.token.set(null);
     this.currentUser.set(null);
     localStorage.removeItem('auth_token');
-    this.router.navigate(['/login']);
+    const target = safeReturnUrl(returnUrl);
+    this.router.navigate(['/login'], target ? { queryParams: { [RETURN_URL_PARAM]: target } } : {});
   }
 }

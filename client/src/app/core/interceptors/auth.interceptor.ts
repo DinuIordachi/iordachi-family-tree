@@ -1,5 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
@@ -16,6 +17,7 @@ const isGuestEndpoint = (url: string): boolean => {
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
   const token = authService.getToken();
 
   if (token && !isGuestEndpoint(req.url)) {
@@ -29,7 +31,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
       if (err.status === 401 && !req.url.includes('/login')) {
-        authService.clearAuth();
+        // The session expired: after logging in again, come back to the page the user was on,
+        // or to the one being opened when the 401 interrupts a navigation (e.g. the guard's /me check).
+        const navigation = router.currentNavigation();
+        const page = navigation ? router.serializeUrl(navigation.finalUrl ?? navigation.extractedUrl) : router.url;
+        authService.clearAuth(page);
       }
       return throwError(() => err);
     })

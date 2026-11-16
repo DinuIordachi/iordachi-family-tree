@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '@app/core/services';
+import { RETURN_URL_PARAM, safeReturnUrl } from '@app/core/guards/return-url';
 import { InputText } from 'primeng/inputtext';
 import { Password } from 'primeng/password';
 import { Button } from 'primeng/button';
@@ -29,6 +30,7 @@ import { AppFloatingConfigurator } from '@app/layout';
 export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
   loading = signal(false);
@@ -54,7 +56,9 @@ export class LoginComponent {
     this.auth.login({ email, password }).subscribe({
       next: () => {
         this.loading.set(false);
-        void this.router.navigate(['/dashboard']);
+        // Back to the page the guest asked for; the dashboard only when /login was opened directly.
+        const returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get(RETURN_URL_PARAM));
+        void this.router.navigateByUrl(returnUrl ?? '/dashboard');
       },
       error: (err) => {
         this.loading.set(false);
