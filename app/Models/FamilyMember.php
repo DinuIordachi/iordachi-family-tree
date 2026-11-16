@@ -183,15 +183,19 @@ class FamilyMember extends Model implements HasMedia
 
     public function scopeSearch(Builder $builder, ?string $term = null): Builder
     {
-        if ($term === null) {
-            return $builder;
-        }
-        $term = trim(strtolower($term));
+        $words = preg_split('/\s+/', trim((string) $term), -1, PREG_SPLIT_NO_EMPTY);
 
-        return $builder
-            ->where('first_name', 'LIKE', "%{$term}%")
-            ->orWhere('last_name', 'LIKE', "%{$term}%")
-            ->orWhere('biography', 'LIKE', "%{$term}%");
+        // Every word must hit one of the name fields, so "ion mandru" finds
+        // Ion Mandru. Grouped so the ORs never escape the surrounding filters.
+        foreach ($words as $word) {
+            $like = '%' . addcslashes(mb_strtolower($word), '%_\\') . '%';
+            $builder->where(fn (Builder $q) => $q
+                ->whereRaw('LOWER(first_name) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(last_name) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(biography) LIKE ?', [$like]));
+        }
+
+        return $builder;
     }
 
     public function scopeFilter(Builder $builder, array $data = []): Builder

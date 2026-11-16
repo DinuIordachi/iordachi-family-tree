@@ -8,6 +8,21 @@
               routerLink="/family-members/new" />
   </div>
 
+  <div class="flex items-center gap-2 mb-4">
+    <p-iconfield class="member-search">
+      <p-inputicon class="pi pi-search" />
+      <input #search pInputText type="search" class="w-full"
+             placeholder="Search by name or bio…"
+             aria-label="Search family members"
+             (input)="onSearch(search.value)"
+             (keydown.escape)="clearSearch(search)" />
+    </p-iconfield>
+    @if (term()) {
+      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary"
+                ariaLabel="Clear search" (onClick)="clearSearch(search)" />
+    }
+  </div>
+
   <p-table
     [value]="members()"
     [lazy]="true"
@@ -49,10 +64,10 @@
           <div class="flex items-center gap-3">
             @if (member.thumbnailUrl) {
               <img [src]="member.thumbnailUrl" [alt]="member.data['first name']"
-                   class="w-9 h-9 rounded-full object-cover member-avatar" />
+                   class="rounded-full object-cover member-avatar" />
             } @else {
-              <div class="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-muted-color">
-                <i class="pi pi-user"></i>
+              <div class="member-avatar rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-muted-color">
+                <i class="pi pi-user text-3xl"></i>
               </div>
             }
             <span class="font-medium">{{ member.data['first name'] }}</span>
@@ -84,7 +99,11 @@
     <ng-template #emptymessage>
       <tr>
         <td colspan="5" class="text-center text-muted-color py-8">
-          No family members found.
+          @if (term()) {
+            No family members match “{{ term() }}”.
+          } @else {
+            No family members found.
+          }
         </td>
       </tr>
     </ng-template>

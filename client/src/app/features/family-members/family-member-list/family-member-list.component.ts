@@ -1,7 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { InputText } from 'primeng/inputtext';
 import { Button } from 'primeng/button';
 import { FamilyTreeService } from '@app/core/services';
 import { FamilyMember } from '@app/core/models';
@@ -10,7 +15,7 @@ import { AppTag, AppTagSeverity } from '@app/shared/components';
 @Component({
   selector: 'app-family-member-list',
   standalone: true,
-  imports: [DatePipe, RouterLink, TableModule, AppTag, Button],
+  imports: [DatePipe, RouterLink, TableModule, AppTag, Button, IconField, InputIcon, InputText],
   templateUrl: './family-member-list.component.html',
   styleUrl: './family-member-list.component.scss',
 })
@@ -22,7 +27,32 @@ export class FamilyMemberListComponent {
   readonly total = signal(0);
   readonly loading = signal(false);
 
+  readonly term = signal('');
+
   readonly defaultPageSize = 10;
+
+  private readonly table = viewChild.required(Table);
+  private readonly termInput$ = new Subject<string>();
+
+  constructor() {
+    this.termInput$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((term) => {
+        this.term.set(term.trim());
+        // Back to page one; reset() re-fires onLazyLoad with the new term.
+        this.table().reset();
+      });
+  }
+
+  onSearch(value: string): void {
+    this.termInput$.next(value);
+  }
+
+  clearSearch(input: HTMLInputElement): void {
+    input.value = '';
+    this.onSearch('');
+    input.focus();
+  }
 
   loadPage(event: TableLazyLoadEvent): void {
     this.loading.set(true);
@@ -41,6 +71,7 @@ export class FamilyMemberListComponent {
         pageSize: rows,
         orderBy: this.mapSortField(sortField),
         orderDirection: event.sortOrder === 1 ? 'asc' : 'desc',
+        term: this.term() || undefined,
       })
       .subscribe({
         next: (res) => {

@@ -2,6 +2,18 @@
   display: block;
 }
 
+.member-search {
+  flex: 1 1 auto;
+  max-width: 24rem;
+}
+
+/* 3× the old 2.25rem (w-9) avatar. */
+.member-avatar {
+  width: 6.75rem;
+  height: 6.75rem;
+  flex-shrink: 0;
+}
+
 /* Deceased rows: 2px slate ribbon on the leading edge — quiet but
  * unmistakable, paired with the † stamp + lifespan rendered in the row. */
 ::ng-deep .p-datatable tbody tr.is-deceased {
