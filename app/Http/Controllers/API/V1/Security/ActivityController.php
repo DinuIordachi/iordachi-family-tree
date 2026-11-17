@@ -51,6 +51,18 @@ class ActivityController extends Controller
     }
 
     /**
+     * Options for the activity report filters
+     *
+     * @param ListActivityRequest $request
+     *
+     * @return JsonResponse
+     */
+    public function filters(ListActivityRequest $request): JsonResponse
+    {
+        return response()->json(['data' => $this->activityService->filterOptions()]);
+    }
+
+    /**
      * Get an activity
      *
      * @param ShowActivityRequest $request

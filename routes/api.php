@@ -44,6 +44,7 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('activities')->controller(Security\ActivityController::class)->group(function () {
             Route::get('/', 'index');
+            Route::get('/filters', 'filters');
             Route::get('/{activity}', 'show');
             Route::delete('/{activity}', 'destroy');
         });
