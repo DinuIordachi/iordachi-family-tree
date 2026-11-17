@@ -37,15 +37,13 @@ class ActivityController extends Controller
     public function index(ListActivityRequest $request): JsonResponse
     {
         $data = $request->collect();
-        $records = $this->activityService->searchAuthorized(
-            $data->get('term', ''),
+        $records = $this->activityService->report(
+            $data->get('term'),
             $data->get('order_by', 'created_at'),
             $data->get('order_direction', 'desc'),
-            $data->only([
-                'log_name',
-                'event',
-            ])->toArray(),
-        )->paginate($data->get('page_size', 20));
+            $data->only(['log_name', 'event', 'causer_id', 'subject_type', 'date_from', 'date_to'])->toArray(),
+            (int) $data->get('page_size', 20),
+        );
 
         return ActivityResource::collection($records)
             ->response()

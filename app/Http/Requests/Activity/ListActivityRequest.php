@@ -44,6 +44,10 @@ class ListActivityRequest extends BaseFormRequest
             'term' => ['nullable', 'string'],
             'logName' => ['nullable', 'string'],
             'event' => ['nullable', 'string'],
+            'causerId' => ['nullable', 'integer'],
+            'subjectType' => ['nullable', 'string'],
+            'dateFrom' => ['nullable', 'date_format:Y-m-d'],
+            'dateTo' => ['nullable', 'date_format:Y-m-d'],
 
             // Pagination
             'page' => ['nullable', 'integer', 'min:1'],
