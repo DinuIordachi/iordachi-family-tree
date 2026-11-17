@@ -18,6 +18,7 @@ export class AuthService {
   readonly currentUser = signal<User | null>(null);
   readonly token = signal<string | null>(null);
   readonly isAuthenticated = computed(() => !!this.token());
+  readonly isAdmin = computed(() => !!this.currentUser()?.roles?.some((role) => role.name === 'admin'));
 
   constructor() {
     const storedToken = localStorage.getItem('auth_token');

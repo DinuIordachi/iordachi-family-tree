@@ -4,5 +4,12 @@ export interface User {
   lastName: string;
   email: string;
   avatarUrl: string;
+  roles?: UserRole[];
+}
+
+export interface UserRole {
+  id: number;
+  name: string;
+  displayName: string;
 }
 
