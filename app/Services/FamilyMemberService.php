@@ -24,6 +24,8 @@ class FamilyMemberService extends BaseRepositoryService
      */
     public function syncRelationships(FamilyMember $member, ?array $parentIds, ?array $spouseIds, ?array $childIds): void
     {
+        $before = $this->relationshipSnapshot($member);
+
         DB::transaction(function () use ($member, $parentIds, $spouseIds, $childIds) {
             if ($parentIds !== null) {
                 $member->parents()->sync($this->normalizeIds($parentIds, $member->id));
@@ -35,6 +37,36 @@ class FamilyMemberService extends BaseRepositoryService
                 $member->syncSpouseIds($this->normalizeIds($spouseIds, $member->id));
             }
         });
+
+        $after = $this->relationshipSnapshot($member);
+
+        if ($before !== $after) {
+            activity('family-member')
+                ->performedOn($member)
+                ->event('relationships-updated')
+                ->withProperties(['old' => $before, 'attributes' => $after])
+                ->log("Family member {$member->activityLabel()} relationships were updated");
+        }
+    }
+
+    /**
+     * Parents / spouses / children as sorted [{id, name}] lists, for the activity log.
+     *
+     * @return array{parents: list<array{id:int,name:string}>, spouses: list<array{id:int,name:string}>, children: list<array{id:int,name:string}>}
+     */
+    private function relationshipSnapshot(FamilyMember $member): array
+    {
+        $map = fn ($relation) => $member->{$relation}()->get()
+            ->sortBy('id')
+            ->map(fn (FamilyMember $m) => ['id' => $m->id, 'name' => $m->activityLabel()])
+            ->values()
+            ->all();
+
+        return [
+            'parents' => $map('parents'),
+            'spouses' => $map('spouses'),
+            'children' => $map('children'),
+        ];
     }
 
     /**

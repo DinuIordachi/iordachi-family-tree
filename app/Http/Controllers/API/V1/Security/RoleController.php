@@ -104,11 +104,6 @@ class RoleController extends Controller
                     throw new Exception('Failed to update the role');
                 }
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($response)
-                    ->event(PermissionsEnum::ROLE_CREATE->value)
-                    ->log('Role :subject.display_name was created by :causer.email');
 
                 return RoleResource::make($response)
                     ->message('Role was created successfully')
@@ -162,11 +157,6 @@ class RoleController extends Controller
 
                 $role->refresh();
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($role)
-                    ->event(PermissionsEnum::ROLE_UPDATE->value)
-                    ->log('Role :subject.display_name was updated by :causer.email');
 
                 return RoleResource::make($role)
                     ->message('Role was updated successfully')
@@ -208,11 +198,6 @@ class RoleController extends Controller
                     throw new Exception('Failed to delete the role');
                 }
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($role)
-                    ->event(PermissionsEnum::ROLE_DELETE->value)
-                    ->log('Role :subject.display_name was deleted by :causer.email');
 
                 return EmptyJsonResource::messageResponse('Role was deleted successfully');
             },

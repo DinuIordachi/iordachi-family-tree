@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use App\Enums\PermissionsEnum;
 use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +45,7 @@ class FamilyMember extends Model implements HasMedia
 
     use SoftDeletes;
     use InteractsWithMedia;
+    use LogsActivity;
 
     const MEDIA_THUMBNAIL_COLLECTION = 'thumbnail';
     const MEDIA_FILES_COLLECTION = 'media';
@@ -233,5 +236,23 @@ class FamilyMember extends Model implements HasMedia
          * be exposed through a dedicated archive view + the explicit
          * `?archived=true` filter handled in {@see scopeFilter()}. */
         return $builder;
+    }
+
+    /**
+     * Human label used in activity descriptions and the activity report.
+     */
+    public function activityLabel(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}") ?: "#{$this->id}";
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('family-member')
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $event) => "Family member {$this->activityLabel()} was {$event}");
     }
 }

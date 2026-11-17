@@ -71,7 +71,28 @@ class UserService extends BaseRepositoryService
      */
     public function setRoles(User $user, string|int|array|Role|Collection|BackedEnum ...$roles): void
     {
+        $before = $user->roles()->pluck('name')->sort()->values()->all();
         $user->syncRoles($roles);
+        $after = $user->roles()->pluck('name')->sort()->values()->all();
+
+        if ($before !== $after) {
+            activity('user')
+                ->performedOn($user)
+                ->event('roles-updated')
+                ->withProperties(['old' => ['roles' => $before], 'attributes' => ['roles' => $after]])
+                ->log("User {$user->activityLabel()} roles were updated");
+        }
+    }
+
+    /**
+     * Record a password change without storing the password.
+     */
+    public function logPasswordChange(User $user): void
+    {
+        activity('user')
+            ->performedOn($user)
+            ->event('password-changed')
+            ->log("User {$user->activityLabel()} password was changed");
     }
 
     public function saveAvatar(User $user, UploadedFile $file): void

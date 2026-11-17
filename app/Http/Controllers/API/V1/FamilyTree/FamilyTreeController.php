@@ -112,11 +112,6 @@ class FamilyTreeController extends Controller
 
                 $member->load(['parents', 'children', 'spouses', 'media']);
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($member)
-                    ->event(PermissionsEnum::FAMILY_MEMBER_CREATE->value)
-                    ->log('Family member #:subject.id was created by :causer.email');
 
                 return FamilyMemberResource::make($member)
                     ->message('Family member was created successfully')
@@ -156,11 +151,6 @@ class FamilyTreeController extends Controller
 
                 $familyMember->refresh()->load(['parents', 'children', 'spouses', 'media']);
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($familyMember)
-                    ->event(PermissionsEnum::FAMILY_MEMBER_UPDATE->value)
-                    ->log('Family member #:subject.id was updated by :causer.email');
 
                 return FamilyMemberResource::make($familyMember)
                     ->message('Family member was updated successfully')
@@ -184,11 +174,6 @@ class FamilyTreeController extends Controller
                     throw new Exception('Failed to delete the family member');
                 }
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($familyMember)
-                    ->event(PermissionsEnum::FAMILY_MEMBER_DELETE->value)
-                    ->log('Family member #:subject.id was deleted by :causer.email');
 
                 return EmptyJsonResource::messageResponse('Family member was deleted successfully');
             },

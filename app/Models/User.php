@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use App\Enums\RolesEnum;
 use App\Enums\PermissionsEnum;
 use Laravel\Sanctum\HasApiTokens;
@@ -59,6 +61,7 @@ class User extends Authenticatable implements MustVerifyEmailInterface, HasMedia
     use Notifiable;
     use InteractsWithMedia;
     use MustVerifyEmail;
+    use LogsActivity;
 
     const GUARD_NAME = 'api';
 
@@ -273,5 +276,24 @@ class User extends Authenticatable implements MustVerifyEmailInterface, HasMedia
             'roles',
             fn (Builder $query) => $query->whereIn('name', [RolesEnum::MEMBER->value]),
         );
+    }
+
+    /**
+     * Human label used in activity descriptions and the activity report.
+     */
+    public function activityLabel(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}") ?: (string) $this->email;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('user')
+            ->logFillable()
+            ->logExcept(['password', 'remember_token', 'email_code', 'email_code_expires_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $event) => "User {$this->activityLabel()} was {$event}");
     }
 }

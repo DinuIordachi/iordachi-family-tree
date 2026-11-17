@@ -93,11 +93,6 @@ class UserController extends Controller
 
                 $user->refresh();
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($user)
-                    ->event(PermissionsEnum::USER_CREATE->value)
-                    ->log('User :subject.email was created by :causer.email');
 
                 return UserResource::make($user)
                     ->message('User was created successfully')
@@ -131,6 +126,10 @@ class UserController extends Controller
                     throw new Exception('Failed to update the user');
                 }
 
+                if (isset($data['password'])) {
+                    $this->userService->logPasswordChange($user);
+                }
+
                 if ($request->has('roles')) {
                     $this->userService->setRoles($user, (array) $request->input('roles'));
                 }
@@ -141,11 +140,6 @@ class UserController extends Controller
 
                 $user->refresh();
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($user)
-                    ->event(PermissionsEnum::USER_UPDATE->value)
-                    ->log('User :subject.email was updated by :causer.email');
 
                 return UserResource::make($user)
                     ->message('User was updated successfully')
@@ -171,11 +165,6 @@ class UserController extends Controller
                     throw new Exception('Failed to delete the user');
                 }
 
-                activity()
-                    ->causedBy($request->user())
-                    ->performedOn($user)
-                    ->event(PermissionsEnum::USER_DELETE->value)
-                    ->log('User :subject.email was deleted by :causer.email');
 
                 return EmptyJsonResource::messageResponse('User was deleted successfully');
             },

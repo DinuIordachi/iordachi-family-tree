@@ -65,17 +65,16 @@ class MeController extends Controller
                     throw new Exception('Failed to update the user');
                 }
 
+                if (isset($data['password'])) {
+                    $this->userService->logPasswordChange($user);
+                }
+
                 if ($file = $request->file('avatarFile')) {
                     $this->userService->saveAvatar($user, $file);
                 }
 
                 $user->refresh();
 
-                activity()
-                    ->causedBy($user)
-                    ->performedOn($user)
-                    ->event(PermissionsEnum::ACCOUNT_UPDATE->value)
-                    ->log('User :subject.email updated their profile');
 
                 return MeResource::make($user)
                     ->message('Profile updated successfully')
@@ -114,11 +113,6 @@ class MeController extends Controller
                     throw new Exception('Failed to delete the user');
                 }
 
-                activity()
-                    ->causedBy($user)
-                    ->performedOn($user)
-                    ->event(PermissionsEnum::ACCOUNT_DELETE->value)
-                    ->log('User :subject.email deleted their profile');
 
                 return EmptyJsonResource::withMessage('Profile deleted successfully')
                     ->response()

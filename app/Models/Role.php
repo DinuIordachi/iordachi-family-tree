@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use App\Enums\RolesEnum;
 use App\Enums\PermissionsEnum;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +30,7 @@ use Spatie\Permission\Models\Role as BaseRole;
 class Role extends BaseRole
 {
     use HasFactory;
+    use LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -143,5 +146,23 @@ class Role extends BaseRole
         }
 
         return $builder->limit(0);
+    }
+
+    /**
+     * Human label used in activity descriptions and the activity report.
+     */
+    public function activityLabel(): string
+    {
+        return (string) ($this->display_name ?: $this->name);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('role')
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $event) => "Role {$this->activityLabel()} was {$event}");
     }
 }
