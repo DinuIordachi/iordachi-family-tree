@@ -38,11 +38,8 @@ class ActivityPolicy
      */
     public function viewAny(User $user): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $user->hasPermissionTo(PermissionsEnum::ACTIVITY_VIEW_ANY->value);
+        // The activity log is an admin-only audit trail; permissions don't grant it.
+        return $user->isAdmin();
     }
 
     /**
@@ -55,11 +52,8 @@ class ActivityPolicy
      */
     public function view(User $user, Activity $activity): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $user->hasPermissionTo(PermissionsEnum::ACTIVITY_VIEW->value);
+        // The activity log is an admin-only audit trail; permissions don't grant it.
+        return $user->isAdmin();
     }
 
     /**
@@ -97,10 +91,7 @@ class ActivityPolicy
      */
     public function delete(User $user, Activity $activity): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $user->hasPermissionTo(PermissionsEnum::ACTIVITY_DELETE->value);
+        // The activity log is an admin-only audit trail; permissions don't grant it.
+        return $user->isAdmin();
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use App\Enums\PermissionsEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\Activitylog\Models\Activity as BaseActivity;
@@ -108,15 +107,6 @@ class Activity extends BaseActivity
         /* @var User $user */
         $user = auth()->user();
 
-        if ($user?->isAdmin()) {
-            return $builder;
-        }
-
-        $hasAnyPermission = $user?->hasAnyPermission(
-            PermissionsEnum::ACTIVITY_VIEW_ANY->value,
-            PermissionsEnum::ACTIVITY_VIEW->value,
-        );
-
-        return $hasAnyPermission ? $builder : $builder->limit(0);
+        return $user?->isAdmin() ? $builder : $builder->whereRaw('1 = 0');
     }
 }
