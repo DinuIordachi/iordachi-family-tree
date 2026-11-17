@@ -98,5 +98,10 @@ class UserService extends BaseRepositoryService
     public function saveAvatar(User $user, UploadedFile $file): void
     {
         $user->addMedia($file)->toMediaCollection(User::MEDIA_AVATAR_COLLECTION);
+
+        activity('user')
+            ->performedOn($user)
+            ->event('avatar-changed')
+            ->log("User {$user->activityLabel()} avatar was changed");
     }
 }

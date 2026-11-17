@@ -45,7 +45,9 @@ class FamilyMember extends Model implements HasMedia
 
     use SoftDeletes;
     use InteractsWithMedia;
-    use LogsActivity;
+    use LogsActivity {
+        shouldLogEvent as activityShouldLogEvent;
+    }
 
     const MEDIA_THUMBNAIL_COLLECTION = 'thumbnail';
     const MEDIA_FILES_COLLECTION = 'media';
@@ -244,6 +246,19 @@ class FamilyMember extends Model implements HasMedia
     public function activityLabel(): string
     {
         return trim("{$this->first_name} {$this->last_name}") ?: "#{$this->id}";
+    }
+
+    /**
+     * A force delete is logged once, by the controller; skip the trait's
+     * automatic "deleted" entry that Eloquent also fires for it.
+     */
+    protected function shouldLogEvent(string $eventName): bool
+    {
+        if ($eventName === 'deleted' && $this->isForceDeleting()) {
+            return false;
+        }
+
+        return $this->activityShouldLogEvent($eventName);
     }
 
     public function getActivitylogOptions(): LogOptions

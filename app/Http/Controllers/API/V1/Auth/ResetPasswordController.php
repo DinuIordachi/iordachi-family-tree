@@ -68,11 +68,7 @@ class ResetPasswordController extends Controller
                     ->causedByAnonymous()
                     ->performedOn($user)
                     ->event('reset-password')
-                    ->withProperty('code', $code)
-                    ->log(
-                        "A person updated the user's :subject.email password with code :properties:code." .
-                        "User :subject.email was logged out from all sessions"
-                    );
+                    ->log("User :subject.email reset their password with an emailed code and was logged out from all sessions");
 
                 return EmptyJsonResource::messageResponse('Your password has been reset successfully. Please login with your new password.');
             },

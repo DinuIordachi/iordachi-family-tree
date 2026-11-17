@@ -98,7 +98,9 @@ class Activity extends BaseActivity
         $like = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term) . '%';
         $mysql = $builder->getConnection()->getDriverName() === 'mysql';
         $properties = $mysql ? 'CAST(properties AS CHAR)' : 'properties';
-        $fullName = $mysql ? "CONCAT(first_name, ' ', last_name)" : "first_name || ' ' || last_name";
+        $fullName = $mysql
+            ? "CONCAT_WS(' ', first_name, last_name)"
+            : "TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))";
         $match = fn (string $column) => "LOWER({$column}) LIKE ? ESCAPE '!'";
 
         return $builder->where(function (Builder $q) use ($like, $match, $properties, $fullName) {
