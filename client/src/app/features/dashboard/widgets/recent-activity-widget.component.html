@@ -1,0 +1,24 @@
+<div class="card">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-semibold text-color m-0">Recent activity</h2>
+    <a routerLink="/activity" class="text-primary font-medium">View full report <i class="pi pi-arrow-right text-sm"></i></a>
+  </div>
+
+  @if (items() === null) {
+    <p class="text-muted-color m-0">Loading…</p>
+  } @else if (items()!.length === 0) {
+    <p class="text-muted-color m-0">No activity recorded yet.</p>
+  } @else {
+    <ul class="list-none p-0 m-0 flex flex-col gap-3">
+      @for (item of items(); track item.id) {
+        <li class="flex items-start gap-3">
+          <app-tag [value]="humanize(item.event) || '—'" [severity]="eventSeverity(item.event)" />
+          <div class="flex-1 min-w-0">
+            <div class="text-color">{{ item.description }}</div>
+            <div class="text-sm text-muted-color">{{ causerName(item) }} · {{ item.createdAt | date: 'medium' }}</div>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

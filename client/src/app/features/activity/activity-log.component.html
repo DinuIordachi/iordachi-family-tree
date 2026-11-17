@@ -1,0 +1,144 @@
+<div class="card">
+  <div class="mb-4">
+    <h1 class="text-2xl font-bold text-color m-0">Activity log</h1>
+    <p class="text-muted-color mt-1 mb-0">Who signed in, and who created, changed or deleted what. Visible to admins only.</p>
+  </div>
+
+  <div class="activity-filters mb-4">
+    <p-iconfield class="activity-search">
+      <p-inputicon class="pi pi-search" />
+      <input #search pInputText type="search" class="w-full"
+             placeholder="Search people, actions, values…"
+             aria-label="Search activity"
+             [value]="term()"
+             (input)="onSearch(search.value)"
+             (keydown.escape)="clearSearch(search)" />
+    </p-iconfield>
+
+    <p-select [options]="causerOptions()" [ngModel]="causerId()" (ngModelChange)="causerId.set($event); applyFilters()"
+              placeholder="Any person" [showClear]="true" [filter]="true" filterBy="label"
+              ariaLabel="Filter by person" styleClass="activity-filter" />
+    <p-select [options]="eventOptions()" [ngModel]="event()" (ngModelChange)="event.set($event); applyFilters()"
+              placeholder="Any action" [showClear]="true" [filter]="true" filterBy="label"
+              ariaLabel="Filter by action" styleClass="activity-filter" />
+    <p-select [options]="subjectTypeOptions()" [ngModel]="subjectType()" (ngModelChange)="subjectType.set($event); applyFilters()"
+              placeholder="Any entity" [showClear]="true"
+              ariaLabel="Filter by entity" styleClass="activity-filter" />
+    <p-datepicker [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
+                  selectionMode="range" [readonlyInput]="true" [showIcon]="true" [showButtonBar]="true"
+                  dateFormat="yy-mm-dd" placeholder="Any date" ariaLabel="Filter by date range"
+                  styleClass="activity-filter" />
+    @if (hasFilters()) {
+      <p-button label="Reset" icon="pi pi-filter-slash" [text]="true" severity="secondary"
+                (onClick)="resetFilters(search)" />
+    }
+  </div>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize"
+    [first]="first()"
+    [rowsPerPageOptions]="[25, 50, 100]"
+    [totalRecords]="total()"
+    [loading]="loading()"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+    dataKey="id"
+    [rowHover]="true"
+    (onLazyLoad)="loadPage($event)"
+    styleClass="p-datatable-striped activity-table"
+  >
+    <ng-template #header>
+      <tr>
+        <th style="width: 3rem"></th>
+        <th style="min-width: 11rem">When</th>
+        <th style="min-width: 14rem">Who</th>
+        <th style="min-width: 10rem">Action</th>
+        <th style="min-width: 12rem">Entity</th>
+        <th style="min-width: 20rem">Description</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-row let-expanded="expanded">
+      <tr>
+        <td>
+          <p-button type="button" [pRowToggler]="row" [text]="true" [rounded]="true" severity="secondary"
+                    [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                    [ariaLabel]="expanded ? 'Hide details' : 'Show details'" />
+        </td>
+        <td class="whitespace-nowrap">{{ row.createdAt | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
+        <td>
+          <div class="font-medium" [innerHTML]="causerName(row) | highlight: term()"></div>
+          @if (row.causer) {
+            <div class="text-sm text-muted-color" [innerHTML]="row.causer.email | highlight: term()"></div>
+          }
+        </td>
+        <td>
+          <app-tag [value]="humanize(row.event) || '—'" [severity]="eventSeverity(row.event)" />
+        </td>
+        <td>
+          @if (row.subjectType) {
+            <div class="text-sm text-muted-color" [innerHTML]="humanize(row.subjectType) | highlight: term()"></div>
+            <div [innerHTML]="row.subjectLabel | highlight: term()"></div>
+          } @else {
+            <span class="text-muted-color">—</span>
+          }
+        </td>
+        <td [innerHTML]="row.description | highlight: term()"></td>
+      </tr>
+    </ng-template>
+
+    <ng-template #expandedrow let-row>
+      <tr class="activity-details-row">
+        <td colspan="6">
+          <div class="activity-details">
+            @if (row.changes.length) {
+              <table class="activity-changes">
+                <thead>
+                  <tr><th>Field</th><th>Before</th><th>After</th></tr>
+                </thead>
+                <tbody>
+                  @for (change of row.changes; track change.field) {
+                    <tr>
+                      <td class="font-medium" [innerHTML]="humanize(change.field) | highlight: term()"></td>
+                      <td class="activity-old" [innerHTML]="displayValue(change.old) | highlight: term()"></td>
+                      <td class="activity-new" [innerHTML]="displayValue(change.new) | highlight: term()"></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <p class="text-muted-color m-0">No field changes recorded for this action.</p>
+            }
+
+            @if (extraProperties(row).length) {
+              <dl class="activity-extra">
+                @for (p of extraProperties(row); track p.key) {
+                  <dt>{{ p.key }}</dt>
+                  <dd [innerHTML]="p.value | highlight: term()"></dd>
+                }
+              </dl>
+            }
+            <div class="text-sm text-muted-color mt-2">
+              Entry #{{ row.id }} · log “{{ row.logName }}” @if (row.subjectId) { · {{ row.subjectType }} #{{ row.subjectId }} }
+            </div>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="6" class="text-center text-muted-color py-8">
+          @if (hasFilters()) {
+            No activity matches these filters.
+          } @else {
+            No activity recorded yet.
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

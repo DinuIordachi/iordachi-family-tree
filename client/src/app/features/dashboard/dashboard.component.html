@@ -19,6 +19,11 @@
     link="/family-members"
   />
 
+  <!-- Admin-only: latest activity log entries -->
+  @if (auth.isAdmin()) {
+    <app-recent-activity-widget />
+  }
+
   <!-- Quick actions -->
   <div class="col-span-12">
     <div class="card">

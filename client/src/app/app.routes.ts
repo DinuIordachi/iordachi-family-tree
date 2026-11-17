@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AppLayout } from './layout/layout.component';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -32,6 +33,11 @@ export const routes: Routes = [
       {
         path: 'family-members',
         loadChildren: () => import('./features/family-members/family-member.routes').then(m => m.FAMILY_MEMBER_ROUTES)
+      },
+      {
+        path: 'activity',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/activity/activity-log.component').then(m => m.ActivityLogComponent)
       },
     ]
   },

@@ -1,5 +1,5 @@
 <ul class="layout-menu">
-  @for (item of model; track item.label; let i = $index) {
+  @for (item of model(); track item.label; let i = $index) {
     @if (!item.separator) {
       <app-menuitem [item]="item" [index]="i" [root]="true" />
     } @else {

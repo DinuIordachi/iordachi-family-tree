@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { AuthService, FamilyTreeService } from '@app/core/services';
 import { Button } from 'primeng/button';
 import { StatsWidgetComponent } from './widgets/stats-widget.component';
+import { RecentActivityWidgetComponent } from './widgets/recent-activity-widget.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, Button, StatsWidgetComponent],
+  imports: [RouterLink, Button, StatsWidgetComponent, RecentActivityWidgetComponent],
   templateUrl: './dashboard.component.html',
   styles: ``,
 })
